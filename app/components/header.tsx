@@ -22,15 +22,17 @@ export default function Header() {
         }}
       />
 
-      {/* 3. LOGO WATERMARK (320px / 15% Opacity) */}
-      <div className="absolute inset-0 flex items-center justify-center z-0 select-none pointer-events-none opacity-[0.15]">
+      {/* 3. LOGO WATERMARK (Full Color & High Opacity)
+          - Grayscale removed to show original colors
+          - Opacity increased to 35% (0.35) for a bold brand presence
+      */}
+      <div className="absolute inset-0 flex items-center justify-center z-0 select-none pointer-events-none opacity-[0.35]">
         <Image 
           src="/assets/logo.png" 
           alt="Bora Logo Watermark" 
           width={320} 
           height={320}
           priority
-          className="grayscale brightness-125"
         />
       </div>
 
@@ -38,14 +40,13 @@ export default function Header() {
         
         {/* 4. CLEAN BRANDING AREA */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-[0.15em] font-cinzel text-white drop-shadow-[0_4px_4px_rgba(0,0,0,1)]">
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-[0.15em] font-cinzel text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]">
             Bora <span className="text-[#D4AF37]">Music</span> <span className="text-[#C0C0C0]">Charts</span>
           </h1>
-          {/* Junk removed, kept only a minimalist silver divider for style balance */}
           <div className="h-[2px] w-12 bg-[#D4AF37] mt-3" />
         </div>
 
-        {/* 5. NAVIGATION */}
+        {/* 5. NAVIGATION (Submit Removed) */}
         <nav className="flex items-center gap-8 md:gap-12 font-cinzel">
           {['Official Top 20', 'Fresh Drops', 'News'].map((item) => (
             <a 
@@ -56,15 +57,6 @@ export default function Header() {
               {item}
             </a>
           ))}
-          
-          <div className="hidden md:block h-5 w-[1px] bg-[#C0C0C0]/20" />
-
-          <a 
-            href="#" 
-            className="text-[11px] font-black uppercase tracking-widest text-[#FF0000] border border-[#FF0000]/30 px-6 py-2 hover:bg-[#FF0000] hover:text-white transition-all duration-300"
-          >
-            Submit
-          </a>
         </nav>
       </div>
     </header>
