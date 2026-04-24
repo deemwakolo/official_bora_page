@@ -6,13 +6,13 @@ export default function Header() {
   return (
     <header className="relative w-full py-14 px-6 md:px-12 overflow-hidden border-b border-white/5 bg-[#050505]">
       
-      {/* CINZEL FONT IMPORT */}
+      {/* 1. CINZEL FONT IMPORT */}
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
         .font-cinzel { font-family: 'Cinzel', serif; }
       `}} />
 
-      {/* BACKGROUND LAYER: KITENGE GRADIENT */}
+      {/* 2. BACKGROUND LAYER: KITENGE GRADIENT */}
       <div 
         className="absolute inset-0 z-0 opacity-10 pointer-events-none"
         style={{
@@ -22,10 +22,7 @@ export default function Header() {
         }}
       />
 
-      {/* LOGO WATERMARK ADJUSTED: 
-          - Size reduced to 320px
-          - Opacity increased to 15% (0.15) to make it obvious
-      */}
+      {/* 3. LOGO WATERMARK (320px / 15% Opacity) */}
       <div className="absolute inset-0 flex items-center justify-center z-0 select-none pointer-events-none opacity-[0.15]">
         <Image 
           src="/assets/logo.png" 
@@ -39,20 +36,16 @@ export default function Header() {
 
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
         
-        {/* BRANDING AREA */}
+        {/* 4. CLEAN BRANDING AREA */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
           <h1 className="text-3xl md:text-4xl font-black uppercase tracking-[0.15em] font-cinzel text-white drop-shadow-[0_4px_4px_rgba(0,0,0,1)]">
-            Bora <span className="text-[#D4AF37]">Music</span> Store
+            Bora <span className="text-[#D4AF37]">Music</span> <span className="text-[#C0C0C0]">Charts</span>
           </h1>
-          <div className="flex items-center gap-3 mt-3">
-            <span className="h-[1px] w-8 bg-[#D4AF37]" />
-            <p className="text-[10px] font-mono text-[#C0C0C0] uppercase tracking-[0.4em] font-bold">
-              Matitu Nation Hub • <span className="text-[#FF0000]">v1.0 Alpha</span>
-            </p>
-          </div>
+          {/* Junk removed, kept only a minimalist silver divider for style balance */}
+          <div className="h-[2px] w-12 bg-[#D4AF37] mt-3" />
         </div>
 
-        {/* NAVIGATION */}
+        {/* 5. NAVIGATION */}
         <nav className="flex items-center gap-8 md:gap-12 font-cinzel">
           {['Official Top 20', 'Fresh Drops', 'News'].map((item) => (
             <a 
