@@ -16,16 +16,16 @@ export default function Header() {
       <div 
         className="absolute inset-0 z-0 pointer-events-none opacity-20"
         style={{
-          backgroundImage: `linear-gradient(to right, rgba(255, 0, 0, 0.2) 0%, #050505 40%, #050505 60%, rgba(255, 0, 0, 0.2) 100%), url('/assets/kitenge.png')`,
+          backgroundImage: `linear-gradient(to right, rgba(255, 0, 0, 0.15) 0%, #050505 40%, #050505 60%, rgba(255, 0, 0, 0.15) 100%), url('/assets/kitenge.png')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundBlendMode: 'luminosity',
         }}
       />
 
-      {/* 3. LAYER 2: LOGO BEHIND TEXT (Reduced for mobile) */}
-      <div className="absolute inset-0 flex items-center justify-center z-0 select-none pointer-events-none opacity-[0.2]">
-        <div className="w-[120px] h-[120px] md:w-[160px] md:h-[160px] relative">
+      {/* 3. LAYER 2: LOGO WATERMARK (Tightened) */}
+      <div className="absolute inset-0 flex items-center justify-center z-0 select-none pointer-events-none opacity-[0.18]">
+        <div className="w-[120px] h-[120px] md:w-[150px] md:h-[150px] relative">
           <Image 
             src="/assets/logo.png" 
             alt="Bora Logo Watermark" 
@@ -36,37 +36,33 @@ export default function Header() {
         </div>
       </div>
 
-      {/* 4. MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12 flex flex-col items-center relative z-10">
+      {/* 4. MAIN CONTENT (Ultra Squeezed Padding) */}
+      <div className="max-w-7xl mx-auto px-4 py-4 md:py-6 flex flex-col items-center relative z-10">
         
-        {/* THE TYPOGRAPHY (Responsive Sizes) */}
-        <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-3xl md:text-6xl font-black tracking-[0.15em] md:tracking-[0.25em] font-cinzel text-white leading-none drop-shadow-[0_8px_12px_rgba(0,0,0,1)]">
+        {/* THE TYPOGRAPHY (Increased Font Sizes) */}
+        <div className="text-center mb-2 md:mb-4">
+          <h1 className="text-4xl md:text-7xl font-black tracking-[0.25em] font-cinzel text-white leading-none drop-shadow-[0_4px_8px_rgba(0,0,0,1)]">
             BORA <span className="text-[#D4AF37]">CHARTS</span>
           </h1>
-          <div className="flex items-center justify-center gap-3 mt-4">
-            <div className="h-[1px] w-8 md:w-10 bg-gradient-to-r from-transparent to-[#D4AF37]" />
-            <p className="text-[8px] md:text-[9px] font-cinzel tracking-[0.3em] md:tracking-[0.4em] text-[#C0C0C0] uppercase font-bold">
+          <div className="flex items-center justify-center gap-3 mt-1">
+            <div className="h-[1px] w-10 md:w-16 bg-[#D4AF37]/60" />
+            <p className="text-[10px] md:text-[12px] font-cinzel tracking-[0.5em] text-[#C0C0C0] uppercase font-bold">
               The Gold Standard
             </p>
-            <div className="h-[1px] w-8 md:w-10 bg-gradient-to-l from-transparent to-[#D4AF37]" />
+            <div className="h-[1px] w-10 md:w-16 bg-[#D4AF37]/60" />
           </div>
         </div>
 
-        {/* 5. SYMMETRICAL NAVIGATION (Fixed for Mobile)
-            - Changed 'flex-row' to 'flex-wrap'
-            - Changed 'justify-around' to 'justify-center'
-            - Added 'gap' for consistent spacing on small screens
-        */}
-        <nav className="w-full max-w-xl border-t border-white/10 pt-6">
-          <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 md:justify-around font-cinzel">
+        {/* 5. NAVIGATION (Increased Font Sizes) */}
+        <nav className="w-full max-w-xl border-t border-white/10 pt-3">
+          <ul className="flex items-center justify-center gap-x-10 md:gap-x-16 font-cinzel">
             {['Top 20', 'Drops', 'News'].map((item) => (
-              <li key={item} className="text-center">
+              <li key={item}>
                 <a 
                   href="#" 
-                  className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-white/60 hover:text-[#D4AF37] transition-all duration-300 whitespace-nowrap"
+                  className="text-[10px] md:text-[13px] font-black uppercase tracking-[0.2em] text-white/70 hover:text-[#D4AF37] transition-all duration-300"
                 >
-                  {item === 'Official Top 20' ? 'Top 20' : item === 'Fresh Drops' ? 'Drops' : item === 'News Bulletin' ? 'News' : item}
+                  {item}
                 </a>
               </li>
             ))}
