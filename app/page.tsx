@@ -1,26 +1,26 @@
 'use client';
 
-// Matching your lowercase file name
 import Header from './components/header'; 
+import HotThree from './components/HotThree';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#050505] text-white antialiased flex flex-col font-sans">
+    <main className="min-h-screen bg-[#050505] text-white antialiased flex flex-col font-cinzel">
       
-      {/* 1. CINZEL FONT IMPORT */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
-        .font-cinzel { font-family: 'Cinzel', serif; }
-      `}} />
-
-      {/* 2. THE HEADER COMPONENT */}
+      {/* 1. HEADER COMPONENT 
+          Now safe from hydration mismatches.
+      */}
       <Header />
 
-      {/* 3. PURE OBSIDIAN CONTENT AREA 
-          All junk, footers, and grids removed. 
-          Ready for the store content.
+      {/* 2. CONTENT AREA 
+          The 'flex-grow' ensures the obsidian background fills the viewport.
       */}
-      <div className="flex-grow bg-[#050505]" />
+      <div className="flex-grow bg-[#050505] pt-10 pb-20">
+        
+        {/* THE "HOT THREE" HORIZONTAL DECK */}
+        <HotThree />
+
+      </div>
 
     </main>
   );

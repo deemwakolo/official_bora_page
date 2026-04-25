@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,26 +9,50 @@
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 5, 5, 5;
   --background-end-rgb: 0, 0, 0;
-  --accent-color: #ff3e00; /* Neon Orange/Red accent */
+  --accent-gold: #D4AF37;
+  --accent-red: #FF0000;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  font-family: 'Inter', sans-serif;
-  overflow-x: hidden;
+@layer base {
+  body {
+    color: rgb(var(--foreground-rgb));
+    background: #050505;
+    /* Default to a clean sans for UI, but Cinzel for authority */
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
 }
 
-/* Custom scrollbar for that pro look */
+@layer utilities {
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
+  }
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom "Obsidian" scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 4px;
 }
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
 ::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 10px;
+  background: #222;
+  border-radius: 0px;
+  border: 1px solid #333;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
+}
+
+/* Smooth transitions for the Bora Deck */
+.transition-all {
+  transition-duration: 400ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
