@@ -32,94 +32,89 @@ export default function Throne({
 
   return (
     <>
-      <section className="relative w-full bg-[#050505] py-20 text-center overflow-hidden border-b border-white/5">
+      <section className="relative w-full bg-[#050505] py-10 text-center overflow-hidden border-b border-white/5">
         
-        {/* 1. CINEMATIC BACKGROUND GLOW */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-4xl pointer-events-none opacity-20">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#D4AF37_0%,_transparent_70%)] blur-[100px]" />
+        {/* CINEMATIC BACKGROUND GLOW - Tighter radius */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-2xl pointer-events-none opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#D4AF37_0%,_transparent_70%)] blur-[80px]" />
         </div>
 
-        {/* WATERMARK CROWN - Increased opacity as requested */}
-        <div className="absolute -top-12 right-[10%] rotate-[15deg] z-0 opacity-[0.15] pointer-events-none transition-transform duration-[2s]">
-          <div className="text-[180px] md:text-[240px] text-transparent bg-clip-text bg-gradient-to-br from-[#D4AF37] to-white/10 font-serif">
+        {/* WATERMARK CROWN - Scaled down and shifted */}
+        <div className="absolute -top-6 right-[15%] rotate-[12deg] z-0 opacity-[0.12] pointer-events-none transition-transform duration-[2s]">
+          <div className="text-[140px] md:text-[180px] text-transparent bg-clip-text bg-gradient-to-br from-[#D4AF37] to-white/10 font-serif">
             ♛
           </div>
         </div>
 
-        {/* MAIN HEADLINE */}
+        {/* MAIN HEADLINE - Squeezed size and mt */}
         <div className="relative z-10 px-4">
-          <h1 className="font-cinzel text-6xl md:text-8xl font-black text-white tracking-tighter uppercase leading-none">
-            <span className="bg-clip-text text-transparent bg-gradient-to-b from-[#D4AF37] via-[#D4AF37] to-[#8a6d1a] drop-shadow-[0_0_25px_rgba(212,175,55,0.4)]">
+          <h1 className="font-cinzel text-5xl md:text-7xl font-black text-white tracking-tight uppercase leading-none">
+            <span className="bg-clip-text text-transparent bg-gradient-to-b from-[#D4AF37] via-[#D4AF37] to-[#8a6d1a] drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]">
               {song}
             </span>
           </h1>
           
-          <p className="text-white/40 text-[10px] md:text-[12px] font-mono tracking-[0.6em] uppercase mt-4">
+          <p className="text-white/40 text-[9px] md:text-[11px] font-mono tracking-[0.5em] uppercase mt-2">
             — {artist} —
           </p>
         </div>
 
-        {/* METRIC HUD */}
-        <div className="relative z-10 flex justify-center items-center gap-12 mt-12">
-          <div className="text-center group">
-            <p className="font-mono text-[7px] text-white/20 uppercase tracking-[0.3em] mb-1">Tenure</p>
-            <p className="text-white/70 text-lg font-cinzel">{weeksInChart} <span className="text-[9px] opacity-50 uppercase">Wks</span></p>
+        {/* METRIC HUD - Squeezed gap and mt */}
+        <div className="relative z-10 flex justify-center items-center gap-8 mt-8">
+          <div className="text-center">
+            <p className="font-mono text-[6px] text-white/20 uppercase tracking-[0.2em] mb-0.5">Tenure</p>
+            <p className="text-white/70 text-base font-cinzel">{weeksInChart} <span className="text-[8px] opacity-50 uppercase">Wks</span></p>
           </div>
 
-          <div className="w-[1px] h-10 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+          <div className="w-[1px] h-6 bg-white/10" />
 
           <div className="text-center">
-            <p className="font-mono text-[7px] text-[#D4AF37]/40 uppercase tracking-[0.3em] mb-1">Peak Status</p>
-            <p className="text-[#D4AF37] text-lg font-cinzel">{weeksAtNo1} <span className="text-[9px] opacity-70 uppercase">At #1</span></p>
+            <p className="font-mono text-[6px] text-[#D4AF37]/40 uppercase tracking-[0.2em] mb-0.5">Peak Status</p>
+            <p className="text-[#D4AF37] text-base font-cinzel">{weeksAtNo1} <span className="text-[8px] opacity-70 uppercase">At #1</span></p>
           </div>
         </div>
 
-        {/* PLATFORM BADGES */}
-        <div className="relative z-10 flex justify-center gap-4 mt-10">
-          <div className="px-4 py-1.5 border border-white/5 rounded-full bg-white/[0.02] text-[8px] font-mono text-white/30 tracking-widest flex items-center gap-2 hover:border-[#D4AF37]/20 transition-colors">
-            YT <span className="text-white/70 font-bold">{ytRank}</span>
-          </div>
-          <div className="px-4 py-1.5 border border-white/5 rounded-full bg-white/[0.02] text-[8px] font-mono text-white/30 tracking-widest flex items-center gap-2 hover:border-[#D4AF37]/20 transition-colors">
-            SP <span className="text-white/70 font-bold">{spRank}</span>
-          </div>
-          <div className="px-4 py-1.5 border border-white/5 rounded-full bg-white/[0.02] text-[8px] font-mono text-white/30 tracking-widest flex items-center gap-2 hover:border-[#D4AF37]/20 transition-colors">
-            BP <span className="text-white/70 font-bold">{bpRank}</span>
-          </div>
+        {/* PLATFORM BADGES - More compact */}
+        <div className="relative z-10 flex justify-center gap-3 mt-6">
+          {['YT', 'SP', 'BP'].map((plat, i) => (
+            <div key={plat} className="px-3 py-1 border border-white/5 rounded-full bg-white/[0.02] text-[7px] font-mono text-white/30 tracking-widest flex items-center gap-1.5">
+              {plat} <span className="text-white/70 font-bold">{[ytRank, spRank, bpRank][i]}</span>
+            </div>
+          ))}
         </div>
 
-        {/* INTERACTIVE PULSE CONTROL */}
-        <div className="relative z-10 flex items-center justify-center gap-12 mt-16">
+        {/* INTERACTIVE PULSE CONTROL - Squeezed mt and padding */}
+        <div className="relative z-10 flex items-center justify-center gap-8 mt-10">
           <button
             onClick={() => handleVote('up')}
-            className={`group relative p-3 transition-all duration-300 ${
-              lastVote === 'up' && animating ? 'scale-125' : 'hover:scale-110 active:scale-95'
-            }`}
+            className={`group p-2 transition-all duration-300 ${lastVote === 'up' && animating ? 'scale-110' : 'hover:scale-105'}`}
           >
-            <span className={`text-3xl ${lastVote === 'up' && animating ? 'text-[#D4AF37]' : 'text-[#D4AF37]/30 group-hover:text-[#D4AF37]'}`}>
+            <span className={`text-2xl ${lastVote === 'up' && animating ? 'text-[#D4AF37]' : 'text-[#D4AF37]/30 group-hover:text-[#D4AF37]'}`}>
               ▲
             </span>
           </button>
 
-          <div className="relative text-center min-w-[80px]">
-            <p className="text-4xl font-cinzel font-bold text-white tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]">
+          <div className="relative text-center min-w-[60px]">
+            <p className="text-3xl font-cinzel font-bold text-white tracking-widest">
               {votes}
             </p>
-            <p className="text-[6px] text-white/20 uppercase tracking-[0.5em] mt-2">Pulse Power</p>
+            <p className="text-[5px] text-white/20 uppercase tracking-[0.4em]">Pulse Power</p>
           </div>
 
           <button
             onClick={() => handleVote('down')}
-            className="group p-3 transition-all duration-300 hover:scale-110 active:scale-95"
+            className="group p-2 transition-all duration-300 hover:scale-105"
           >
-            <span className="text-3xl text-white/10 group-hover:text-white/40">
+            <span className="text-2xl text-white/10 group-hover:text-white/40">
               ▼
             </span>
           </button>
         </div>
 
-        {/* SIGNATURE BASE LINE - Fixed syntax error here */}
-        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37]/40 via-[#C0C0C0]/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-[#D4AF37]/5 to-transparent opacity-50 blur-xl pointer-events-none" />
+        {/* SIGNATURE BASE LINE - Squeezed height */}
+        <div className="absolute bottom-0 left-0 w-full">
+           <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
+        </div>
         
       </section>
     </>
