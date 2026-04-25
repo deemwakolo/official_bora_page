@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+/* REMOVE Google font imports ❌ */
 
+/* Tailwind */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -17,22 +17,22 @@
   body {
     color: rgb(var(--foreground-rgb));
     background: #050505;
-    /* Default to a clean sans for UI, but Cinzel for authority */
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-inter), system-ui, sans-serif;
     overflow-x: hidden;
   }
 }
 
 @layer utilities {
   .font-cinzel {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-cinzel), serif;
   }
+
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
 }
 
-/* Custom "Obsidian" scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
 }
@@ -43,7 +43,6 @@
 
 ::-webkit-scrollbar-thumb {
   background: #222;
-  border-radius: 0px;
   border: 1px solid #333;
 }
 
@@ -51,7 +50,7 @@
   background: var(--accent-gold);
 }
 
-/* Smooth transitions for the Bora Deck */
+/* Transition */
 .transition-all {
   transition-duration: 400ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
