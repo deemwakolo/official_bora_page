@@ -23,27 +23,15 @@ export default function Header() {
         }}
       />
 
-      {/* 3. LAYER 2: LOGO WATERMARK (Tightened) */}
-      <div className="absolute inset-0 flex items-center justify-center z-0 select-none pointer-events-none opacity-[0.18]">
-        <div className="w-[120px] h-[120px] md:w-[150px] md:h-[150px] relative">
-          <Image 
-            src="/assets/logo.png" 
-            alt="Bora Logo Watermark" 
-            fill
-            priority
-            className="object-contain"
-          />
-        </div>
-      </div>
-
-      {/* 4. MAIN CONTENT (Ultra Squeezed Padding) */}
-      <div className="max-w-7xl mx-auto px-4 py-4 md:py-6 flex flex-col items-center relative z-10">
+      {/* 3. MAIN CONTENT (Forced Centering) */}
+      <div className="max-w-7xl mx-auto px-4 py-4 md:py-6 flex flex-col items-center justify-center relative z-10">
         
-        {/* THE TYPOGRAPHY (Increased Font Sizes) */}
-        <div className="text-center mb-2 md:mb-4">
+        {/* THE TYPOGRAPHY (Perfectly Centered) */}
+        <div className="flex flex-col items-center text-center mb-2 md:mb-4">
           <h1 className="text-4xl md:text-7xl font-black tracking-[0.25em] font-cinzel text-white leading-none drop-shadow-[0_4px_8px_rgba(0,0,0,1)]">
             BORA <span className="text-[#D4AF37]">CHARTS</span>
           </h1>
+          
           <div className="flex items-center justify-center gap-3 mt-1">
             <div className="h-[1px] w-10 md:w-16 bg-[#D4AF37]/60" />
             <p className="text-[10px] md:text-[12px] font-cinzel tracking-[0.5em] text-[#C0C0C0] uppercase font-bold">
@@ -53,9 +41,9 @@ export default function Header() {
           </div>
         </div>
 
-        {/* 5. NAVIGATION (Increased Font Sizes) */}
+        {/* 4. NAVIGATION (Forced Centering) */}
         <nav className="w-full max-w-xl border-t border-white/10 pt-3">
-          <ul className="flex items-center justify-center gap-x-10 md:gap-x-16 font-cinzel">
+          <ul className="flex items-center justify-center gap-x-10 md:gap-x-16 font-cinzel w-full">
             {['Top 20', 'Drops', 'News'].map((item) => (
               <li key={item}>
                 <a 
@@ -70,7 +58,7 @@ export default function Header() {
         </nav>
       </div>
 
-      {/* 6. BOTTOM ACCENT LINE */}
+      {/* 5. BOTTOM ACCENT LINE */}
       <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-[#FF0000]/70 to-transparent" />
     </header>
   );
