@@ -10,7 +10,7 @@
   --background-start-rgb: 5, 5, 5;
   --background-end-rgb: 0, 0, 0;
   --accent-gold: #D4AF37;
-  --accent-red: #FF0000;
+  --accent-red: #b91c1c; /* Matched to your component hex */
 }
 
 @layer base {
@@ -19,6 +19,7 @@
     background: #050505;
     font-family: var(--font-inter), system-ui, sans-serif;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -28,13 +29,35 @@
   }
 
   .font-mono {
-    font-family: 'JetBrains Mono', monospace;
+    /* Using system mono as fallback if JetBrains isn't loaded */
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+
+  /* CUSTOM TACTICAL UTILITIES */
+  .glow-red {
+    text-shadow: 0 0 10px rgba(185, 28, 28, 0.5);
+  }
+
+  .glow-gold {
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+  }
+
+  /* Scanline animation for that "System Monitor" feel */
+  .scanline-overlay::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 2;
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
   }
 }
 
-/* Scrollbar */
+/* Scrollbar - Thinned and themed */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -42,16 +65,23 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #222;
-  border: 1px solid #333;
+  background: #1a1a1a;
+  border-radius: 10px;
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-gold);
+  background: var(--accent-red); /* Red highlight on scroll */
 }
 
-/* Transition */
+/* Smooth Navigation Transitions */
 .transition-all {
   transition-duration: 400ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global Selection Color */
+::selection {
+  background: var(--accent-red);
+  color: white;
 }
