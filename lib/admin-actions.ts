@@ -1,8 +1,18 @@
 // lib/admin-actions.ts
-// Ensure this path matches where your supabase.ts file is located.
-// If supabase.ts is in the same 'lib' folder, use './supabase'
 import { supabase } from './supabase';
 
+// 1. GET ALL SONGS
+export async function getRegistry() {
+  const { data, error } = await supabase
+    .from('songs')
+    .select('*')
+    .order('momentum_score', { ascending: false });
+  
+  if (error) return [];
+  return data;
+}
+
+// 2. INJECT NEW SONG
 export async function injectSong(formData: FormData) {
   const file = formData.get('cover') as File;
   const title = formData.get('title') as string;
@@ -10,46 +20,29 @@ export async function injectSong(formData: FormData) {
   const yt = formData.get('yt_views') as string;
   const sp = formData.get('sp_plays') as string;
 
-  if (!file || !title || !artist) {
-    throw new Error("Missing required fields: Title, Artist, or Cover Art.");
-  }
-
-  // 1. Upload Image to bora-assets
   const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+  const fileName = `${Date.now()}.${fileExt}`;
   const filePath = `covers/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from('bora-assets')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
+  await supabase.storage.from('bora-assets').upload(filePath, file);
+  const { data: urlData } = supabase.storage.from('bora-assets').getPublicUrl(filePath);
 
-  if (uploadError) {
-    console.error("Storage Upload Error:", uploadError.message);
-    throw uploadError;
-  }
-
-  // 2. Get Public URL
-  const { data: urlData } = supabase.storage
-    .from('bora-assets')
-    .getPublicUrl(filePath);
-
-  // 3. Inject into Database
   const { error: dbError } = await supabase.from('songs').insert({
     title,
     artist,
     cover_url: urlData.publicUrl,
     yt_views: parseInt(yt) || 0,
     sp_plays: parseInt(sp) || 0,
-    momentum_score: 100, // Initial momentum for the Bora chart algorithm
+    momentum_score: 100,
   });
 
-  if (dbError) {
-    console.error("Database Injection Error:", dbError.message);
-    throw dbError;
-  }
+  if (dbError) throw dbError;
+  return { success: true };
+}
 
+// 3. DELETE SONG
+export async function deleteSong(id: string) {
+  const { error } = await supabase.from('songs').delete().eq('id', id);
+  if (error) throw error;
   return { success: true };
 }
