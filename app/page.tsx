@@ -17,29 +17,38 @@ export default function Home() {
       {/* HEADER */}
       <Header />
 
-      {/* HOT THREE (DISCOVERY ZONE - FIRST IMPACT) */}
-      <div className="pt-6">
-        <HotThree />
-      </div>
+      {/* STAGE WRAPPER */}
+      <div className="flex flex-col gap-14 pb-24">
 
-      {/* THRONE (MAIN AUTHORITY CENTER) */}
-      <div className="mt-8">
-        <Throne
-          song="Bongo Anthem"
-          artist="Davieh G ft Matitu"
-          votes="12.4K"
-          weeksInChart={12}
-          weeksAtNo1={5}
-          ytRank="#01"
-          spRank="#02"
-          bpRank="#01"
-          onVote={handleVote}
-        />
-      </div>
+        {/* HOT THREE — DISCOVERY LAYER */}
+        <section className="mt-4">
+          <HotThree />
+        </section>
 
-      {/* PODIUM (ELITE CONFIRMATION LAYER) */}
-      <div className="mt-8 pb-20">
-        <Podium onVote={handleVote} />
+        {/* THRONE — AUTHORITY CENTER */}
+        <section className="relative">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-2/3 h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
+
+          <Throne
+            song="Bongo Anthem"
+            artist="Davieh G ft Matitu"
+            votes="12.4K"
+            weeksInChart={12}
+            weeksAtNo1={5}
+            ytRank="#01"
+            spRank="#02"
+            bpRank="#01"
+            onVote={handleVote}
+          />
+
+          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-2/3 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        </section>
+
+        {/* PODIUM — CONFIRMATION LAYER */}
+        <section className="mt-2">
+          <Podium onVote={handleVote} />
+        </section>
+
       </div>
 
     </main>
