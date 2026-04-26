@@ -6,11 +6,12 @@ import Chart from './components/Chart';
 import Throne from './components/Throne';
 import Ticker from './components/Ticker';
 import Fresh from './components/Fresh';
+import News from './components/News';
+import Footer from './components/Footer'; // 🆕 Import the Footer
 
 export default function Home() {
 
   const handleVote = (song: string, type: 'up' | 'down') => {
-    // This logs the vote action—ready to be connected to your DB
     console.log(`BORA PULSE ACTION: ${type.toUpperCase()} | TARGET: ${song}`);
   };
 
@@ -20,6 +21,7 @@ export default function Home() {
       {/* AMBIENT BACKGROUND GLOW */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[1000px] h-[700px] bg-[#D4AF37]/5 blur-[140px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[600px] h-[600px] bg-[#b91c1c]/5 blur-[120px] rounded-full" />
       </div>
 
       <Header />
@@ -34,8 +36,7 @@ export default function Home() {
         <Throne />
       </section>
 
-      {/* REMOVED BOTTOM GAPS AND FOOTER FOR A CLEAN INFINITE LOOK */}
-      <div className="relative z-10 flex flex-col gap-0 pb-10">
+      <div className="relative z-10 flex flex-col gap-0">
         
         {/* DISCOVERY LAYER */}
         <section className="pt-8 md:pt-12">
@@ -47,12 +48,20 @@ export default function Home() {
           <Chart onVote={handleVote} />
         </section>
 
-        {/* 💎 FRESH PRESS - FINAL SECTION BEFORE FADE OUT */}
+        {/* 💎 FRESH PRESS / NEW RELEASES */}
         <section className="w-full border-t border-white/5 mt-8 md:mt-12">
           <Fresh />
         </section>
 
+        {/* 📰 BORA INTELLIGENCE / NEWS DISPATCH */}
+        <section className="w-full bg-[#080000]/40 backdrop-blur-sm border-t border-white/5 mt-12 pt-4 pb-20">
+          <News />
+        </section>
+
       </div>
+
+      {/* 🛠 TERMINAL FOOTER */}
+      <Footer />
 
     </main>
   );
