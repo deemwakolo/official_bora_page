@@ -1,7 +1,8 @@
+// lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 
-// These variables pull from the .env.local file we just updated
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Hardwired keys (Replace the text in quotes with your actual Supabase keys)
+const supabaseUrl = "https://your-actual-project-url.supabase.co";
+const supabaseAnonKey = "your-actual-anon-key-string";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
