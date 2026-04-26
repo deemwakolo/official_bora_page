@@ -3,7 +3,9 @@
 import Header from './components/Header';
 import HotThree from './components/HotThree';
 import Chart from './components/Chart';
-import Throne from './components/Throne'; // Assuming you named the new component Throne
+import Throne from './components/Throne';
+import Ticker from './components/Ticker';
+import Fresh from './components/Fresh';
 
 export default function Home() {
 
@@ -22,21 +24,32 @@ export default function Home() {
 
       <Header />
 
+      {/* ⚡ SYSTEM TICKER */}
+      <div className="sticky top-[64px] md:top-[80px] z-40">
+        <Ticker />
+      </div>
+
       {/* 👑 THE KING OF THE CHART */}
-      <section className="relative z-10 pt-8">
+      <section className="relative z-10 pt-4">
         <Throne />
       </section>
 
-      <div className="relative z-10 flex flex-col gap-12 md:gap-20 pb-32">
+      {/* REMOVED BOTTOM GAPS AND FOOTER FOR A CLEAN INFINITE LOOK */}
+      <div className="relative z-10 flex flex-col gap-0 pb-10">
         
-        {/* DISCOVERY LAYER (SLIDER) */}
-        <section>
+        {/* DISCOVERY LAYER */}
+        <section className="pt-8 md:pt-12">
           <HotThree />
         </section>
 
-        {/* THE UNIFIED PULSE ENGINE (CHART ONLY) */}
-        <section className="w-full relative">
+        {/* THE UNIFIED PULSE ENGINE */}
+        <section className="w-full relative pt-8 md:pt-12">
           <Chart onVote={handleVote} />
+        </section>
+
+        {/* 💎 FRESH PRESS - FINAL SECTION BEFORE FADE OUT */}
+        <section className="w-full border-t border-white/5 mt-8 md:mt-12">
+          <Fresh />
         </section>
 
       </div>

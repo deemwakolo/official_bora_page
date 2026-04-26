@@ -13,8 +13,8 @@ interface ChartItem {
 
 /**
  * THE BORA CHART - COMPACT PRESTIGE EDITION
- * Streamlined box sizes for better vertical density while maintaining unique Top 3 styling.
- * Palette: Royal Red, Gold, Polished Silver, and Pure White.
+ * Bottom gap removed (pb-0) to sit flush with the Fresh.tsx section.
+ * Maintains unique Top 3 styling and high-density technical aesthetics.
  */
 export default function Chart({
   onVote
@@ -71,7 +71,7 @@ export default function Chart({
   if (!hasMounted) return null;
 
   return (
-    <section className="w-full max-w-5xl mx-auto px-4 md:px-6 pt-2 pb-12 bg-transparent text-[#f0f0f0] font-cinzel">
+    <section className="w-full max-w-5xl mx-auto px-4 md:px-6 pt-2 pb-0 bg-transparent text-[#f0f0f0] font-cinzel">
       
       <div className="flex flex-col gap-2 md:gap-px">
         {fullData.map((item) => {
@@ -88,7 +88,6 @@ export default function Chart({
             >
               
               <div className="flex items-center w-full md:w-auto mb-3 md:mb-0">
-                {/* COMPACT COVER ART */}
                 <div className="relative flex-shrink-0 mr-4 md:mr-8">
                   <div className={`relative overflow-hidden rounded-full border-2 transition-all duration-700 group-hover:rotate-[360deg]
                     ${isTop3 
@@ -106,7 +105,6 @@ export default function Chart({
                     </div>
                   </div>
 
-                  {/* RANKING TAG */}
                   <div className={`absolute -top-1 -left-1 font-black flex items-center justify-center rounded-sm transform -rotate-12 group-hover:rotate-0 transition-transform shadow-md border
                     ${isTop3 
                       ? 'w-8 h-8 md:w-10 md:h-10 bg-[#b91c1c] text-white border-[#D4AF37] text-sm md:text-lg' 
@@ -117,7 +115,6 @@ export default function Chart({
                   </div>
                 </div>
 
-                {/* TRACK INFO */}
                 <div className="flex-grow min-w-0">
                   <div className="flex items-center gap-2 mb-1 overflow-hidden">
                     <span className={`text-[7px] md:text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm flex-shrink-0 ${
@@ -141,7 +138,6 @@ export default function Chart({
                 </div>
               </div>
 
-              {/* STATS & VOTING */}
               <div className={`flex items-center justify-between w-full md:w-auto md:ml-auto gap-4 md:gap-10 pl-2 md:pl-0 pt-3 md:pt-0 
                 ${isTop3 ? 'md:border-none' : 'border-t border-white/5 md:border-none'}`}>
                 
@@ -155,7 +151,6 @@ export default function Chart({
                   </span>
                 </div>
 
-                {/* COMPACT VOTING ARROWS */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => onVote(item.song, 'up')}
@@ -186,7 +181,6 @@ export default function Chart({
                 </div>
               </div>
 
-              {/* SIDE ACCENT */}
               {!isTop3 && (
                 <div className="absolute right-0 top-1/4 bottom-1/4 w-[1px] bg-white/5 group-hover:bg-[#D4AF37]/40 transition-all" />
               )}
