@@ -14,7 +14,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#050505] text-white antialiased flex flex-col relative overflow-x-hidden selection:bg-[#D4AF37] selection:text-black">
       
-      {/* AMBIENT BACKGROUND GLOW - Optimized for performance */}
+      {/* AMBIENT BACKGROUND GLOW */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[1000px] h-[700px] bg-[#D4AF37]/5 blur-[140px] rounded-full" />
       </div>
@@ -23,30 +23,17 @@ export default function Home() {
 
       <div className="relative z-10 flex flex-col gap-12 md:gap-20 pb-32">
         
-        {/* DISCOVERY LAYER */}
+        {/* DISCOVERY LAYER (SLIDER) */}
         <section className="mt-8">
           <HotThree />
         </section>
 
-        {/* THE UNIFIED PULSE ENGINE */}
+        {/* THE UNIFIED PULSE ENGINE (CHART ONLY) */}
         <section className="w-full relative">
-          {/* Section Divider Architecture */}
-          <div className="flex items-center gap-6 px-6 max-w-6xl mx-auto mb-12">
-            <div className="h-[1px] flex-grow bg-gradient-to-r from-transparent via-white/10 to-white/10" />
-            <div className="flex flex-col items-center">
-              <span className="font-cinzel text-[10px] text-[#D4AF37] uppercase tracking-[0.5em] font-black">
-                The Throne
-              </span>
-              <span className="text-[7px] text-white/20 font-mono uppercase tracking-[0.3em] mt-1">
-                Live Pulse Monitoring
-              </span>
-            </div>
-            <div className="h-[1px] flex-grow bg-gradient-to-l from-transparent via-white/10 to-white/10" />
-          </div>
-
-          {/* Unified Chart Component */}
+          {/* The heading and divider architecture have been removed 
+              to allow the Chart to speak for itself.
+          */}
           <Chart onVote={handleVote} />
-          
         </section>
 
       </div>

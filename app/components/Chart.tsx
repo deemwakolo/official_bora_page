@@ -23,19 +23,16 @@ export default function Chart({
 }) {
   const [hasMounted, setHasMounted] = useState(false);
 
-  // Fixed core data to prevent hydration mismatch
   const baseData: ChartItem[] = [
     { rank: 1, song: "Sielewi", artist: "Dee", votes: "18.2K", weeks: 12, yt: "#01", sp: "#02", bp: "#01", medal: "🥇", accent: "#D4AF37", direction: "up" },
     { rank: 2, song: "The Rock", artist: "Rocky", votes: "12.9K", weeks: 9, yt: "#03", sp: "#05", bp: "#04", medal: "🥈", accent: "#C0C0C0", direction: "flat" },
     { rank: 3, song: "Spirit", artist: "Matitu", votes: "10.1K", weeks: 7, yt: "#06", sp: "#07", bp: "#08", medal: "🥉", accent: "#8a6d1a", direction: "down" },
   ];
 
-  // Effect to handle hydration
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
-  // Generate the rest of the chart only after mounting
   const fullData = hasMounted 
     ? [
         ...baseData,
@@ -50,96 +47,112 @@ export default function Chart({
           direction: ['up', 'down', 'flat'][Math.floor(Math.random() * 3)] as 'up' | 'down' | 'flat'
         }))
       ]
-    : baseData; // Initially only show the Top 3 to match server render
+    : baseData;
 
-  if (!hasMounted) {
-    return <div className="w-full max-w-6xl mx-auto px-4 py-12 opacity-0" />; // Prevent flicker
-  }
+  if (!hasMounted) return null;
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-12">
-      {/* BRAND HEADER */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 px-6 border-l-2 border-[#D4AF37] gap-4">
-        <div>
-          <h1 className="font-cinzel text-4xl font-black text-white tracking-[0.15em] uppercase leading-none">
-            Bora <span className="text-[#D4AF37]">Charts</span>
-          </h1>
-          <p className="text-[8px] font-mono text-white/20 uppercase tracking-[0.6em] mt-3">Matitu Nation Protocol // 2026</p>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-mono text-[#D4AF37] uppercase font-bold">Sunday Edit: 26.04.26</p>
-        </div>
+    <div className="w-full max-w-6xl mx-auto px-4 py-8 relative">
+      
+      {/* Dynamic Background Glow */}
+      <div className="fixed inset-0 pointer-events-none opacity-40">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(circle_at_center,_#D4AF37_0%,_transparent_70%)] blur-[120px]" />
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6 relative z-10">
         {fullData.map((item) => {
+          const isNo1 = item.rank === 1;
           const isElite = item.rank <= 3;
+          
           return (
             <div
               key={item.rank}
-              className={`group relative flex items-stretch bg-[#050505] border transition-all duration-500 overflow-hidden ${
-                isElite ? 'border-white/10 min-h-[140px]' : 'border-white/5 min-h-[85px]'
+              className={`group relative flex items-stretch bg-[#050505] border transition-all duration-700 ${
+                isNo1 
+                  ? 'border-[#D4AF37]/30 min-h-[160px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)]' 
+                  : isElite 
+                    ? 'border-white/10 min-h-[130px]' 
+                    : 'border-white/5 min-h-[85px]'
               }`}
             >
-              {/* ASCEND PILLAR */}
+              {/* THE CROWN WATERMARK (Upper Right Background) */}
+              {isElite && (
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] select-none pointer-events-none z-0 transition-transform duration-1000 group-hover:scale-110">
+                   <svg 
+                    width={isNo1 ? "180" : "120"} 
+                    height={isNo1 ? "180" : "120"} 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor" 
+                    className={`transform rotate-[25deg] ${isNo1 ? 'text-[#D4AF37]' : 'text-white'}`}
+                   >
+                    <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z" />
+                   </svg>
+                </div>
+              )}
+
+              {/* VOTE ASCEND */}
               <button
                 onClick={() => onVote(item.song, 'up')}
-                className={`relative w-16 md:w-24 flex items-center justify-center transition-all border-r border-white/5 group/up ${
-                  isElite ? 'bg-[#D4AF37]/5 hover:bg-[#D4AF37]/20' : 'bg-white/[0.01] hover:bg-white/5'
+                className={`relative w-16 md:w-24 flex items-center justify-center border-r border-white/5 transition-all group/up z-20 ${
+                  isElite ? 'bg-[#D4AF37]/5 hover:bg-[#D4AF37]/20' : 'bg-white/[0.01] hover:bg-white/10'
                 }`}
               >
-                <span className={`text-2xl transition-transform duration-300 group-hover/up:-translate-y-1 ${isElite ? 'text-[#D4AF37]' : 'text-white/20'}`}>
+                <span className={`text-2xl transition-transform group-hover/up:-translate-y-1 ${isElite ? 'text-[#D4AF37]' : 'text-white/10'}`}>
                   ▲
                 </span>
               </button>
 
               {/* IDENTITY SEAT */}
-              <div className="flex-grow flex items-center px-6 relative">
-                {item.medal && (
-                  <span className="absolute right-6 text-[120px] opacity-[0.03] rotate-12 pointer-events-none select-none">
-                    {item.medal}
+              <div className="flex-grow flex items-center px-8 relative z-10">
+                
+                <div className="relative mr-10">
+                  <span className={`font-cinzel font-black italic leading-none select-none ${
+                    isNo1 ? 'text-[90px] text-[#D4AF37]' : isElite ? 'text-[65px] text-white/40' : 'text-2xl text-white/10'
+                  }`}>
+                    {item.rank < 10 ? `0${item.rank}` : item.rank}
                   </span>
-                )}
-                <div className="relative z-10 flex flex-col">
-                  <div className="flex items-center gap-4">
-                    <span className={`font-cinzel text-2xl font-black italic ${isElite ? 'text-[#D4AF37]' : 'text-white/10'}`}>
-                      {item.rank < 10 ? `0${item.rank}` : item.rank}
-                    </span>
-                    <h3 className={`font-cinzel uppercase tracking-tighter ${isElite ? 'text-2xl font-black text-white' : 'text-lg font-bold text-white/70'}`}>
-                      {item.song}
-                    </h3>
-                  </div>
-                  <p className="text-[10px] text-white/30 font-mono tracking-[0.4em] uppercase mt-1">
+                </div>
+
+                <div className="flex flex-col">
+                  <h3 className={`font-cinzel uppercase tracking-tighter leading-tight ${
+                    isNo1 ? 'text-3xl font-black text-white' : isElite ? 'text-xl font-bold text-white/90' : 'text-base font-medium text-white/60'
+                  }`}>
+                    {item.song}
+                  </h3>
+                  <p className="text-[10px] text-[#D4AF37]/50 font-mono tracking-[0.5em] uppercase mt-2">
                     {item.artist}
                   </p>
                 </div>
               </div>
 
-              {/* STATS COLUMN */}
-              <div className="flex flex-col items-center justify-center px-6 border-x border-white/5 bg-black/40 min-w-[100px]">
-                <span className={`text-xl font-mono font-black ${isElite ? 'text-[#D4AF37]' : 'text-white/80'}`}>
+              {/* PULSE STATS */}
+              <div className={`flex flex-col items-center justify-center px-6 border-x border-white/5 min-w-[110px] z-10 ${isNo1 ? 'bg-[#D4AF37]/5' : 'bg-black/40'}`}>
+                <span className={`text-xl font-mono font-black ${isElite ? 'text-[#D4AF37]' : 'text-white/60'}`}>
                   {item.votes}
                 </span>
-                <span className={`text-sm ${item.direction === 'up' ? 'text-[#D4AF37]' : item.direction === 'down' ? 'text-red-600' : 'text-white/10'}`}>
+                <div className={`text-xs mt-1 font-bold ${
+                  item.direction === 'up' ? 'text-[#D4AF37]' : item.direction === 'down' ? 'text-red-600' : 'text-white/10'
+                }`}>
                   {item.direction === 'up' && '▲'}
                   {item.direction === 'down' && '▼'}
                   {item.direction === 'flat' && '—'}
-                </span>
+                </div>
               </div>
 
-              {/* DESCEND PILLAR */}
+              {/* VOTE DESCEND */}
               <button
                 onClick={() => onVote(item.song, 'down')}
-                className="relative w-16 md:w-24 flex items-center justify-center transition-all bg-white/[0.01] hover:bg-red-950/20 group/down"
+                className="relative w-16 md:w-24 flex items-center justify-center transition-all bg-white/[0.01] hover:bg-red-950/20 z-20"
               >
-                <span className="text-2xl text-white/10 group-hover/down:text-red-600 group-hover/down:translate-y-1 transition-all duration-300">
+                <span className="text-2xl text-white/10 group-hover:text-red-600 transition-colors">
                   ▼
                 </span>
               </button>
 
-              <div 
-                className={`absolute left-0 top-0 h-full w-[3px] transition-all duration-500 ${isElite ? 'bg-[#D4AF37] shadow-[2px_0_15px_#D4AF37]' : 'bg-white/10'}`} 
-              />
+              {/* DYNAMIC THRONE ACCENT */}
+              <div className={`absolute left-0 top-0 h-full transition-all duration-700 z-10 ${
+                isNo1 ? 'w-[4px] bg-[#D4AF37] shadow-[4px_0_20px_#D4AF37]' : isElite ? 'w-[2px] bg-white/20' : 'w-[1px] bg-white/5'
+              }`} />
             </div>
           );
         })}
