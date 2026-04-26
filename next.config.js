@@ -1,13 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // ⚠ allows build even with TS errors (temporary only)
+    // !! WARN !!
+    // This allows production builds to successfully complete even if
+    // your project has type errors.
     ignoreBuildErrors: true,
   },
   eslint: {
-    // ⚠ allows build even with lint errors
+    // This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreSuccessiveBuilds: true,
     ignoreDuringBuilds: true,
   },
-};
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig
