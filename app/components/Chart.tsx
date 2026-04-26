@@ -6,14 +6,9 @@ interface ChartItem {
   song: string;
   artist: string;
   votes: string;
-  weeks: number;
-  yt: string;
-  sp: string;
-  bp: string;
-  medal?: string;
-  accent: string;
   rank: number;
   direction?: 'up' | 'down' | 'flat';
+  cover?: string;
 }
 
 export default function Chart({
@@ -24,9 +19,22 @@ export default function Chart({
   const [hasMounted, setHasMounted] = useState(false);
 
   const baseData: ChartItem[] = [
-    { rank: 1, song: "Sielewi", artist: "Dee", votes: "18.2K", weeks: 12, yt: "#01", sp: "#02", bp: "#01", medal: "🥇", accent: "#D4AF37", direction: "up" },
-    { rank: 2, song: "The Rock", artist: "Rocky", votes: "12.9K", weeks: 9, yt: "#03", sp: "#05", bp: "#04", medal: "🥈", accent: "#C0C0C0", direction: "flat" },
-    { rank: 3, song: "Spirit", artist: "Matitu", votes: "10.1K", weeks: 7, yt: "#06", sp: "#07", bp: "#08", medal: "🥉", accent: "#8a6d1a", direction: "down" },
+    { 
+      rank: 2, 
+      song: "The Rock", 
+      artist: "Rocky", 
+      votes: "12.9K", 
+      direction: "flat",
+      cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80" 
+    },
+    { 
+      rank: 3, 
+      song: "Spirit", 
+      artist: "Matitu", 
+      votes: "10.1K", 
+      direction: "down",
+      cover: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800&q=80"
+    },
   ];
 
   useEffect(() => {
@@ -36,17 +44,15 @@ export default function Chart({
   const fullData = hasMounted 
     ? [
         ...baseData,
-        ...Array.from({ length: 7 }, (_, i) => ({
+        ...Array.from({ length: 17 }, (_, i) => ({
           rank: i + 4,
           song: `Pulse Track ${i + 4}`,
           artist: "Matitu Nation",
           votes: `${(Math.random() * 5 + 0.5).toFixed(1)}K`,
-          weeks: Math.floor(Math.random() * 15),
-          yt: `#${i + 10}`, sp: `#${i + 12}`, bp: `#${i + 8}`,
-          accent: "#1a1a1a",
-          direction: ['up', 'down', 'flat'][Math.floor(Math.random() * 3)] as 'up' | 'down' | 'flat'
+          direction: ['up', 'down', 'flat'][Math.floor(Math.random() * 3)] as 'up' | 'down' | 'flat',
+          cover: "" 
         }))
-      ]
+      ].filter(item => item.rank <= 20)
     : baseData;
 
   if (!hasMounted) return null;
@@ -54,105 +60,103 @@ export default function Chart({
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-8 relative">
       
-      {/* Dynamic Background Glow */}
-      <div className="fixed inset-0 pointer-events-none opacity-40">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(circle_at_center,_#D4AF37_0%,_transparent_70%)] blur-[120px]" />
-      </div>
+      {/* Background Technical Grid */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.05] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:32px_32px]" />
 
-      <div className="flex flex-col gap-6 relative z-10">
+      <div className="flex flex-col gap-4 relative z-10">
         {fullData.map((item) => {
-          const isNo1 = item.rank === 1;
-          const isElite = item.rank <= 3;
+          const isTopTier = item.rank <= 3;
           
           return (
             <div
               key={item.rank}
-              className={`group relative flex items-stretch bg-[#050505] border transition-all duration-700 ${
-                isNo1 
-                  ? 'border-[#D4AF37]/30 min-h-[160px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)]' 
-                  : isElite 
-                    ? 'border-white/10 min-h-[130px]' 
-                    : 'border-white/5 min-h-[85px]'
-              }`}
+              className="group relative flex items-stretch bg-[#050505] border border-white/5 hover:border-[#D4AF37]/40 transition-all duration-700 overflow-hidden min-h-[100px]"
             >
-              {/* THE CROWN WATERMARK (Upper Right Background) */}
-              {isElite && (
-                <div className="absolute top-0 right-0 p-4 opacity-[0.03] select-none pointer-events-none z-0 transition-transform duration-1000 group-hover:scale-110">
-                   <svg 
-                    width={isNo1 ? "180" : "120"} 
-                    height={isNo1 ? "180" : "120"} 
-                    viewBox="0 0 24 24" 
-                    fill="currentColor" 
-                    className={`transform rotate-[25deg] ${isNo1 ? 'text-[#D4AF37]' : 'text-white'}`}
-                   >
-                    <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z" />
-                   </svg>
-                </div>
-              )}
+              
+              {/* THE FUSED ART ENGINE - HIGH OPACITY VERSION */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {item.cover ? (
+                  <div className="relative w-full h-full">
+                    <img 
+                      src={item.cover} 
+                      alt="" 
+                      className="absolute left-0 top-0 w-full md:w-3/4 h-full object-cover transition-all duration-1000 ease-in-out
+                        grayscale-[50%] opacity-60 group-hover:grayscale-0 group-hover:opacity-90 group-hover:scale-105"
+                    />
+                    {/* Refined Fusion Mask - Pushed further right for more image visibility */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-[#050505]/40 to-[#050505]" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/20" />
+                  </div>
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-30" />
+                )}
+              </div>
 
-              {/* VOTE ASCEND */}
-              <button
-                onClick={() => onVote(item.song, 'up')}
-                className={`relative w-16 md:w-24 flex items-center justify-center border-r border-white/5 transition-all group/up z-20 ${
-                  isElite ? 'bg-[#D4AF37]/5 hover:bg-[#D4AF37]/20' : 'bg-white/[0.01] hover:bg-white/10'
-                }`}
-              >
-                <span className={`text-2xl transition-transform group-hover/up:-translate-y-1 ${isElite ? 'text-[#D4AF37]' : 'text-white/10'}`}>
-                  ▲
+              {/* RANK PLATE */}
+              <div className="relative w-20 md:w-24 flex flex-col items-center justify-center border-r border-white/10 z-10 backdrop-blur-md bg-black/40">
+                <span className="font-mono text-[8px] text-white/40 tracking-[0.3em] uppercase mb-1">Rank</span>
+                <span className={`font-cinzel font-black italic text-2xl md:text-3xl transition-all duration-500 ${isTopTier ? 'text-[#D4AF37] scale-110 drop-shadow-[0_0_10px_rgba(212,175,55,0.5)]' : 'text-white/60 group-hover:text-white'}`}>
+                  {item.rank < 10 ? `0${item.rank}` : item.rank}
                 </span>
-              </button>
+              </div>
 
-              {/* IDENTITY SEAT */}
-              <div className="flex-grow flex items-center px-8 relative z-10">
-                
-                <div className="relative mr-10">
-                  <span className={`font-cinzel font-black italic leading-none select-none ${
-                    isNo1 ? 'text-[90px] text-[#D4AF37]' : isElite ? 'text-[65px] text-white/40' : 'text-2xl text-white/10'
-                  }`}>
-                    {item.rank < 10 ? `0${item.rank}` : item.rank}
-                  </span>
-                </div>
+              {/* INTERACTION ZONE (VOTING) */}
+              <div className="relative flex flex-col border-r border-white/10 z-10 bg-black/20 backdrop-blur-sm">
+                <button
+                  onClick={() => onVote(item.song, 'up')}
+                  className="flex-1 w-12 md:w-16 flex items-center justify-center hover:bg-[#D4AF37]/30 transition-all group/btn"
+                >
+                  <span className="text-white/30 group-hover/btn:text-[#D4AF37] text-lg transition-transform group-hover/btn:-translate-y-1">▲</span>
+                </button>
+                <button
+                  onClick={() => onVote(item.song, 'down')}
+                  className="flex-1 w-12 md:w-16 flex items-center justify-center border-t border-white/10 hover:bg-red-950/40 transition-all group/btn"
+                >
+                  <span className="text-white/30 group-hover/btn:text-red-600 text-lg transition-transform group-hover/btn:translate-y-1">▼</span>
+                </button>
+              </div>
 
-                <div className="flex flex-col">
-                  <h3 className={`font-cinzel uppercase tracking-tighter leading-tight ${
-                    isNo1 ? 'text-3xl font-black text-white' : isElite ? 'text-xl font-bold text-white/90' : 'text-base font-medium text-white/60'
-                  }`}>
-                    {item.song}
-                  </h3>
-                  <p className="text-[10px] text-[#D4AF37]/50 font-mono tracking-[0.5em] uppercase mt-2">
+              {/* TRACK IDENTITY (FUSED OVER ART) */}
+              <div className="relative flex-grow flex flex-col justify-center px-8 z-10">
+                <h3 className="font-cinzel uppercase tracking-[0.25em] text-sm md:text-xl font-black text-white drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
+                  {item.song}
+                </h3>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="h-[1px] w-4 bg-[#D4AF37]" />
+                  <p className="text-[10px] text-white font-mono tracking-[0.5em] uppercase drop-shadow-md">
                     {item.artist}
                   </p>
                 </div>
               </div>
 
-              {/* PULSE STATS */}
-              <div className={`flex flex-col items-center justify-center px-6 border-x border-white/5 min-w-[110px] z-10 ${isNo1 ? 'bg-[#D4AF37]/5' : 'bg-black/40'}`}>
-                <span className={`text-xl font-mono font-black ${isElite ? 'text-[#D4AF37]' : 'text-white/60'}`}>
-                  {item.votes}
-                </span>
-                <div className={`text-xs mt-1 font-bold ${
-                  item.direction === 'up' ? 'text-[#D4AF37]' : item.direction === 'down' ? 'text-red-600' : 'text-white/10'
+              {/* STATUS ANALYTICS */}
+              <div className="relative flex items-center gap-6 px-8 z-10 bg-[#050505]/80 backdrop-blur-2xl border-l border-white/10 group-hover:border-[#D4AF37]/40">
+                <div className="flex flex-col items-end">
+                  <span className="font-mono text-[9px] text-[#D4AF37] tracking-[0.2em] mb-1 uppercase font-bold">Pulse Engine</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-mono font-black text-lg text-white">
+                      {item.votes}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className={`flex items-center justify-center w-10 h-10 border-2 transition-all duration-500 shadow-lg ${
+                  item.direction === 'up' ? 'border-[#D4AF37] text-[#D4AF37] bg-[#D4AF37]/10' : 
+                  item.direction === 'down' ? 'border-red-600 text-red-600 bg-red-600/10' : 'border-white/20 text-white/20'
                 }`}>
-                  {item.direction === 'up' && '▲'}
-                  {item.direction === 'down' && '▼'}
-                  {item.direction === 'flat' && '—'}
+                  <span className="text-xs font-bold">
+                    {item.direction === 'up' && '▲'}
+                    {item.direction === 'down' && '▼'}
+                    {item.direction === 'flat' && '—'}
+                  </span>
                 </div>
               </div>
 
-              {/* VOTE DESCEND */}
-              <button
-                onClick={() => onVote(item.song, 'down')}
-                className="relative w-16 md:w-24 flex items-center justify-center transition-all bg-white/[0.01] hover:bg-red-950/20 z-20"
-              >
-                <span className="text-2xl text-white/10 group-hover:text-red-600 transition-colors">
-                  ▼
-                </span>
-              </button>
-
-              {/* DYNAMIC THRONE ACCENT */}
-              <div className={`absolute left-0 top-0 h-full transition-all duration-700 z-10 ${
-                isNo1 ? 'w-[4px] bg-[#D4AF37] shadow-[4px_0_20px_#D4AF37]' : isElite ? 'w-[2px] bg-white/20' : 'w-[1px] bg-white/5'
-              }`} />
+              {/* THE THRONE ACCENT */}
+              <div className={`absolute right-0 top-0 bottom-0 w-[1px] transition-all duration-700 ${isTopTier ? 'bg-[#D4AF37]' : 'bg-transparent'}`} />
+              {isTopTier && (
+                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#D4AF37] z-20 shadow-[6px_0_25px_rgba(212,175,55,0.6)]" />
+              )}
             </div>
           );
         })}

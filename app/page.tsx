@@ -30,29 +30,10 @@ export default function Home() {
 
         {/* THE UNIFIED PULSE ENGINE (CHART ONLY) */}
         <section className="w-full relative">
-          {/* The heading and divider architecture have been removed 
-              to allow the Chart to speak for itself.
-          */}
           <Chart onVote={handleVote} />
         </section>
 
       </div>
-
-      {/* FOOTER STRIP */}
-      <footer className="mt-auto py-10 border-t border-white/5 bg-black/80 backdrop-blur-xl relative z-20">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col items-center md:items-start opacity-30">
-             <p className="font-mono text-[8px] uppercase tracking-[0.4em]">© 2026 MATITU NATION ARCHITECTURE</p>
-             <p className="font-mono text-[7px] uppercase tracking-[0.2em] mt-1">Designed in Dar Es Salaam // Iringa</p>
-          </div>
-          
-          <div className="flex gap-6 opacity-20 hover:opacity-50 transition-opacity">
-             <div className="h-4 w-[1px] bg-white" />
-             <div className="h-4 w-[1px] bg-white" />
-             <div className="h-4 w-[1px] bg-white" />
-          </div>
-        </div>
-      </footer>
 
     </main>
   );
