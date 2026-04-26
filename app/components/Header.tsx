@@ -5,12 +5,28 @@ import Link from 'next/link';
 
 /**
  * BORA CHARTS HEADER - "THE ARCHIVE" EDITION
- * Updated to integrate the Faq/Intel routing and mobile responsiveness.
+ * Full-bleed Tinga asset injection with negative vertical flow.
  */
 export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full bg-[#050505] border-b border-[#b91c1c]/30 overflow-hidden">
       
+      {/* TACTICAL ASSET INJECTION: Tinga.png (Full Width / Top-Down) */}
+      <div 
+        className="absolute top-0 left-0 right-0 w-full h-full pointer-events-none z-0"
+        style={{ 
+          backgroundImage: "url('/assets/Tinga.png')",
+          // 'cover' ensures the image occupies the full width from left to right
+          backgroundSize: 'cover', 
+          backgroundPosition: 'top center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.5,
+          // MAINTAINED: Solid at top (0%), fading out toward the bottom (100%)
+          WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%)',
+          maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%)'
+        }}
+      />
+
       {/* GLITCH OVERLAY EFFECT */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-10 bg-[url('https://www.transparenttextures.com/patterns/60-lines.png')]" />
 
@@ -30,7 +46,7 @@ export default function Header() {
         </Link>
 
         {/* CENTER: NAV (TACTICAL STYLE) */}
-        <nav className="hidden lg:flex items-center bg-white/[0.03] border border-white/5 rounded-sm px-2">
+        <nav className="hidden lg:flex items-center bg-white/[0.03] border border-white/5 rounded-sm px-2 backdrop-blur-sm">
           {['Top 20', 'Drops', 'News'].map((item) => (
             <a
               key={item}
@@ -40,7 +56,6 @@ export default function Header() {
               {item}
             </a>
           ))}
-          {/* INTEL LINK - Points to your new page */}
           <Link
             href="/Faq"
             className="px-6 py-2 text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] text-[#D4AF37] hover:bg-[#b91c1c]/10 transition-all border-l border-white/5"
@@ -61,13 +76,12 @@ export default function Header() {
             </span>
           </div>
           
-          {/* Date/Time Hidden on very small screens to prevent overlap */}
           <div className="hidden sm:flex gap-3 mt-1">
             <span className="text-[8px] md:text-[9px] text-[#D4AF37] border-r border-white/10 pr-3">
               APR 26. 2026
             </span>
-            <span className="text-[8px] md:text-[9px] text-white/30 tracking-tighter">
-              20:08:26 EAT
+            <span className="text-[8px] md:text-[9px] text-white/30 tracking-tighter uppercase">
+              20:46:26 EAT
             </span>
           </div>
         </div>
