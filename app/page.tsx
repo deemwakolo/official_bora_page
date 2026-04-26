@@ -3,6 +3,7 @@
 import Header from './components/Header';
 import HotThree from './components/HotThree';
 import Chart from './components/Chart';
+import Throne from './components/Throne'; // Assuming you named the new component Throne
 
 export default function Home() {
 
@@ -21,10 +22,15 @@ export default function Home() {
 
       <Header />
 
+      {/* 👑 THE KING OF THE CHART */}
+      <section className="relative z-10 pt-8">
+        <Throne />
+      </section>
+
       <div className="relative z-10 flex flex-col gap-12 md:gap-20 pb-32">
         
         {/* DISCOVERY LAYER (SLIDER) */}
-        <section className="mt-8">
+        <section>
           <HotThree />
         </section>
 
