@@ -2,160 +2,171 @@
 
 import React, { useState } from 'react';
 
-interface ChartItem {
-  slot_number: number;
-  title: string;
-  artist: string;
-  yt_views: number;
-  sp_plays: number;
-  momentum_score: number;
-  cover_url: string;
-  rank: number;
-}
+export default function Chart({ songs = [], onVote }) {
+  const [alert, setAlert] = useState(null);
 
-export default function Chart({
-  songs = [], 
-  onVote
-}: {
-  songs: ChartItem[];
-  onVote: (songId: string, type: 'up' | 'down') => void;
-}) {
-  const [alert, setAlert] = useState<{ id: string; msg: string; type: 'up' | 'down' } | null>(null);
-
-  const handleInternalVote = (slot: number, title: string, type: 'up' | 'down') => {
-    onVote(slot.toString(), type);
-    setAlert(null);
-    setTimeout(() => {
-      setAlert({ 
-        id: title === 'Empty Slot' ? `ID_${slot}` : title, 
-        msg: type === 'up' ? 'SIGNAL_BOOST' : 'SIGNAL_DAMP', 
-        type 
-      });
-    }, 10);
-    setTimeout(() => setAlert(null), 1200);
+  const handleVote = (id, title, type) => {
+    onVote(id.toString(), type);
+    setAlert({
+      id: title,
+      type,
+      msg: type === 'up' ? 'SIGNAL_BOOSTED' : 'SIGNAL_DROPPED'
+    });
+    setTimeout(() => setAlert(null), 1500);
   };
 
-  if (!songs || songs.length === 0) return null;
-
   return (
-    <section className="w-full min-h-screen bg-[#050505] text-white p-4 md:p-12 font-cinzel selection:bg-[#b91c1c]">
-      
-      {/* 📡 SYSTEM HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-end mb-16 border-b border-white/10 pb-8">
-        <div>
-          <h1 className="text-6xl md:text-8xl font-black tracking-tighter italic leading-none">THE_REGISTRY</h1>
-          <p className="font-mono text-[10px] tracking-[0.6em] text-[#b91c1c] mt-4 uppercase">Matitu Nation // Tanzanian Sound Authority</p>
-        </div>
-        <div className="hidden md:block font-mono text-[10px] text-white/20 text-right uppercase">
-          <p>Status: Active_Stream</p>
-          <p>Engine: Bora_V4.0</p>
-        </div>
-      </div>
+    <section className="min-h-screen bg-[#0A0A0A] text-white p-6 md:p-20">
 
-      {/* ⚠️ HUD ALERT */}
-      <div className="fixed top-10 right-10 z-[500] pointer-events-none">
-        {alert && (
-          <div className="bg-white text-black p-4 skew-x-[-12deg] shadow-[8px_8px_0px_#b91c1c] border-l-8 border-black">
-            <p className="font-mono font-black text-[10px] tracking-tighter italic">UPDATE_LOG //</p>
-            <p className="font-bold uppercase text-xs italic">{alert.id}: {alert.msg}</p>
+      {/* ALERT */}
+      {alert && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none p-6">
+          <div className={`w-full max-w-lg backdrop-blur-xl border p-8 shadow-2xl
+            ${alert.type === 'up'
+              ? 'border-[#D4AF37] bg-[#D4AF37]/10'
+              : 'border-red-600 bg-red-600/10'}
+          `}>
+            <h2 className="text-3xl font-black italic uppercase">
+              {alert.msg}
+            </h2>
+            <p className="text-xs opacity-60 mt-2">{alert.id}</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* 🛠️ LIST SYSTEM */}
-      <div className="space-y-1">
-        {songs.map((item, index) => {
-          const isTopTier = index < 3;
-          
+      <div className="max-w-6xl mx-auto flex flex-col gap-24">
+
+        {songs.map((item, i) => {
+          const isTop = i === 0;
+
           return (
-            <div 
+            <div
               key={item.slot_number}
-              className="group relative flex items-center gap-6 p-4 md:p-8 bg-zinc-950/40 border border-white/5 hover:bg-zinc-900/80 hover:border-[#b91c1c]/50 transition-all duration-300"
+              className="relative flex flex-col items-center 
+              bg-[#111] border border-white/10 
+              hover:border-[#D4AF37]/40 
+              transition-all duration-500 
+              p-10 md:p-16 group rounded-sm"
             >
-              {/* RANK */}
-              <div className="flex-shrink-0 w-12 md:w-20">
-                <span className={`text-2xl md:text-5xl font-black italic transition-colors ${isTopTier ? 'text-[#D4AF37]' : 'text-white/10 group-hover:text-white'}`}>
-                  {(index + 1).toString().padStart(2, '0')}
-                </span>
-              </div>
 
-              {/* COVER ART (COMPACT) */}
-              <div className="hidden md:block w-20 h-20 overflow-hidden border border-white/10 grayscale group-hover:grayscale-0 transition-all">
-                {item.cover_url ? (
-                  <img src={item.cover_url} className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-700" />
-                ) : (
-                  <div className="w-full h-full bg-black flex items-center justify-center text-[8px] font-mono opacity-20">NO_IMG</div>
-                )}
-              </div>
+              {/* RANK BACKDROP */}
+              <span className="absolute text-[8rem] md:text-[12rem] font-black italic opacity-[0.05] -top-6 left-4">
+                {(i + 1).toString().padStart(2, '0')}
+              </span>
 
-              {/* IDENTITY */}
-              <div className="flex-grow min-w-0">
-                <p className="font-mono text-[8px] md:text-[10px] tracking-[0.4em] text-white/30 uppercase mb-1">
-                  {item.artist === 'Empty Slot' ? 'DEE_DAVIEH' : item.artist}
-                </p>
-                <h2 className={`font-black uppercase tracking-tight truncate leading-none transition-all
-                  ${isTopTier ? 'text-2xl md:text-5xl' : 'text-xl md:text-3xl'}
+              {/* VINYL + COVER */}
+              <div className="relative flex items-center justify-center mb-14">
+
+                {/* 💿 VINYL (VISIBLE NOW) */}
+                <div className={`
+                  absolute transition-all duration-700
+                  ${isTop ? 'w-72 h-72 md:w-[420px] md:h-[420px]' : 'w-52 h-52 md:w-72 md:h-72'}
+                  group-hover:translate-x-16 md:group-hover:translate-x-24
                 `}>
-                  {item.title === 'Empty Slot' ? 'RESERVED_SLOT' : item.title}
-                </h2>
-              </div>
 
-              {/* STATS AREA */}
-              <div className="hidden lg:flex items-center gap-12 px-8 border-x border-white/5">
-                <div className="text-right">
-                  <span className="block font-mono text-[7px] text-white/20 uppercase tracking-widest">Impact</span>
-                  <span className="text-lg font-black italic tracking-tighter leading-none">
-                    {(item.yt_views + item.sp_plays).toLocaleString()}
-                  </span>
-                </div>
-                <div className="text-right w-24">
-                  <span className="block font-mono text-[7px] text-white/20 uppercase tracking-widest">Momentum</span>
-                  <div className="h-1 bg-white/5 mt-2 overflow-hidden">
-                    <div 
-                      className="h-full bg-[#b91c1c] transition-all duration-1000" 
-                      style={{ width: `${item.momentum_score}%` }} 
+                  <div className="relative w-full h-full rounded-full bg-black border border-white/20 shadow-[0_30px_80px_rgba(0,0,0,0.9)] overflow-hidden">
+
+                    {/* grooves */}
+                    <div className="absolute inset-0 opacity-40"
+                      style={{
+                        background: `
+                          repeating-radial-gradient(
+                            circle,
+                            rgba(255,255,255,0.06) 0px,
+                            rgba(255,255,255,0.06) 1px,
+                            transparent 2px,
+                            transparent 4px
+                          )
+                        `
+                      }}
                     />
+
+                    {/* highlight */}
+                    <div className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.12),transparent)]" />
+
+                    {/* center label */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className={`
+                        rounded-full overflow-hidden border border-white/20
+                        ${isTop ? 'w-28 h-28 md:w-40 md:h-40' : 'w-20 h-20 md:w-28 md:h-28'}
+                      `}>
+                        <img
+                          src={item.cover_url || '/placeholder.jpg'}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+
+                    {/* hole */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-black rounded-full" />
+                    </div>
+
                   </div>
                 </div>
+
+                {/* COVER */}
+                <div className={`
+                  relative z-10 overflow-hidden bg-black
+                  shadow-[0_20px_60px_rgba(0,0,0,0.8)]
+                  ${isTop
+                    ? 'w-72 h-72 md:w-[440px] md:h-[440px] border border-[#D4AF37]'
+                    : 'w-60 h-60 md:w-[320px] md:h-[320px] border border-white/10'}
+                `}>
+                  <img
+                    src={item.cover_url || '/placeholder.jpg'}
+                    className="w-full h-full object-cover brightness-75 group-hover:brightness-100 transition"
+                  />
+                </div>
+
               </div>
 
-              {/* VOTE TRIGGER */}
-              <div className="flex-shrink-0">
-                <button 
-                  onClick={() => handleInternalVote(item.slot_number, item.title, 'up')}
-                  className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center border border-white/10 group/btn hover:bg-white transition-all"
+              {/* TEXT */}
+              <div className="text-center max-w-2xl">
+
+                <p className="text-xs tracking-[0.4em] text-gray-400 uppercase mb-2">
+                  {item.artist}
+                </p>
+
+                <h3 className={`
+                  font-black uppercase leading-tight
+                  ${isTop ? 'text-5xl md:text-7xl italic text-white' : 'text-3xl md:text-5xl'}
+                `}>
+                  {item.title}
+                </h3>
+
+                <div className="mt-6 flex justify-center gap-6 text-xs text-gray-400 font-mono">
+                  <span>YT {item.yt_views}</span>
+                  <span>SP {item.sp_plays}</span>
+                  <span className="text-[#D4AF37]">MS {item.momentum_score}</span>
+                </div>
+
+              </div>
+
+              {/* ACTIONS */}
+              <div className="mt-12 flex gap-6">
+
+                <button
+                  onClick={() => handleVote(item.slot_number, item.title, 'up')}
+                  className="px-5 py-2 border border-white/20 hover:border-[#D4AF37] hover:text-[#D4AF37] transition"
                 >
-                  <svg 
-                    width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" 
-                    className="group-hover/btn:text-black group-hover/btn:-translate-y-1 transition-all"
-                  >
-                    <path d="M12 19V5M5 12l7-7 7 7"/>
-                  </svg>
+                  ▲
                 </button>
+
+                <button
+                  onClick={() => handleVote(item.slot_number, item.title, 'down')}
+                  className="px-5 py-2 border border-white/20 hover:border-red-500 hover:text-red-400 transition"
+                >
+                  ▼
+                </button>
+
               </div>
 
-              {/* GHOST DETAIL */}
-              <div className="absolute right-0 top-0 h-full w-24 overflow-hidden opacity-0 group-hover:opacity-10 pointer-events-none">
-                <span className="text-8xl font-black italic rotate-90 inline-block translate-y-10 uppercase tracking-tighter">
-                  MATITU
-                </span>
-              </div>
             </div>
           );
         })}
-      </div>
 
-      {/* FOOTER METADATA */}
-      <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex gap-8 font-mono text-[8px] tracking-[0.5em] text-white/20 uppercase">
-          <span>Tanzania_District_Audio</span>
-          <span>// Local_Time: {new Date().toLocaleTimeString()}</span>
-        </div>
-        <div className="px-4 py-1 border border-white/10">
-          <span className="font-mono text-[8px] tracking-[0.2em] text-[#D4AF37] uppercase animate-pulse">Recording_Signal_Stable</span>
-        </div>
       </div>
-
     </section>
   );
 }
