@@ -2,11 +2,6 @@
 
 import React from 'react';
 
-/**
- * FRESH.TSX - "PRESTIGE GALLERY" COMPACT EDITION
- * Reduced card sizing and speed for a smoother, more refined discovery experience.
- * Tightened the vertical gap between heading and the gallery stream.
- */
 export default function Fresh() {
   const newSongs = [
     { artist: "Zuchu", title: "Naringa", status: "NEW ENTRY", cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400&q=80" },
@@ -22,77 +17,110 @@ export default function Fresh() {
   ];
 
   return (
-    <section className="w-full py-10 bg-[#050505] overflow-hidden border-t border-white/5">
-      
-      {/* SECTION HEADER - Tightened MB from 12 to 6 */}
-      <div className="max-w-7xl mx-auto px-6 mb-6 flex items-end justify-between">
-        <div className="flex flex-col">
+    <section className="w-full py-12 bg-[#050505] overflow-hidden border-t border-white/5 relative">
+
+      {/* 🌌 SOFT SYSTEM BACKGROUND */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-[#050505] to-black" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[200px] bg-[#D4AF37]/10 blur-[120px]" />
+      </div>
+
+      {/* HEADER */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 mb-6 flex items-end justify-between">
+
+        <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-1.5 h-1.5 bg-[#b91c1c] animate-pulse" />
+            <span className="w-1.5 h-1.5 bg-[#b91c1c] animate-pulse" />
             <span className="text-[9px] font-mono tracking-[0.4em] text-[#D4AF37] uppercase">
               Global Discovery
             </span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-white font-cinzel tracking-tighter uppercase leading-none">
+
+          <h2 className="text-3xl md:text-5xl font-black text-white font-cinzel uppercase leading-none">
             FRESH<span className="text-white/20">PRESS</span>
           </h2>
         </div>
-        <div className="text-right hidden md:block">
-           <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em]">
-             Authorized Feed // 2026
-           </p>
+
+        <div className="hidden md:block text-right">
+          <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.3em]">
+            Authorized Feed // 2026
+          </p>
         </div>
+
       </div>
 
-      {/* CARD GALLERY MARQUEE */}
-      <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-[#050505] to-transparent" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-[#050505] to-transparent" />
+      {/* MARQUEE */}
+      <div className="relative z-10">
+        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#050505] to-transparent z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#050505] to-transparent z-10" />
 
-        {/* Speed reduced: animation duration increased from 80s to 120s */}
-        <div className="flex whitespace-nowrap animate-gallery-roll-slow hover:[animation-play-state:paused] py-2">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-2">
-              {newSongs.map((song, index) => (
-                <div 
-                  key={index} 
-                  className="relative flex-shrink-0 w-48 md:w-56 group cursor-pointer"
-                >
-                  {/* COVER ART CONTAINER - Reduced size */}
-                  <div className="relative aspect-square overflow-hidden border border-white/10 shadow-xl transition-all duration-500 group-hover:border-[#D4AF37]/40 group-hover:scale-[1.01]">
-                    <img 
-                      src={song.cover} 
-                      alt={song.title}
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <span className="bg-[#b91c1c] text-white text-[7px] font-black tracking-widest px-1.5 py-0.5 uppercase">
-                        {song.status}
-                      </span>
-                    </div>
-                  </div>
+        <div className="flex whitespace-nowrap animate-gallery-roll-slow hover:[animation-play-state:paused]">
 
-                  {/* TRACK METADATA - Tightened spacing */}
-                  <div className="mt-3 px-1">
-                    <h3 className="text-sm md:text-base font-bold text-white uppercase font-cinzel tracking-tight group-hover:text-[#D4AF37] transition-colors truncate">
-                      {song.title}
-                    </h3>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <p className="text-[9px] text-white/40 font-bold uppercase tracking-[0.15em] truncate">
-                        {song.artist}
-                      </p>
-                      <span className="text-[8px] font-mono text-white/10">
-                        {index + 1 < 10 ? `0${index + 1}` : index + 1}
-                      </span>
+          {[...Array(2)].map((_, setIndex) => (
+            <div key={setIndex} className="flex gap-5 px-3">
+
+              {newSongs.map((song, index) => {
+                const globalIndex = setIndex * newSongs.length + index + 1;
+
+                return (
+                  <div
+                    key={globalIndex}
+                    className="relative w-48 md:w-56 flex-shrink-0 group"
+                  >
+
+                    {/* CARD */}
+                    <div className="relative aspect-square overflow-hidden rounded-sm border border-white/10 bg-black/40 transition-all duration-500 group-hover:border-[#D4AF37]/40 group-hover:scale-[1.02]">
+
+                      {/* image */}
+                      <img
+                        src={song.cover}
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700"
+                      />
+
+                      {/* overlay gradient */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                      {/* status badge */}
+                      <div className="absolute top-2 left-2">
+                        <span className="bg-[#b91c1c]/90 backdrop-blur text-white text-[7px] font-black tracking-widest px-2 py-1 uppercase">
+                          {song.status}
+                        </span>
+                      </div>
+
                     </div>
+
+                    {/* META */}
+                    <div className="mt-2 px-1">
+
+                      <h3 className="text-sm font-bold text-white uppercase font-cinzel group-hover:text-[#D4AF37] transition truncate">
+                        {song.title}
+                      </h3>
+
+                      <div className="flex justify-between items-center mt-1">
+
+                        <p className="text-[9px] text-white/40 uppercase tracking-[0.15em] truncate">
+                          {song.artist}
+                        </p>
+
+                        <span className="text-[8px] font-mono text-white/20">
+                          {String(globalIndex).padStart(2, '0')}
+                        </span>
+
+                      </div>
+
+                    </div>
+
                   </div>
-                </div>
-              ))}
+                );
+              })}
+
             </div>
           ))}
+
         </div>
       </div>
 
+      {/* ANIMATION */}
       <style jsx global>{`
         @keyframes gallery-roll-slow {
           0% { transform: translateX(0); }
@@ -100,14 +128,14 @@ export default function Fresh() {
         }
 
         .animate-gallery-roll-slow {
-          display: flex;
           width: fit-content;
+          display: flex;
           animation: gallery-roll-slow 120s linear infinite;
         }
 
         @media (max-width: 768px) {
           .animate-gallery-roll-slow {
-            animation-duration: 60s;
+            animation-duration: 65s;
           }
         }
       `}</style>

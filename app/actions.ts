@@ -2,32 +2,61 @@
 
 import { revalidatePath } from 'next/cache';
 
+type PulseType = 'up' | 'down';
+
+interface PulseResult {
+  success: boolean;
+  error?: string;
+}
+
 /**
  * handleVoteAction
- * This function processes the BORA PULSE (Upvotes/Downvotes).
- * Because it is a Server Action, it runs on the server and can
- * trigger a fresh data fetch for the entire page.
+ * BORA PULSE ENGINE (Server Action Layer)
+ * Handles voting events + triggers cache invalidation.
  */
-export async function handleVoteAction(songId: string, type: 'up' | 'down') {
+export async function handleVoteAction(
+  songId: string,
+  type: PulseType
+): Promise<PulseResult> {
+  const timestamp = new Date().toISOString();
+
   try {
-    // 1. LOG THE ACTION
-    // In your terminal, you will see exactly which slot is being boosted
-    console.log(`BORA PULSE INCOMING: [${type.toUpperCase()}] for Slot ${songId}`);
+    // 🧠 STRUCTURED EVENT LOG (future analytics-ready)
+    console.log(
+      JSON.stringify({
+        event: 'BORA_PULSE',
+        songId,
+        type,
+        timestamp,
+      })
+    );
 
-    // 2. FUTURE DATABASE LOGIC
-    // This is where you will eventually add the Supabase call to 
-    // increment the 'votes' or 'momentum_score' in your registry table.
-    // Example: 
-    // await supabase.from('registry').rpc('increment_vote', { slot: songId });
+    // 🚧 PLACEHOLDER: RATE LIMIT CHECK (future upgrade)
+    // Example: prevent spam voting per IP / user session
+    // if (await isRateLimited(songId)) {
+    //   return { success: false, error: 'Rate limit exceeded' };
+    // }
 
-    // 3. REVALIDATE THE CACHE
-    // This is the "magic" line. It tells Next.js to throw away the cached
-    // version of the home page and fetch the fresh registry data from Supabase.
+    // 🗄️ DATABASE LAYER HOOK (future Supabase / Prisma / etc.)
+    // Keep isolated so you don't mix logic with framework code
+    // Example:
+    // await db.registry.update({
+    //   where: { id: songId },
+    //   data: {
+    //     votes: { increment: type === 'up' ? 1 : -1 }
+    //   }
+    // });
+
+    // 🔄 CACHE INVALIDATION (live chart refresh)
     revalidatePath('/');
 
     return { success: true };
-  } catch (error) {
-    console.error("Pulse Error:", error);
-    return { success: false, error: "Failed to register pulse" };
+  } catch (error: unknown) {
+    console.error('BORA_PULSE_ERROR:', error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown failure',
+    };
   }
 }

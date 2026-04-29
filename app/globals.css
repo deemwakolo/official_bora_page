@@ -1,39 +1,41 @@
-/* REMOVE Google font imports ❌ */
-
-/* Tailwind */
+/* Tailwind Core */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* DESIGN TOKENS */
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 5, 5, 5;
-  --background-end-rgb: 0, 0, 0;
+  --foreground: 255 255 255;
+  --bg: 5 5 5;
+
   --accent-gold: #D4AF37;
-  --accent-red: #b91c1c; /* Matched to your component hex */
+  --accent-red: #b91c1c;
 }
 
+/* BASE LAYER */
 @layer base {
   body {
-    color: rgb(var(--foreground-rgb));
-    background: #050505;
-    font-family: var(--font-inter), system-ui, sans-serif;
+    color: rgb(var(--foreground));
+    background: rgb(var(--bg));
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 }
 
+/* UTILITIES */
 @layer utilities {
+
   .font-cinzel {
     font-family: var(--font-cinzel), serif;
   }
 
   .font-mono {
-    /* Using system mono as fallback if JetBrains isn't loaded */
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   }
 
-  /* CUSTOM TACTICAL UTILITIES */
+  /* GLOW SYSTEM */
   .glow-red {
     text-shadow: 0 0 10px rgba(185, 28, 28, 0.5);
   }
@@ -42,20 +44,31 @@
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
   }
 
-  /* Scanline animation for that "System Monitor" feel */
+  /* SCANLINE LAYER (SAFE STACKING) */
+  .scanline-overlay {
+    position: relative;
+    overflow: hidden;
+  }
+
   .scanline-overlay::after {
-    content: " ";
-    display: block;
+    content: "";
     position: absolute;
-    top: 0; left: 0; bottom: 0; right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    z-index: 2;
+    inset: 0;
+    background:
+      linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.25) 50%),
+      linear-gradient(90deg,
+        rgba(255,0,0,0.04),
+        rgba(0,255,0,0.02),
+        rgba(0,0,255,0.04)
+      );
     background-size: 100% 2px, 3px 100%;
     pointer-events: none;
+    z-index: 10;
+    opacity: 0.6;
   }
 }
 
-/* Scrollbar - Thinned and themed */
+/* SCROLLBAR SYSTEM */
 ::-webkit-scrollbar {
   width: 3px;
 }
@@ -66,21 +79,14 @@
 
 ::-webkit-scrollbar-thumb {
   background: #1a1a1a;
-  border-radius: 10px;
-  transition: background 0.3s ease;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-red); /* Red highlight on scroll */
+  background: var(--accent-red);
 }
 
-/* Smooth Navigation Transitions */
-.transition-all {
-  transition-duration: 400ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Global Selection Color */
+/* TEXT SELECTION */
 ::selection {
   background: var(--accent-red);
   color: white;

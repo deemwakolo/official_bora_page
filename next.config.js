@@ -1,17 +1,19 @@
-/** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  experimental: {
-    // Some versions require this to be 'true', others need it enabled specifically
-    serverActions: true,
-  },
-  // Force the compiler to re-evaluate the SWC plugins
-  swcMinify: true, 
-}
+  reactStrictMode: true,
 
-module.exports = nextConfig
+  typescript: {
+    // ❗ REMOVE ignoreBuildErrors in production
+    ignoreBuildErrors: false,
+  },
+
+  eslint: {
+    // ❗ KEEP SAFE (recommended for production discipline)
+    ignoreDuringBuilds: false,
+  },
+
+  experimental: {
+    serverActions: true, // keep if you're using App Router actions
+  },
+};
+
+module.exports = nextConfig;

@@ -3,12 +3,10 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Cinzel } from 'next/font/google';
 
-// Added adjustFontFallback: false to prevent build timeouts
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
-  adjustFontFallback: false, 
 });
 
 const cinzel = Cinzel({
@@ -16,7 +14,6 @@ const cinzel = Cinzel({
   weight: ['400', '700', '900'],
   variable: '--font-cinzel',
   display: 'swap',
-  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -34,19 +31,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body 
+      <body
         className={`
-          ${inter.variable} 
-          ${cinzel.variable} 
-          bg-[#050505] 
-          text-white 
-          antialiased 
+          ${inter.variable}
+          ${cinzel.variable}
+          bg-[#050505]
+          text-white
+          antialiased
           font-sans
-          selection:bg-[#b91c1c] 
-          selection:text-white
         `}
       >
-        {/* The font-sans class ensures a fallback if Inter fails to load */}
         {children}
       </body>
     </html>
