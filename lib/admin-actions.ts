@@ -4,24 +4,24 @@ import { revalidatePath } from 'next/cache';
 
 /**
  * FETCH THE REGISTRY
- * Pulls the Sacred 20 from the 'songs' table.
  */
 export async function getRegistry() {
   try {
+    // We add a timestamp query parameter to the select if we want to 
+    // absolutely force Supabase to bypass any edge caching.
     const { data, error } = await supabase
       .from('songs')
       .select('*')
       .order('slot_number', { ascending: true });
     
     if (error) {
-      // Log the specific Postgres error code for debugging
-      console.error(`Supabase Error [${error.code}]:`, error.message);
-      return []; 
+      console.error("Supabase Error:", error.message);
+      return [];
     }
 
     return data || [];
   } catch (error: any) {
-    console.error("Connection Catch:", error.message);
+    console.error("Registry Fetch Error:", error.message);
     return [];
   }
 }
@@ -31,7 +31,6 @@ export async function getRegistry() {
  */
 export async function updateSlot(formData: FormData) {
   try {
-    // 1. Data Extraction
     const rawSlot = formData.get('slot_number');
     if (!rawSlot) throw new Error("Missing slot number.");
 
@@ -40,14 +39,11 @@ export async function updateSlot(formData: FormData) {
     const artist = (formData.get('artist') as string) || 'Matitu Nation';
     const yt_views = Number(formData.get('yt_views')) || 0;
     const sp_plays = Number(formData.get('sp_plays')) || 0;
-    
-    // Default momentum_score if not provided
     const momentum_score = Number(formData.get('momentum_score')) || 100;
     
     const file = formData.get('cover') as File | null;
     let cover_url = (formData.get('existing_cover_url') as string) || '';
 
-    // 2. Optimized Image Upload
     if (file && file.size > 0 && file.name !== 'undefined') {
       const fileExt = file.name.split('.').pop();
       const fileName = `slot_${slot_number}_${Date.now()}.${fileExt}`;
@@ -57,9 +53,7 @@ export async function updateSlot(formData: FormData) {
         .from('bora-assets')
         .upload(filePath, file, { upsert: true });
 
-      if (uploadError) {
-        console.error("Storage Error:", uploadError.message);
-      } else {
+      if (!uploadError) {
         const { data: urlData } = supabase.storage
           .from('bora-assets')
           .getPublicUrl(filePath);
@@ -67,8 +61,6 @@ export async function updateSlot(formData: FormData) {
       }
     }
 
-    // 3. The Sacred Upsert
-    // Matches the exact schema you confirmed: id, slot_number, title, artist, etc.
     const { data, error } = await supabase
       .from('songs')
       .upsert({
@@ -77,7 +69,7 @@ export async function updateSlot(formData: FormData) {
         artist,
         yt_views,
         sp_plays,
-        momentum_score, // Added this to match your table
+        momentum_score,
         cover_url,
         updated_at: new Date().toISOString(),
       }, { 
@@ -85,15 +77,11 @@ export async function updateSlot(formData: FormData) {
       })
       .select();
 
-    if (error) {
-      console.error("Upsert failed:", error.message);
-      throw new Error(error.message);
-    }
+    if (error) throw error;
 
-    // 4. Force Cache Revalidation
+    // This is the most important part for your version of Next.js
     revalidatePath('/');
-    revalidatePath('/admin');
-
+    
     return { success: true, data: data?.[0] };
     
   } catch (err: any) {
