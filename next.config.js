@@ -1,14 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // Allows production builds to finish even with type errors
     ignoreBuildErrors: true,
   },
   eslint: {
-    // Allows production builds to finish even with linting errors
-    // Note: 'ignoreSuccessiveBuilds' was removed as it is invalid
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    // Some versions require this to be 'true', others need it enabled specifically
+    serverActions: true,
+  },
+  // Force the compiler to re-evaluate the SWC plugins
+  swcMinify: true, 
 }
 
 module.exports = nextConfig

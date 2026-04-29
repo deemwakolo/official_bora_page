@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { getRegistry } from '../../lib/admin-actions'; 
+import React, { useState } from 'react';
 
 interface ChartItem {
-  slot_number: number; // Anchor for the Sacred 20
+  slot_number: number;
   title: string;
   artist: string;
   yt_views: number;
@@ -14,38 +13,17 @@ interface ChartItem {
   rank: number;
 }
 
+// 🔥 ADDED default value songs = [] to prevent the crash
 export default function Chart({
+  songs = [], 
   onVote
 }: {
+  songs: ChartItem[];
   onVote: (songId: string, type: 'up' | 'down') => void;
 }) {
-  const [hasMounted, setHasMounted] = useState(false);
-  const [songs, setSongs] = useState<ChartItem[]>([]);
   const [alert, setAlert] = useState<{ id: string; msg: string; type: 'up' | 'down' } | null>(null);
 
-  useEffect(() => {
-    setHasMounted(true);
-    fetchLiveChart();
-  }, []);
-
-  const fetchLiveChart = async () => {
-    try {
-      const data = await getRegistry();
-      if (data && data.length > 0) {
-        // We trust the database order, but we map rank to slot_number for display
-        const rankedData = data.map((item: any) => ({
-          ...item,
-          rank: item.slot_number // Slot 1 is Rank 1
-        }));
-        setSongs(rankedData);
-      }
-    } catch (error) {
-      console.error("Chart Fetch Error:", error);
-    }
-  };
-
   const handleInternalVote = (slot: number, title: string, type: 'up' | 'down') => {
-    // Send the slot_number as the ID for the voting system
     onVote(slot.toString(), type);
     setAlert(null);
     setTimeout(() => {
@@ -58,7 +36,14 @@ export default function Chart({
     setTimeout(() => setAlert(null), 2500);
   };
 
-  if (!hasMounted) return null;
+  // 🛡️ EXTRA SAFETY: If songs is somehow null/undefined, don't try to map
+  if (!songs || !Array.isArray(songs)) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-white/20 font-mono text-xs uppercase tracking-widest italic">Initializing Registry...</p>
+      </div>
+    );
+  }
 
   return (
     <section className="w-full max-w-5xl mx-auto px-4 md:px-6 pt-2 pb-0 bg-transparent text-[#f0f0f0] font-cinzel relative">
@@ -139,11 +124,8 @@ export default function Chart({
         })}
         
         {songs.length === 0 && (
-          <div className="text-center py-20 border border-white/5 bg-zinc-900/10">
-            <div className="animate-pulse flex flex-col items-center">
-               <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin mb-4"></div>
-               <p className="text-white/20 font-mono text-xs uppercase tracking-widest">Establishing Connection to Matitu Nation Registry...</p>
-            </div>
+          <div className="text-center py-20">
+            <p className="text-white/20 font-mono text-xs uppercase tracking-widest italic">The Registry is currently quiet...</p>
           </div>
         )}
       </div>
