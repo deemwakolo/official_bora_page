@@ -3,7 +3,6 @@ import { supabase } from './supabase';
 
 /**
  * FETCH THE REGISTRY
- * Pulls all 20 slots from the database.
  */
 export async function getRegistry() {
   const { data, error } = await supabase
@@ -20,29 +19,26 @@ export async function getRegistry() {
 
 /**
  * UPDATE THE SACRED SLOT
- * Validates and injects data into the specific slot (1-20).
  */
 export async function updateSlot(formData: FormData) {
-  // 1. Precise Extraction
+  // 1. Precise Extraction & Validation
   const rawSlot = formData.get('slot_number');
-  const title = formData.get('title') as string;
-  const artist = formData.get('artist') as string;
-  const yt_views = formData.get('yt_views');
-  const sp_plays = formData.get('sp_plays');
-  const file = formData.get('cover') as File | null;
-
-  // 2. Validation Check
   if (!rawSlot) {
-    console.error("Error: slot_number is missing from the form submission.");
+    console.error("Error: slot_number is missing.");
     throw new Error("Missing slot number.");
   }
 
   const slot_number = parseInt(rawSlot as string);
+  const title = (formData.get('title') as string) || 'Empty Slot';
+  const artist = (formData.get('artist') as string) || 'Matitu Nation';
+  const yt_views = Number(formData.get('yt_views')) || 0;
+  const sp_plays = Number(formData.get('sp_plays')) || 0;
+  const file = formData.get('cover') as File | null;
+  
+  // Start with existing cover URL if no new file is provided
   let cover_url = (formData.get('existing_cover_url') as string) || '';
 
-  console.log(`Initalizing Update for Slot #${slot_number}: ${title}`);
-
-  // 3. Image Upload Logic (Optimized)
+  // 2. Image Upload Logic
   if (file && file.size > 0 && file.name !== 'undefined') {
     try {
       const fileExt = file.name.split('.').pop();
@@ -51,43 +47,46 @@ export async function updateSlot(formData: FormData) {
 
       const { error: uploadError } = await supabase.storage
         .from('bora-assets')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { 
+          upsert: true,
+          cacheControl: '3600'
+        });
 
-      if (uploadError) {
-        console.warn("Storage Upload Warning:", uploadError.message);
-      } else {
+      if (!uploadError) {
         const { data: urlData } = supabase.storage
           .from('bora-assets')
           .getPublicUrl(filePath);
         cover_url = urlData.publicUrl;
       }
     } catch (err) {
-      console.error("Image processing skipped due to error.");
+      console.error("Image upload failed, proceeding with text update.");
     }
   }
 
-  // 4. The Upsert Logic
-  // Using 'onConflict' to ensure we only ever have 20 rows.
+  // 3. The Clean Upsert
+  // We DO NOT include the 'id' here. We let 'onConflict: slot_number' 
+  // do the work of finding the right row to overwrite.
   const { data, error } = await supabase
     .from('songs')
-    .upsert({
-      slot_number: slot_number,
-      title: title || 'Empty Slot',
-      artist: artist || 'Matitu Nation',
-      yt_views: Number(yt_views) || 0,
-      sp_plays: Number(sp_plays) || 0,
-      cover_url: cover_url,
-      updated_at: new Date().toISOString(),
-    }, { 
-      onConflict: 'slot_number' 
-    })
+    .upsert(
+      {
+        slot_number,
+        title,
+        artist,
+        yt_views,
+        sp_plays,
+        cover_url,
+        updated_at: new Date().toISOString(),
+      }, 
+      { onConflict: 'slot_number' }
+    )
     .select();
 
   if (error) {
     console.error("Supabase Database Error:", error.message);
-    throw new Error(`Database Update Failed: ${error.message}`);
+    // If you see this in the console, check your RLS policies again
+    throw new Error(error.message);
   }
 
-  console.log("Sacred Slot Updated Successfully:", data);
-  return { success: true, data };
+  return { success: true, data: data[0] };
 }
