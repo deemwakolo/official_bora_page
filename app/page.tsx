@@ -8,14 +8,22 @@ import Fresh from './components/Fresh';
 import News from './components/News';
 import Footer from './components/Footer';
 import { getRegistry } from '../lib/admin-actions'; 
-import { handleVoteAction } from './actions'; // 👈 Import the clean action
+import { handleVoteAction } from './actions';
+
+// ⚡ THE "PULSE" FIX: Force the page to fetch fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function Home() {
-  // 1. Fetch the Sacred 20 Registry directly on the server
-  const registryData = await getRegistry() || [];
+  // 1. Fetch the Registry
+  const registryData = await getRegistry();
 
-  // 2. Format rank based on slot_number for the UI
-  const rankedSongs = registryData.map((item: any) => ({
+  // 🔍 DEBUG: This will show in your VS Code terminal
+  console.log(`BORA ENGINE: Fetched ${registryData?.length || 0} songs.`);
+
+  // 2. Format for the UI
+  // We ensure rankedSongs is always an array so the Chart doesn't say "quiet"
+  const rankedSongs = (registryData || []).map((item: any) => ({
     ...item,
     rank: item.slot_number
   }));
@@ -35,32 +43,32 @@ export default async function Home() {
         <Ticker />
       </div>
 
-      {/* 👑 TOP OF THE CHART (Visual Highlight) */}
       <section className="relative z-10 pt-4">
         <Throne />
       </section>
 
       <div className="relative z-10 flex flex-col gap-0">
         
-        {/* TOP 3 - HOT DISCOVERY */}
         <section className="pt-8 md:pt-12">
           <HotThree />
         </section>
 
-        {/* THE MAIN CHART ENGINE */}
         <section className="w-full relative pt-8 md:pt-12">
-          {/* Now passing the server-fetched 'rankedSongs' 
-              and the imported 'handleVoteAction'.
-          */}
-          <Chart songs={rankedSongs} onVote={handleVoteAction} />
+          {/* If rankedSongs has data, the Chart will display it */}
+          {rankedSongs.length > 0 ? (
+             <Chart songs={rankedSongs} onVote={handleVoteAction} />
+          ) : (
+            <div className="text-center py-20 opacity-50">
+              <p className="text-xl font-light tracking-widest uppercase">The Registry is Quiet</p>
+              <p className="text-sm mt-2">Connecting to Matitu Nation database...</p>
+            </div>
+          )}
         </section>
 
-        {/* NEW RELEASES SECTION */}
         <section className="w-full border-t border-white/5 mt-8 md:mt-12">
           <Fresh />
         </section>
 
-        {/* INDUSTRY NEWS & UPDATES */}
         <section className="w-full bg-[#080000]/40 backdrop-blur-sm border-t border-white/5 mt-12 pt-4 pb-20">
           <News />
         </section>
