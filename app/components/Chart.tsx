@@ -27,105 +27,135 @@ export default function Chart({
     setAlert(null);
     setTimeout(() => {
       setAlert({ 
-        id: title === 'Empty Slot' ? `SLOT ${slot}` : title, 
-        msg: type === 'up' ? 'SIGNAL BOOST' : 'SIGNAL DAMP', 
+        id: title === 'Empty Slot' ? `ID_${slot}` : title, 
+        msg: type === 'up' ? 'SIGNAL_BOOST' : 'SIGNAL_DAMP', 
         type 
       });
     }, 10);
-    setTimeout(() => setAlert(null), 2500);
+    setTimeout(() => setAlert(null), 1200);
   };
 
-  if (!songs || !Array.isArray(songs)) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-white/20 font-mono text-xs uppercase tracking-widest italic">Initializing Registry...</p>
-      </div>
-    );
-  }
+  if (!songs || songs.length === 0) return null;
 
   return (
-    <section className="w-full max-w-5xl mx-auto px-4 md:px-6 pt-2 pb-0 bg-transparent text-[#f0f0f0] font-cinzel relative">
+    <section className="w-full min-h-screen bg-[#050505] text-white p-4 md:p-12 font-cinzel selection:bg-[#b91c1c]">
       
-      <div className="fixed bottom-12 right-6 z-[100] pointer-events-none">
+      {/* 📡 SYSTEM HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-end mb-16 border-b border-white/10 pb-8">
+        <div>
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter italic leading-none">THE_REGISTRY</h1>
+          <p className="font-mono text-[10px] tracking-[0.6em] text-[#b91c1c] mt-4 uppercase">Matitu Nation // Tanzanian Sound Authority</p>
+        </div>
+        <div className="hidden md:block font-mono text-[10px] text-white/20 text-right uppercase">
+          <p>Status: Active_Stream</p>
+          <p>Engine: Bora_V4.0</p>
+        </div>
+      </div>
+
+      {/* ⚠️ HUD ALERT */}
+      <div className="fixed top-10 right-10 z-[500] pointer-events-none">
         {alert && (
-            <div className={`p-3 min-w-[200px] bg-[#0a0a0a] border-l-4 ${alert.type === 'up' ? 'border-[#D4AF37]' : 'border-[#b91c1c]'} transition-all shadow-2xl animate-in fade-in slide-in-from-right-4`}>
-              <span className={`text-[8px] font-black tracking-[0.3em] font-mono ${alert.type === 'up' ? 'text-[#D4AF37]' : 'text-[#b91c1c]'}`}>
-                {alert.msg}
-              </span>
-              <h4 className="text-white text-[11px] font-bold uppercase truncate max-w-[180px]">{alert.id}</h4>
-            </div>
+          <div className="bg-white text-black p-4 skew-x-[-12deg] shadow-[8px_8px_0px_#b91c1c] border-l-8 border-black">
+            <p className="font-mono font-black text-[10px] tracking-tighter italic">UPDATE_LOG //</p>
+            <p className="font-bold uppercase text-xs italic">{alert.id}: {alert.msg}</p>
+          </div>
         )}
       </div>
 
-      <div className="flex flex-col gap-2 md:gap-px">
-        {songs.map((item) => {
-          const isTop3 = item.rank <= 3;
-          const totalReach = (item.yt_views || 0) + (item.sp_plays || 0);
-          const volume = totalReach >= 1000 ? (totalReach / 1000).toFixed(1) + "K" : totalReach;
+      {/* 🛠️ LIST SYSTEM */}
+      <div className="space-y-1">
+        {songs.map((item, index) => {
+          const isTopTier = index < 3;
           
-          // ✨ NEW: Placeholder logic for un-updated slots
-          const isPlaceholder = item.title === 'Empty Slot';
-          const displayTitle = isPlaceholder ? `SLOT_${item.slot_number.toString().padStart(2, '0')}` : item.title;
-          const displayArtist = isPlaceholder ? "MATITU_NATION_RESERVED" : item.artist;
-
           return (
-            <div
+            <div 
               key={item.slot_number}
-              className={`group relative flex flex-col md:flex-row items-start md:items-center transition-all duration-500 
-                ${isTop3 
-                  ? 'bg-gradient-to-r from-[#1a0000] to-[#080000] py-6 md:py-8 border-2 border-[#D4AF37]/30 mb-2' 
-                  : 'bg-[#080000] py-4 md:py-5 border-b border-white/5 md:border-none'
-                } px-4 md:px-6 hover:bg-[#120000] ${isPlaceholder ? 'opacity-60 grayscale' : ''}`}
+              className="group relative flex items-center gap-6 p-4 md:p-8 bg-zinc-950/40 border border-white/5 hover:bg-zinc-900/80 hover:border-[#b91c1c]/50 transition-all duration-300"
             >
-              <div className="flex items-center w-full md:w-auto mb-3 md:mb-0">
-                <div className="relative flex-shrink-0 mr-4 md:mr-8">
-                  <div className={`relative overflow-hidden rounded-full border-2 transition-all duration-700 bg-zinc-900 
-                    ${isTop3 ? 'w-20 h-20 md:w-28 md:h-28 border-[#D4AF37]' : 'w-14 h-14 md:w-16 md:h-16 border-[#e5e7eb]/10'}`}
-                  >
-                    {item.cover_url ? (
-                      <img src={item.cover_url} alt={displayTitle} className="w-full h-full object-cover grayscale transition-all group-hover:grayscale-0" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[8px] text-white/10 uppercase font-mono">No_Signal</div>
-                    )}
-                  </div>
-                  <div className={`absolute -top-1 -left-1 font-black flex items-center justify-center rounded-sm 
-                    ${isTop3 ? 'w-8 h-8 md:w-10 md:h-10 bg-[#b91c1c] text-white border-[#D4AF37]' : 'w-6 h-6 bg-[#222] text-[#e5e7eb] border-white/10 text-[9px]'}`}
-                  >
-                    {item.rank}
-                  </div>
-                </div>
+              {/* RANK */}
+              <div className="flex-shrink-0 w-12 md:w-20">
+                <span className={`text-2xl md:text-5xl font-black italic transition-colors ${isTopTier ? 'text-[#D4AF37]' : 'text-white/10 group-hover:text-white'}`}>
+                  {(index + 1).toString().padStart(2, '0')}
+                </span>
+              </div>
 
-                <div className="flex-grow min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[7px] md:text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm ${isPlaceholder ? 'bg-zinc-800 text-zinc-500' : 'bg-[#b91c1c] text-white'}`}>
-                      {isPlaceholder ? 'VOID' : (item.momentum_score > 90 ? 'ASC' : 'STB')}
-                    </span>
-                    <p className={`font-mono uppercase tracking-widest truncate ${isTop3 ? 'text-[#D4AF37] text-[9px]' : 'text-white/40 text-[8px]'}`}>{displayArtist}</p>
+              {/* COVER ART (COMPACT) */}
+              <div className="hidden md:block w-20 h-20 overflow-hidden border border-white/10 grayscale group-hover:grayscale-0 transition-all">
+                {item.cover_url ? (
+                  <img src={item.cover_url} className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-700" />
+                ) : (
+                  <div className="w-full h-full bg-black flex items-center justify-center text-[8px] font-mono opacity-20">NO_IMG</div>
+                )}
+              </div>
+
+              {/* IDENTITY */}
+              <div className="flex-grow min-w-0">
+                <p className="font-mono text-[8px] md:text-[10px] tracking-[0.4em] text-white/30 uppercase mb-1">
+                  {item.artist === 'Empty Slot' ? 'DEE_DAVIEH' : item.artist}
+                </p>
+                <h2 className={`font-black uppercase tracking-tight truncate leading-none transition-all
+                  ${isTopTier ? 'text-2xl md:text-5xl' : 'text-xl md:text-3xl'}
+                `}>
+                  {item.title === 'Empty Slot' ? 'RESERVED_SLOT' : item.title}
+                </h2>
+              </div>
+
+              {/* STATS AREA */}
+              <div className="hidden lg:flex items-center gap-12 px-8 border-x border-white/5">
+                <div className="text-right">
+                  <span className="block font-mono text-[7px] text-white/20 uppercase tracking-widest">Impact</span>
+                  <span className="text-lg font-black italic tracking-tighter leading-none">
+                    {(item.yt_views + item.sp_plays).toLocaleString()}
+                  </span>
+                </div>
+                <div className="text-right w-24">
+                  <span className="block font-mono text-[7px] text-white/20 uppercase tracking-widest">Momentum</span>
+                  <div className="h-1 bg-white/5 mt-2 overflow-hidden">
+                    <div 
+                      className="h-full bg-[#b91c1c] transition-all duration-1000" 
+                      style={{ width: `${item.momentum_score}%` }} 
+                    />
                   </div>
-                  <h3 className={`font-bold uppercase tracking-tight truncate transition-all group-hover:text-[#D4AF37] ${isTop3 ? 'text-2xl md:text-4xl text-white' : 'text-lg md:text-2xl text-white/90'} ${isPlaceholder ? 'italic text-zinc-700' : ''}`}>{displayTitle}</h3>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between w-full md:w-auto md:ml-auto gap-4 md:gap-10">
-                <div className="text-left md:text-right">
-                  <span className="block font-mono uppercase tracking-[0.3em] text-[8px] opacity-40">Volume</span>
-                  <span className={`font-black italic ${isTop3 ? 'text-2xl text-white' : 'text-lg text-white/90'}`}>{isPlaceholder ? '---' : volume}</span>
-                </div>
-
-                <div className="flex gap-2">
-                  <button 
-                    disabled={isPlaceholder}
-                    onClick={() => handleInternalVote(item.slot_number, item.title, 'up')} 
-                    className={`flex items-center justify-center rounded-full border transition-all active:scale-90 ${isTop3 ? 'w-10 h-10 md:w-14 md:h-14 bg-[#b91c1c] border-[#D4AF37]' : 'w-8 h-8 md:w-10 md:h-10 border-white/10 hover:border-[#D4AF37]'} ${isPlaceholder ? 'opacity-20 cursor-not-allowed' : ''}`}
+              {/* VOTE TRIGGER */}
+              <div className="flex-shrink-0">
+                <button 
+                  onClick={() => handleInternalVote(item.slot_number, item.title, 'up')}
+                  className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center border border-white/10 group/btn hover:bg-white transition-all"
+                >
+                  <svg 
+                    width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" 
+                    className="group-hover/btn:text-black group-hover/btn:-translate-y-1 transition-all"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                  </button>
-                </div>
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* GHOST DETAIL */}
+              <div className="absolute right-0 top-0 h-full w-24 overflow-hidden opacity-0 group-hover:opacity-10 pointer-events-none">
+                <span className="text-8xl font-black italic rotate-90 inline-block translate-y-10 uppercase tracking-tighter">
+                  MATITU
+                </span>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* FOOTER METADATA */}
+      <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex gap-8 font-mono text-[8px] tracking-[0.5em] text-white/20 uppercase">
+          <span>Tanzania_District_Audio</span>
+          <span>// Local_Time: {new Date().toLocaleTimeString()}</span>
+        </div>
+        <div className="px-4 py-1 border border-white/10">
+          <span className="font-mono text-[8px] tracking-[0.2em] text-[#D4AF37] uppercase animate-pulse">Recording_Signal_Stable</span>
+        </div>
+      </div>
+
     </section>
   );
 }
