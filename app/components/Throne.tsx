@@ -3,19 +3,15 @@
 import React from 'react';
 
 interface ThroneProps {
-  song: string;
-  artist: string;
-
-  // FIX: votes must be numeric for ranking logic
-  votes: number;
-
-  weeksInChart: number;
-  weeksAtNo1: number;
-
-  ytRank: string;
-  spRank: string;
-  bpRank: string;
-
+  song?: string;
+  artist?: string;
+  // Numeric or string allowed to prevent type mismatch during hydration
+  votes?: number | string;
+  weeksInChart?: number | string;
+  weeksAtNo1?: number | string;
+  ytRank?: string;
+  spRank?: string;
+  bpRank?: string;
   cover?: string;
 }
 
@@ -23,11 +19,11 @@ interface ThroneProps {
  * THE ROYAL THRONE - ELEVATED IMPACT EDITION
  */
 export default function Throne({
-  song = "Enjoy",
-  artist = "Diamond Platnumz ft Mafikizolo and DJ White",
+  song = "Sielewi",
+  artist = "Matitu Nation",
   votes = 0,
-  weeksInChart = 0,
-  weeksAtNo1 = 0,
+  weeksInChart = 1,
+  weeksAtNo1 = 1,
   ytRank = "-",
   spRank = "-",
   bpRank = "-",
@@ -41,7 +37,7 @@ export default function Throne({
       <div className="absolute inset-0 z-0 pointer-events-none">
         <img
           src={cover}
-          alt=""
+          alt={`${artist} - ${song} background`}
           className="w-full h-full object-cover grayscale opacity-15 mix-blend-overlay"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#1a0000] via-transparent to-[#080000]" />
@@ -57,7 +53,6 @@ export default function Throne({
 
       {/* MAIN */}
       <div className="relative z-20 px-4 max-w-7xl mx-auto w-full mt-4 md:mt-8">
-
         <span className="text-[8px] md:text-[10px] font-mono tracking-[0.8em] text-[#D4AF37] uppercase block mb-2 animate-pulse">
           Bora namba moja
         </span>
@@ -66,50 +61,41 @@ export default function Throne({
           <span className="text-6xl md:text-[11rem] font-black text-white uppercase">
             {song}
           </span>
+          <span className="text-sm md:text-xl text-[#D4AF37] mt-4 uppercase tracking-widest">
+            {artist}
+          </span>
         </h1>
       </div>
 
       {/* METRICS */}
       <div className="relative z-20 flex flex-wrap justify-center items-center gap-6 md:gap-12 mt-8 md:mt-10 px-4">
-
         <div className="text-center">
           <p className="text-[9px] text-white/50 uppercase">Tenure</p>
-          <p className="text-2xl font-bold">
-            {weeksInChart}W
-          </p>
+          <p className="text-2xl font-bold">{weeksInChart}W</p>
         </div>
 
         <div className="text-center">
           <p className="text-[9px] text-white/50 uppercase">Pulse</p>
-          <p className="text-2xl font-black text-white">
-            {votes}
-          </p>
+          <p className="text-2xl font-black text-white">{votes}</p>
         </div>
 
         <div className="text-center">
           <p className="text-[9px] text-[#D4AF37] uppercase">Apex</p>
-          <p className="text-2xl font-bold text-[#D4AF37]">
-            {weeksAtNo1}#1
-          </p>
+          <p className="text-2xl font-bold text-[#D4AF37]">{weeksAtNo1}#1</p>
         </div>
-
       </div>
 
       {/* PLATFORM */}
       <div className="relative z-20 flex flex-wrap justify-center gap-2 mt-8 px-4">
-
-        <div className="px-3 py-2 text-[10px] border text-white">
+        <div className="px-3 py-2 text-[10px] border border-white/20 text-white font-mono">
           YT {ytRank}
         </div>
-
-        <div className="px-3 py-2 text-[10px] border text-white">
+        <div className="px-3 py-2 text-[10px] border border-white/20 text-white font-mono">
           SP {spRank}
         </div>
-
-        <div className="px-3 py-2 text-[10px] border text-[#D4AF37]">
+        <div className="px-3 py-2 text-[10px] border border-[#D4AF37]/50 text-[#D4AF37] font-mono">
           BP {bpRank}
         </div>
-
       </div>
 
     </section>
