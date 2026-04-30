@@ -1,19 +1,21 @@
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
 
   typescript: {
-    // ❗ REMOVE ignoreBuildErrors in production
+    // Ensuring strict type checking for production reliability
     ignoreBuildErrors: false,
   },
 
   eslint: {
-    // ❗ KEEP SAFE (recommended for production discipline)
+    // Maintaining code quality standards during the build process
     ignoreDuringBuilds: false,
   },
 
-  experimental: {
-    serverActions: true, // keep if you're using App Router actions
-  },
+  /* 
+     NOTE: experimental.serverActions has been removed. 
+     It is enabled by default in Next.js 14 and no longer required.
+  */
 };
 
 module.exports = nextConfig;

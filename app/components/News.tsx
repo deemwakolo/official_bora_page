@@ -86,7 +86,7 @@ export default function News() {
             <img 
               src={featured.image} 
               className="w-full aspect-[4/3] object-cover grayscale contrast-125 transition-all duration-700 group-hover:grayscale-0 group-hover:scale-105"
-              alt=""
+              alt={featured.title}
             />
             <div className="absolute inset-0 bg-[#D4AF37]/10 opacity-0 group-hover:opacity-100 mix-blend-overlay transition-opacity" />
           </div>
@@ -100,7 +100,7 @@ export default function News() {
             {featured.title}
           </h2>
           <p className="text-white/50 text-sm font-sans leading-relaxed mb-6 max-w-xl italic">
-            "{featured.excerpt}"
+            &quot;{featured.excerpt}&quot;
           </p>
           <button className="flex items-center gap-4 group/btn">
             <span className="w-12 h-[2px] bg-[#b91c1c] group-hover/btn:w-20 transition-all" />
@@ -129,7 +129,11 @@ export default function News() {
               </div>
               
               <div className="absolute -right-4 top-0 w-16 h-16 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                 <img src={item.image} className="w-full h-full object-cover grayscale rounded-sm border border-white/20 shadow-2xl" />
+                 <img 
+                    src={item.image} 
+                    className="w-full h-full object-cover grayscale rounded-sm border border-white/20 shadow-2xl" 
+                    alt={item.title}
+                 />
               </div>
             </div>
           ))}
