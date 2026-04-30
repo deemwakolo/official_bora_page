@@ -3,11 +3,32 @@
 import React, { useState } from 'react';
 import { Youtube, Music } from 'lucide-react'; // 🔥 added icons
 
-export default function Kura({ songs = [], onVote }) {
-  const [alert, setAlert] = useState(null);
+// 1. Define the Data Structure for a Song
+interface Song {
+  id?: string | number;
+  slot_number?: number;
+  title: string;
+  artist: string;
+  cover_url: string;
+  upvotes?: number;
+  downvotes?: number;
+  momentum_score?: string | number;
+  yt_views?: string | number;
+  sp_plays?: string | number;
+}
 
-  const handleVote = (id, title, type) => {
-    if (typeof onVote === 'function') {
+// 2. Define the Component Props Interface
+interface KuraProps {
+  songs: Song[];
+  onVote: (id: string, type: 'up' | 'down') => void;
+}
+
+export default function Kura({ songs = [], onVote }: KuraProps) {
+  // Define Alert State Type
+  const [alert, setAlert] = useState<{ id: string; type: 'up' | 'down'; msg: string } | null>(null);
+
+  const handleVote = (id: string | number | undefined, title: string, type: 'up' | 'down') => {
+    if (typeof onVote === 'function' && id !== undefined) {
       onVote(id.toString(), type);
     } else {
       console.error("MATITU_SYSTEM_ERROR: onVote signal not connected to Kura.");
@@ -88,7 +109,7 @@ export default function Kura({ songs = [], onVote }) {
                 </span>
               </div>
 
-              {/* PLATFORM INDICATORS (🔥 NEW) */}
+              {/* PLATFORM INDICATORS */}
               <div className="absolute top-4 right-4 flex gap-3 opacity-60">
                 {item.yt_views && (
                   <div className="flex items-center gap-1 text-red-400">
@@ -105,7 +126,7 @@ export default function Kura({ songs = [], onVote }) {
                 )}
               </div>
 
-              {/* VINYL (UNCHANGED) */}
+              {/* VINYL */}
               <div className="relative flex items-center justify-center mb-8">
                 <div className="absolute w-52 h-52 md:w-[320px] md:h-[320px] group-hover:translate-x-12 transition-all duration-700">
                   <div className="relative w-full h-full rounded-full bg-[#05070D] border border-[#F5EBD2]/20 overflow-hidden">
@@ -117,7 +138,10 @@ export default function Kura({ songs = [], onVote }) {
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border border-[#F5EBD2]/20">
-                        <img src={item.cover_url || '/placeholder.jpg'} alt="label" />
+                        <img 
+                          src={item.cover_url || '/placeholder.jpg'} 
+                          alt={`${item.artist} - ${item.title} label`} 
+                        />
                       </div>
                     </div>
                   </div>
@@ -126,7 +150,7 @@ export default function Kura({ songs = [], onVote }) {
                 <div className="relative z-10 w-56 h-56 md:w-[340px] md:h-[340px] border border-white/10 bg-black overflow-hidden">
                   <img
                     src={item.cover_url}
-                    alt={item.title}
+                    alt={`${item.artist} - ${item.title} cover`}
                     className="w-full h-full object-cover brightness-75 group-hover:brightness-100 transition"
                   />
                 </div>
@@ -142,7 +166,7 @@ export default function Kura({ songs = [], onVote }) {
                 </h3>
               </div>
 
-              {/* STATS (UNCHANGED LOGIC) */}
+              {/* STATS */}
               <div className="mt-3 flex items-center gap-6 text-[10px] font-mono text-[#F5EBD2]/60 uppercase">
                 <span>▲ {item.upvotes ?? 0}</span>
                 <span>▼ {item.downvotes ?? 0}</span>
