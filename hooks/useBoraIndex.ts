@@ -41,7 +41,9 @@ export function useBoraIndex() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [fetchRankings]);
 
@@ -49,26 +51,30 @@ export function useBoraIndex() {
   const handleVote = async (id: string, type: 'up' | 'down') => {
     const adjustment = type === 'up' ? 1 : -1;
 
+    // Optimistic UI Update: Immediate response for the user
     setSongs(prev => {
       const updated = prev.map(song =>
         song.id === id
-          ? { ...song, votes: Math.max(0, song.votes + adjustment) }
+          ? { ...song, votes: Math.max(0, (song.votes || 0) + adjustment) }
           : song
       );
 
       return [...updated].sort((a, b) => b.votes - a.votes);
     });
 
-    const { error } = await supabase
-      .from('songs')
-      .update({
-        votes: supabase.rpc ? undefined : undefined // placeholder safe
-      })
-      .eq('id', id);
+    /** 
+     * FIX: Replaced .update() with .rpc() to solve the TypeScript build error.
+     * This calls a Postgres function to handle the math on the server.
+     */
+    const { error } = await supabase.rpc(
+      type === 'up' ? 'increment_votes' : 'decrement_votes',
+      { row_id: id }
+    );
 
     if (error) {
-      console.error('Vote sync failed:', error.message);
-      fetchRankings(); // rollback correction
+      console.error('BORA_SYNC_ERROR:', error.message);
+      // Rollback to actual database state if the sync fails
+      fetchRankings(); 
     }
   };
 
