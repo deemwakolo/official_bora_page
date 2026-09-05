@@ -1,7 +1,7 @@
 import ChartWrapper from './components/ChartWrapper';
 import Throne from './components/trends/Throne';
 import Fresh from './components/discover/Fresh';
-import News from './components/News';
+import News from './components/news/News';
 import Footer from './components/workflow/Footer';
 import BoraShell from './components/workflow/BoraShell';
 

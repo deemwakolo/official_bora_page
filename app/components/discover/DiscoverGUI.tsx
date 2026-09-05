@@ -4,9 +4,14 @@ import React, { useRef, useState } from 'react';
 
 import NewSongsSlide from './slides/NewSongsSlide';
 import NewArtistsSlide from './slides/NewArtistsSlide';
+import PlaylistsSlide from './slides/PlaylistsSlide';
 import UpcomingShowsSlide from './slides/UpcomingShowsSlide';
 
-type DiscoverSlide = 'songs' | 'artists' | 'shows';
+type DiscoverSlide =
+  | 'songs'
+  | 'artists'
+  | 'playlists'
+  | 'shows';
 
 export default function DiscoverGUI() {
   // SLIDE ILIYO ACTIVE
@@ -19,12 +24,14 @@ export default function DiscoverGUI() {
   const slides: DiscoverSlide[] = [
     'songs',
     'artists',
+    'playlists',
     'shows',
   ];
 
   const slideLabels = {
     songs: 'NEW SONGS',
     artists: 'NEW ARTISTS',
+    playlists: 'PLAYLISTS',
     shows: 'UPCOMING SHOWS',
   };
 
@@ -79,6 +86,11 @@ export default function DiscoverGUI() {
           <NewArtistsSlide />
         </div>
 
+        {/* PLAYLISTS */}
+        <div className="w-full shrink-0 snap-center">
+          <PlaylistsSlide />
+        </div>
+
         {/* UPCOMING SHOWS */}
         <div className="w-full shrink-0 snap-center">
           <UpcomingShowsSlide />
@@ -103,7 +115,15 @@ export default function DiscoverGUI() {
         ))}
       </div>
 
-      {/* HISTORY ITAONGEZWA BAADAYE */}
+      {/* ARCHIVE BUTTON */}
+      <div className="flex justify-center px-4 pt-8 pb-10">
+        <a
+          href="/archive"
+          className="w-full max-w-md bg-[#b91c1c] px-8 py-5 text-center text-sm font-black uppercase tracking-[0.3em] text-white transition-all duration-300 hover:bg-[#dc2626]"
+        >
+          ARCHIVE
+        </a>
+      </div>
     </section>
   );
 }
