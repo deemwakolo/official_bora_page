@@ -1,18 +1,20 @@
 /* Tailwind Core */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* DESIGN TOKENS */
+
 :root {
   --foreground: 255 255 255;
   --bg: 5 5 5;
-
   --accent-gold: #D4AF37;
   --accent-red: #b91c1c;
 }
 
 /* BASE LAYER */
+
 @layer base {
   body {
     color: rgb(var(--foreground));
@@ -25,8 +27,8 @@
 }
 
 /* UTILITIES */
-@layer utilities {
 
+@layer utilities {
   .font-cinzel {
     font-family: var(--font-cinzel), serif;
   }
@@ -35,7 +37,6 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   }
 
-  /* GLOW SYSTEM */
   .glow-red {
     text-shadow: 0 0 10px rgba(185, 28, 28, 0.5);
   }
@@ -44,7 +45,6 @@
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
   }
 
-  /* SCANLINE LAYER (SAFE STACKING) */
   .scanline-overlay {
     position: relative;
     overflow: hidden;
@@ -55,11 +55,15 @@
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(rgba(0,0,0,0) 50%, rgba(0,0,0,0.25) 50%),
-      linear-gradient(90deg,
-        rgba(255,0,0,0.04),
-        rgba(0,255,0,0.02),
-        rgba(0,0,255,0.04)
+      linear-gradient(
+        rgba(0, 0, 0, 0) 50%,
+        rgba(0, 0, 0, 0.25) 50%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.04),
+        rgba(0, 255, 0, 0.02),
+        rgba(0, 0, 255, 0.04)
       );
     background-size: 100% 2px, 3px 100%;
     pointer-events: none;
@@ -69,6 +73,7 @@
 }
 
 /* SCROLLBAR SYSTEM */
+
 ::-webkit-scrollbar {
   width: 3px;
 }
@@ -87,6 +92,7 @@
 }
 
 /* TEXT SELECTION */
+
 ::selection {
   background: var(--accent-red);
   color: white;

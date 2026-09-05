@@ -1,7 +1,8 @@
 // app/layout.tsx
-import './globals.css';
+
 import type { Metadata } from 'next';
 import { Inter, Cinzel } from 'next/font/google';
+import './globals.css';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,7 +19,8 @@ const cinzel = Cinzel({
 
 export const metadata: Metadata = {
   title: 'BORA CHARTS // MATITU NATION ARCHIVE',
-  description: 'Creative Strategy & Sound Design. Dar es Salaam, Tanzania. Turning vision into assets.',
+  description:
+    'Creative Strategy & Sound Design. Dar es Salaam, Tanzania. Turning vision into assets.',
   icons: {
     icon: '/favicon.ico',
   },
