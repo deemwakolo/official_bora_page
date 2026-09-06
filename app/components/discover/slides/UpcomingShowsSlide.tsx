@@ -1,7 +1,14 @@
 'use client';
 
 import React from 'react';
-import { CalendarDays, MapPin, Ticket } from 'lucide-react';
+
+import {
+  CalendarDays,
+  MapPin,
+  Ticket,
+} from 'lucide-react';
+
+import discoverTheme from '../DiscoverTheme';
 
 export default function UpcomingShowsSlide() {
   // ORODHA YA SHOWS ZINAZOKUJA
@@ -49,88 +56,258 @@ export default function UpcomingShowsSlide() {
   ];
 
   return (
-    <section className="w-full py-10 md:py-14 bg-[#050505] overflow-hidden relative">
+    <section
+      className="relative w-full overflow-hidden py-10 md:py-14"
+      style={{
+        backgroundColor: discoverTheme.background,
+        color: discoverTheme.text,
+      }}
+    >
       {/* BACKGROUND YA DISCOVER */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-[#050505] to-black" />
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(
+              to bottom,
+              ${discoverTheme.backgroundDeep},
+              ${discoverTheme.background},
+              ${discoverTheme.backgroundDeep}
+            )`,
+          }}
+        />
 
-        <div className="absolute top-0 right-1/4 w-[500px] h-[220px] bg-[#b91c1c]/10 blur-[120px]" />
+        <div
+          className="absolute right-1/4 top-0 h-[220px] w-[500px] blur-[120px]"
+          style={{
+            backgroundColor: discoverTheme.redGlow,
+          }}
+        />
       </div>
 
       {/* HEADER */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6 mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="w-1.5 h-1.5 bg-[#b91c1c] animate-pulse" />
+      <div className="relative z-10 mx-auto mb-8 max-w-5xl px-6">
+        <div className="mb-2 flex items-center gap-2">
+          <span
+            className="h-1.5 w-1.5 animate-pulse"
+            style={{
+              backgroundColor: discoverTheme.red,
+            }}
+          />
 
-          <span className="text-[9px] font-mono tracking-[0.4em] text-[#D4AF37] uppercase">
+          <span
+            className="font-mono text-[9px] uppercase tracking-[0.4em]"
+            style={{
+              color: discoverTheme.gold,
+            }}
+          >
             Live Calendar
           </span>
         </div>
 
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-3xl md:text-5xl font-black text-white font-cinzel uppercase leading-none">
-              UPCOMING <span className="text-white/20">SHOWS</span>
+            <h2
+              className="font-cinzel text-3xl font-black uppercase leading-none md:text-5xl"
+              style={{
+                color: discoverTheme.text,
+              }}
+            >
+              UPCOMING{' '}
+              <span
+                style={{
+                  color: discoverTheme.textSubtle,
+                }}
+              >
+                SHOWS
+              </span>
             </h2>
 
-            <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.25em] mt-3">
+            <p
+              className="mt-3 font-mono text-[9px] uppercase tracking-[0.25em]"
+              style={{
+                color: discoverTheme.metadata,
+              }}
+            >
               Shows and live events worth watching
             </p>
           </div>
 
           <CalendarDays
             size={24}
-            className="text-[#D4AF37]/40 hidden md:block"
+            className="hidden md:block"
+            style={{
+              color: discoverTheme.gold,
+              opacity: 0.4,
+            }}
           />
         </div>
       </div>
 
       {/* SHOW LIST */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6">
-        <div className="border-t border-white/[0.08]">
+      <div className="relative z-10 mx-auto max-w-5xl px-6">
+        <div
+          style={{
+            borderTop: `1px solid ${discoverTheme.borderStrong}`,
+          }}
+        >
           {shows.map((show, index) => (
             <div
               key={`${show.artist}-${show.event}`}
-              className="group flex items-center gap-4 md:gap-6 py-4 border-b border-white/[0.06] hover:bg-white/[0.02] transition"
+              className="group flex items-center border-b transition"
+              style={{
+                gap: discoverTheme.list.rowGap,
+                paddingTop: discoverTheme.list.rowPaddingY,
+                paddingBottom: discoverTheme.list.rowPaddingY,
+                borderColor: discoverTheme.list.divider,
+                backgroundColor:
+                  discoverTheme.list.rowBackground,
+                transitionDuration:
+                  discoverTheme.list.transition,
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.backgroundColor =
+                  discoverTheme.list.rowHoverBackground;
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.backgroundColor =
+                  discoverTheme.list.rowBackground;
+              }}
             >
               {/* DATE */}
-              <div className="w-14 md:w-16 shrink-0 text-center border-r border-white/[0.08] pr-4">
-                <p className="text-[10px] font-black text-[#D4AF37] font-mono tracking-wider">
+              <div
+                className="w-14 shrink-0 border-r pr-4 text-center md:w-16"
+                style={{
+                  borderColor: discoverTheme.borderStrong,
+                }}
+              >
+                <p
+                  className="font-mono font-black tracking-wider"
+                  style={{
+                    fontSize:
+                      discoverTheme.list.metadataSize,
+                    color: discoverTheme.gold,
+                  }}
+                >
                   {show.date}
                 </p>
 
-                <p className="text-[7px] text-white/20 font-mono mt-1">
+                <p
+                  className="mt-1 font-mono"
+                  style={{
+                    fontSize:
+                      discoverTheme.list.metadataSize,
+                    color: discoverTheme.textSubtle,
+                  }}
+                >
                   {String(index + 1).padStart(2, '0')}
                 </p>
               </div>
 
               {/* EVENT INFO */}
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm md:text-base font-bold text-white uppercase font-cinzel truncate group-hover:text-[#D4AF37] transition">
+                <h3
+                  className="truncate font-cinzel uppercase transition"
+                  style={{
+                    fontSize:
+                      discoverTheme.list.titleSize,
+                    fontWeight:
+                      discoverTheme.list.titleWeight,
+                    letterSpacing:
+                      discoverTheme.list.titleTracking,
+                    lineHeight:
+                      discoverTheme.list.titleLineHeight,
+                    color: discoverTheme.title,
+                    transitionDuration:
+                      discoverTheme.list.transition,
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.color =
+                      discoverTheme.gold;
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.color =
+                      discoverTheme.title;
+                  }}
+                >
                   {show.event}
                 </h3>
 
-                <p className="text-[9px] font-mono text-white/40 uppercase tracking-[0.15em] mt-1">
+                <p
+                  className="mt-1 font-mono uppercase"
+                  style={{
+                    fontSize:
+                      discoverTheme.list.artistSize,
+                    fontWeight:
+                      discoverTheme.list.artistWeight,
+                    letterSpacing:
+                      discoverTheme.list.artistTracking,
+                    color: discoverTheme.artist,
+                  }}
+                >
                   {show.artist}
                 </p>
 
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="flex items-center gap-1 text-[7px] font-mono text-white/25 uppercase">
+                <div
+                  className="mt-2 flex items-center"
+                  style={{
+                    gap: discoverTheme.list.rowGap,
+                  }}
+                >
+                  <span
+                    className="flex items-center gap-1 font-mono uppercase"
+                    style={{
+                      fontSize:
+                        discoverTheme.list.metadataSize,
+                      fontWeight:
+                        discoverTheme.list.metadataWeight,
+                      letterSpacing:
+                        discoverTheme.list.metadataTracking,
+                      color: discoverTheme.metadata,
+                    }}
+                  >
                     <MapPin size={9} />
                     {show.venue}
                   </span>
 
-                  <span className="hidden sm:block text-[7px] font-mono text-white/20 uppercase">
+                  <span
+                    className="hidden font-mono uppercase sm:block"
+                    style={{
+                      fontSize:
+                        discoverTheme.list.metadataSize,
+                      fontWeight:
+                        discoverTheme.list.metadataWeight,
+                      letterSpacing:
+                        discoverTheme.list.metadataTracking,
+                      color: discoverTheme.textSubtle,
+                    }}
+                  >
                     {show.location}
                   </span>
                 </div>
               </div>
 
               {/* STATUS */}
-              <div className="hidden sm:flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#b91c1c] animate-pulse" />
+              <div className="hidden items-center sm:flex">
+                <span
+                  className="mr-2 h-1.5 w-1.5 animate-pulse rounded-full"
+                  style={{
+                    backgroundColor: discoverTheme.red,
+                  }}
+                />
 
-                <span className="text-[7px] font-black tracking-widest text-white/30">
+                <span
+                  className="font-black tracking-widest"
+                  style={{
+                    fontSize:
+                      discoverTheme.list.metadataSize,
+                    fontWeight:
+                      discoverTheme.list.movementWeight,
+                    letterSpacing:
+                      discoverTheme.list.movementTracking,
+                    color: discoverTheme.metadata,
+                  }}
+                >
                   {show.status}
                 </span>
               </div>
@@ -138,9 +315,38 @@ export default function UpcomingShowsSlide() {
               {/* TICKET */}
               <button
                 type="button"
-                className="shrink-0 flex items-center gap-2 border border-white/10 px-3 py-2 text-[7px] font-black tracking-widest text-white/40 uppercase hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition"
+                className="flex shrink-0 items-center border px-3 py-2 font-black uppercase transition"
+                style={{
+                  gap: '0.5rem',
+                  fontSize:
+                    discoverTheme.list.metadataSize,
+                  fontWeight:
+                    discoverTheme.list.metadataWeight,
+                  letterSpacing:
+                    discoverTheme.list.metadataTracking,
+                  borderColor: discoverTheme.borderStrong,
+                  color: discoverTheme.metadata,
+                  backgroundColor: 'transparent',
+                  transitionDuration:
+                    discoverTheme.list.transition,
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.borderColor =
+                    discoverTheme.gold;
+
+                  event.currentTarget.style.color =
+                    discoverTheme.gold;
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.borderColor =
+                    discoverTheme.borderStrong;
+
+                  event.currentTarget.style.color =
+                    discoverTheme.metadata;
+                }}
               >
                 <Ticket size={11} />
+
                 <span className="hidden md:inline">
                   DETAILS
                 </span>

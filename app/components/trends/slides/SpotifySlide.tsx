@@ -1,7 +1,10 @@
 'use client';
 
 import React from 'react';
+
 import { ArrowUp, ArrowDown, Minus, Music2 } from 'lucide-react';
+
+import trendsTheme from '../TrendsTheme';
 
 interface SpotifySong {
   rank: number;
@@ -26,44 +29,86 @@ export default function SpotifySlide() {
   ];
 
   return (
-    <div className="relative w-full overflow-hidden bg-[#050505] px-4 py-10">
+    <div
+      className="relative w-full overflow-hidden px-4 py-10"
+      style={{
+        backgroundColor: trendsTheme.background,
+        color: trendsTheme.text,
+      }}
+    >
       {/* GLOW YA SPOTIFY */}
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[260px] w-[500px] -translate-x-1/2 rounded-full bg-green-500/[0.035] blur-[120px]" />
+      <div
+        className="pointer-events-none absolute left-1/2 top-0 h-[260px] w-[500px] -translate-x-1/2 rounded-full blur-[120px]"
+        style={{
+          backgroundColor: 'rgba(34, 197, 94, 0.035)',
+        }}
+      />
 
       <div className="relative z-10 mx-auto w-full max-w-3xl">
+
         {/* HEADER */}
-        <div className="mb-7 flex items-end justify-between border-b border-white/10 pb-4">
+        <div
+          className="mb-7 flex items-end justify-between border-b pb-4"
+          style={{
+            borderColor: trendsTheme.borderStrong,
+          }}
+        >
           <div>
             <div className="mb-2 flex items-center gap-2">
               <Music2
                 size={14}
-                className="text-green-500"
+                style={{
+                  color: trendsTheme.green,
+                }}
               />
 
-              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-green-500">
+              <span
+                className="text-[8px] font-black uppercase tracking-[0.3em]"
+                style={{
+                  color: trendsTheme.green,
+                }}
+              >
                 SPOTIFY
               </span>
             </div>
 
-            <h2 className="font-cinzel text-2xl font-black uppercase tracking-tight text-white md:text-3xl">
+            <h2
+              className="font-cinzel text-2xl font-black uppercase tracking-tight md:text-3xl"
+              style={{
+                color: trendsTheme.text,
+              }}
+            >
               TOP 10
             </h2>
           </div>
 
-          <span className="font-mono text-[8px] uppercase tracking-[0.15em] text-white/25">
+          <span
+            className="font-mono text-[8px] uppercase tracking-[0.15em]"
+            style={{
+              color: trendsTheme.signal,
+            }}
+          >
             PLATFORM SIGNAL
           </span>
         </div>
 
         {/* SONG LIST */}
-        <div className="divide-y divide-white/[0.06]">
+        <div>
           {songs.map((song) => (
             <div
               key={song.rank}
-              className="flex items-center gap-3 py-3.5"
+              className="flex items-center gap-3 border-b py-3.5"
+              style={{
+                borderColor: trendsTheme.border,
+              }}
             >
               {/* RANK */}
-              <div className="w-7 shrink-0 text-right font-cinzel text-sm font-black text-white/35">
+              <div
+                className="w-7 shrink-0 text-right font-cinzel text-sm font-black"
+                style={{
+                  color: trendsTheme.rank,
+                }}
+              >
                 {String(song.rank).padStart(2, '0')}
               </div>
 
@@ -72,34 +117,55 @@ export default function SpotifySlide() {
                 {song.movement > 0 ? (
                   <ArrowUp
                     size={11}
-                    className="text-[#D4AF37]"
+                    style={{
+                      color: trendsTheme.gold,
+                    }}
                   />
                 ) : song.movement < 0 ? (
                   <ArrowDown
                     size={11}
-                    className="text-red-500"
+                    style={{
+                      color: trendsTheme.red,
+                    }}
                   />
                 ) : (
                   <Minus
                     size={10}
-                    className="text-white/15"
+                    style={{
+                      color: trendsTheme.textSubtle,
+                    }}
                   />
                 )}
               </div>
 
               {/* SONG */}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[10px] font-black uppercase tracking-[0.08em] text-white">
+                <p
+                  className="truncate text-[10px] font-black uppercase tracking-[0.08em]"
+                  style={{
+                    color: trendsTheme.text,
+                  }}
+                >
                   {song.title}
                 </p>
 
-                <p className="mt-1 truncate text-[8px] font-bold uppercase tracking-[0.15em] text-white/30">
+                <p
+                  className="mt-1 truncate text-[8px] font-bold uppercase tracking-[0.15em]"
+                  style={{
+                    color: trendsTheme.artist,
+                  }}
+                >
                   {song.artist}
                 </p>
               </div>
 
               {/* MOVEMENT NUMBER */}
-              <div className="w-8 shrink-0 text-right font-mono text-[8px] text-white/25">
+              <div
+                className="w-8 shrink-0 text-right font-mono text-[8px]"
+                style={{
+                  color: trendsTheme.movement,
+                }}
+              >
                 {song.movement > 0
                   ? `+${song.movement}`
                   : song.movement < 0
@@ -111,8 +177,18 @@ export default function SpotifySlide() {
         </div>
 
         {/* FOOTER */}
-        <div className="mt-5 border-t border-white/[0.06] pt-3">
-          <p className="text-center font-mono text-[7px] uppercase tracking-[0.22em] text-white/20">
+        <div
+          className="mt-5 border-t pt-3"
+          style={{
+            borderColor: trendsTheme.border,
+          }}
+        >
+          <p
+            className="text-center font-mono text-[7px] uppercase tracking-[0.22em]"
+            style={{
+              color: trendsTheme.footer,
+            }}
+          >
             SPOTIFY PERFORMANCE • BORA TREND SIGNAL
           </p>
         </div>

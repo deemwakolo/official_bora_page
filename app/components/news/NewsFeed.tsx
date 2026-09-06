@@ -1,7 +1,10 @@
 'use client';
 
 import React from 'react';
+
 import { ArrowUpRight } from 'lucide-react';
+
+import newsTheme from './NewsTheme';
 
 interface NewsItem {
   id: number;
@@ -61,30 +64,78 @@ export default function NewsFeed() {
   return (
     <div className="flex flex-col">
       {/* NEWS FEED HEADER */}
-      <div className="mb-4 flex items-center justify-between border-b border-white/[0.06] pb-3">
-        <span className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-white/40">
+      <div
+        className="flex items-center justify-between border-b"
+        style={{
+          marginBottom: newsTheme.feed.headerMarginBottom,
+          paddingBottom: newsTheme.feed.headerPaddingBottom,
+          borderColor: newsTheme.border,
+        }}
+      >
+        <span
+          className="font-mono uppercase"
+          style={{
+            color: newsTheme.textMuted,
+            fontSize: newsTheme.feed.headerLabelSize,
+            fontWeight: newsTheme.feed.headerLabelWeight,
+            letterSpacing: newsTheme.feed.headerLabelTracking,
+          }}
+        >
           LATEST INTEL
         </span>
 
-        <span className="font-mono text-[8px] uppercase tracking-widest text-[#D4AF37]/60">
+        <span
+          className="font-mono uppercase"
+          style={{
+            color: newsTheme.gold,
+            fontSize: newsTheme.feed.headerIdSize,
+            letterSpacing: newsTheme.feed.headerIdTracking,
+            opacity: 0.6,
+          }}
+        >
           FEED_04
         </span>
       </div>
 
       {/* NEWS ITEMS */}
-      <div className="divide-y divide-white/[0.06]">
+      <div
+        className="divide-y"
+        style={{
+          borderColor: newsTheme.border,
+        }}
+      >
         {newsData.map((item, index) => (
           <article
             key={item.id}
-            className="group relative flex gap-4 py-5"
+            className="group relative flex"
+            style={{
+              gap: newsTheme.feed.rowGap,
+              paddingTop: newsTheme.feed.rowPaddingY,
+              paddingBottom: newsTheme.feed.rowPaddingY,
+              borderColor: newsTheme.border,
+            }}
           >
             {/* NUMBER */}
-            <div className="w-5 shrink-0 pt-1 font-mono text-[9px] text-white/20">
+            <div
+              className="shrink-0 pt-1 font-mono"
+              style={{
+                width: newsTheme.feed.numberWidth,
+                color: newsTheme.textSubtle,
+                fontSize: newsTheme.feed.numberSize,
+              }}
+            >
               {String(index + 1).padStart(2, '0')}
             </div>
 
             {/* IMAGE */}
-            <div className="relative h-20 w-24 shrink-0 overflow-hidden bg-white/[0.03] md:h-24 md:w-32">
+            <div
+              className="relative shrink-0 overflow-hidden md:h-[6rem] md:w-[8rem]"
+              style={{
+                width: newsTheme.feed.imageWidth,
+                height: newsTheme.feed.imageHeight,
+                backgroundColor: newsTheme.surfaceElevated,
+              }}
+            >
               <img
                 src={item.image}
                 alt=""
@@ -98,25 +149,71 @@ export default function NewsFeed() {
             {/* STORY INFO */}
             <div className="min-w-0 flex-1">
               {/* META */}
-              <div className="mb-2 flex items-center gap-2">
-                <span className="font-mono text-[8px] font-black uppercase tracking-[0.15em] text-[#D4AF37]">
+              <div
+                className="flex items-center gap-2"
+                style={{
+                  marginBottom: newsTheme.feed.metaMarginBottom,
+                }}
+              >
+                <span
+                  className="font-mono font-black uppercase"
+                  style={{
+                    color: newsTheme.gold,
+                    fontSize: newsTheme.feed.categorySize,
+                    fontWeight: newsTheme.feed.categoryWeight,
+                    letterSpacing: newsTheme.feed.categoryTracking,
+                  }}
+                >
                   {item.category}
                 </span>
 
                 {item.isHot && (
-                  <span className="font-mono text-[7px] font-black uppercase tracking-widest text-[#b91c1c]">
+                  <span
+                    className="font-mono font-black uppercase"
+                    style={{
+                      color: newsTheme.live,
+                      fontSize: newsTheme.feed.hotSize,
+                      fontWeight: newsTheme.feed.hotWeight,
+                      letterSpacing: newsTheme.feed.hotTracking,
+                    }}
+                  >
                     HOT
                   </span>
                 )}
               </div>
 
               {/* TITLE */}
-              <h3 className="text-sm font-black uppercase leading-tight tracking-wide text-white transition-colors duration-300 group-hover:text-[#D4AF37]">
+              <h3
+                className="uppercase transition-colors duration-300"
+                style={{
+                  color: newsTheme.title,
+                  fontSize: newsTheme.feed.titleSize,
+                  fontWeight: newsTheme.feed.titleWeight,
+                  letterSpacing: newsTheme.feed.titleTracking,
+                  lineHeight: newsTheme.feed.titleLineHeight,
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.color =
+                    newsTheme.gold;
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.color =
+                    newsTheme.title;
+                }}
+              >
                 {item.title}
               </h3>
 
               {/* TIMESTAMP */}
-              <p className="mt-2 font-mono text-[8px] uppercase tracking-widest text-white/25">
+              <p
+                className="font-mono uppercase"
+                style={{
+                  marginTop: newsTheme.feed.timestampMarginTop,
+                  color: newsTheme.textSubtle,
+                  fontSize: newsTheme.feed.timestampSize,
+                  letterSpacing: newsTheme.feed.timestampTracking,
+                }}
+              >
                 {item.timestamp}
               </p>
             </div>
@@ -124,7 +221,18 @@ export default function NewsFeed() {
             {/* ARROW */}
             <ArrowUpRight
               size={14}
-              className="mt-1 shrink-0 text-white/15 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#D4AF37]"
+              className="mt-1 shrink-0 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+              style={{
+                color: newsTheme.textSubtle,
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.color =
+                  newsTheme.gold;
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.color =
+                  newsTheme.textSubtle;
+              }}
             />
           </article>
         ))}

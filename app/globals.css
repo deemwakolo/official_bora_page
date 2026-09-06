@@ -4,27 +4,50 @@
 @tailwind components;
 @tailwind utilities;
 
+
 /* DESIGN TOKENS */
 
 :root {
   --foreground: 255 255 255;
   --bg: 5 5 5;
-  --accent-gold: #D4AF37;
-  --accent-red: #b91c1c;
+
+  --bora-background: #050505;
+  --bora-background-deep: #040404;
+  --bora-surface: #090909;
+  --bora-surface-elevated: #0c0c0c;
+
+  --bora-text: #ffffff;
+  --bora-text-muted: rgba(255,255,255,0.70);
+  --bora-text-subtle: rgba(255,255,255,0.30);
+
+  --bora-border: rgba(255,255,255,0.06);
+  --bora-border-strong: rgba(255,255,255,0.14);
+
+  --bora-gold: #D4AF37;
+  --bora-red: #b91c1c;
+  --bora-green: #22c55e;
+
+  --bora-selection-background: #D4AF37;
+  --bora-selection-text: #050505;
+
+  --bora-gold-glow: rgba(212,175,55,0.05);
+  --bora-red-glow: rgba(185,28,28,0.05);
 }
+
 
 /* BASE LAYER */
 
 @layer base {
   body {
-    color: rgb(var(--foreground));
-    background: rgb(var(--bg));
+    color: var(--bora-text);
+    background: var(--bora-background);
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 }
+
 
 /* UTILITIES */
 
@@ -38,11 +61,11 @@
   }
 
   .glow-red {
-    text-shadow: 0 0 10px rgba(185, 28, 28, 0.5);
+    text-shadow: 0 0 10px var(--bora-red-glow);
   }
 
   .glow-gold {
-    text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+    text-shadow: 0 0 10px var(--bora-gold-glow);
   }
 
   .scanline-overlay {
@@ -72,6 +95,48 @@
   }
 }
 
+
+/* BORA SHELL SECTION ANIMATION */
+
+@keyframes boraSectionIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* BORA SHELL NAVIGATION ANIMATIONS */
+
+@keyframes boraNavLineIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes boraNavGlowIn {
+  from {
+    transform: translateX(-50%) scaleX(0.25);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(-50%) scaleX(1);
+    opacity: 1;
+  }
+}
+
+
 /* SCROLLBAR SYSTEM */
 
 ::-webkit-scrollbar {
@@ -79,21 +144,22 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #050505;
+  background: var(--bora-background-deep);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1a1a1a;
+  background: var(--bora-surface-elevated);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-red);
+  background: var(--bora-red);
 }
+
 
 /* TEXT SELECTION */
 
 ::selection {
-  background: var(--accent-red);
-  color: white;
+  background: var(--bora-selection-background);
+  color: var(--bora-selection-text);
 }

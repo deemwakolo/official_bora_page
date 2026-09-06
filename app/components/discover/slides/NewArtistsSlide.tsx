@@ -1,7 +1,10 @@
 'use client';
 
 import React from 'react';
+
 import { Mic2, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+
+import discoverTheme from '../DiscoverTheme';
 
 export default function NewArtistsSlide() {
   // ORODHA YA WASANII WAPYA
@@ -61,96 +64,268 @@ export default function NewArtistsSlide() {
   };
 
   return (
-    <section className="w-full py-10 md:py-14 bg-[#050505] overflow-hidden relative">
+    <section
+      className="relative w-full overflow-hidden py-10 md:py-14"
+      style={{
+        backgroundColor: discoverTheme.background,
+        color: discoverTheme.text,
+      }}
+    >
       {/* BACKGROUND */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-[#050505] to-black" />
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(
+              to bottom,
+              ${discoverTheme.backgroundDeep},
+              ${discoverTheme.background},
+              ${discoverTheme.backgroundDeep}
+            )`,
+          }}
+        />
 
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[220px] bg-[#D4AF37]/10 blur-[120px]" />
+        <div
+          className="absolute left-1/2 top-0 h-[220px] w-[500px] -translate-x-1/2 blur-[120px]"
+          style={{
+            backgroundColor: discoverTheme.goldGlow,
+          }}
+        />
       </div>
 
       {/* HEADER */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6 mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="w-1.5 h-1.5 bg-[#b91c1c] animate-pulse" />
+      <div className="relative z-10 mx-auto mb-8 max-w-5xl px-6">
+        <div className="mb-2 flex items-center gap-2">
+          <span
+            className="h-1.5 w-1.5 animate-pulse"
+            style={{
+              backgroundColor: discoverTheme.red,
+            }}
+          />
 
-          <span className="text-[9px] font-mono tracking-[0.4em] text-[#D4AF37] uppercase">
+          <span
+            className="font-mono text-[9px] uppercase tracking-[0.4em]"
+            style={{
+              color: discoverTheme.gold,
+            }}
+          >
             Artist Discovery
           </span>
         </div>
 
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-3xl md:text-5xl font-black text-white font-cinzel uppercase leading-none">
-              NEW <span className="text-white/20">ARTISTS</span>
+            <h2
+              className="font-cinzel text-3xl font-black uppercase leading-none md:text-5xl"
+              style={{
+                color: discoverTheme.text,
+              }}
+            >
+              NEW{' '}
+              <span
+                style={{
+                  color: discoverTheme.textSubtle,
+                }}
+              >
+                ARTISTS
+              </span>
             </h2>
 
-            <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.25em] mt-3">
+            <p
+              className="mt-3 font-mono text-[9px] uppercase tracking-[0.25em]"
+              style={{
+                color: discoverTheme.metadata,
+              }}
+            >
               Artists gaining attention across BORA
             </p>
           </div>
 
           <Mic2
             size={24}
-            className="text-[#D4AF37]/40 hidden md:block"
+            className="hidden md:block"
+            style={{
+              color: discoverTheme.gold,
+              opacity: 0.4,
+            }}
           />
         </div>
       </div>
 
       {/* ARTIST LIST */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6">
-        <div className="border-t border-white/[0.08]">
+      <div className="relative z-10 mx-auto max-w-5xl px-6">
+        <div
+          style={{
+            borderTop: `1px solid ${discoverTheme.borderStrong}`,
+          }}
+        >
           {artists.map((artist, index) => (
             <div
               key={artist.name}
-              className="group flex items-center gap-4 md:gap-6 py-4 border-b border-white/[0.06] hover:bg-white/[0.02] transition"
+              className="group flex items-center border-b transition"
+              style={{
+                gap: discoverTheme.list.rowGap,
+                paddingTop: discoverTheme.list.rowPaddingY,
+                paddingBottom: discoverTheme.list.rowPaddingY,
+                borderColor: discoverTheme.list.divider,
+                backgroundColor:
+                  discoverTheme.list.rowBackground,
+                transitionDuration:
+                  discoverTheme.list.transition,
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.backgroundColor =
+                  discoverTheme.list.rowHoverBackground;
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.backgroundColor =
+                  discoverTheme.list.rowBackground;
+              }}
             >
               {/* RANK */}
-              <div className="w-7 text-[10px] font-mono text-white/20">
+              <div
+                className="shrink-0 font-mono"
+                style={{
+                  width: discoverTheme.list.rankWidth,
+                  fontSize: discoverTheme.list.rankSize,
+                  fontWeight: discoverTheme.list.rankWeight,
+                  color: discoverTheme.rank,
+                }}
+              >
                 {String(index + 1).padStart(2, '0')}
               </div>
 
               {/* ARTIST AVATAR */}
-              <div className="w-11 h-11 md:w-14 md:h-14 shrink-0 rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-black flex items-center justify-center overflow-hidden">
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border md:h-14 md:w-14"
+                style={{
+                  borderColor: discoverTheme.borderStrong,
+                  background: `linear-gradient(
+                    to bottom right,
+                    ${discoverTheme.surfaceElevated},
+                    ${discoverTheme.backgroundDeep}
+                  )`,
+                }}
+              >
                 <Mic2
                   size={18}
-                  className="text-white/30 group-hover:text-[#D4AF37] transition"
+                  style={{
+                    color: discoverTheme.textSubtle,
+                  }}
                 />
               </div>
 
               {/* ARTIST INFO */}
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm md:text-base font-bold text-white uppercase font-cinzel truncate group-hover:text-[#D4AF37] transition">
+                <h3
+                  className="truncate font-cinzel uppercase transition"
+                  style={{
+                    fontSize: discoverTheme.list.titleSize,
+                    fontWeight: discoverTheme.list.titleWeight,
+                    letterSpacing:
+                      discoverTheme.list.titleTracking,
+                    lineHeight:
+                      discoverTheme.list.titleLineHeight,
+                    color: discoverTheme.title,
+                    transitionDuration:
+                      discoverTheme.list.transition,
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.color =
+                      discoverTheme.gold;
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.color =
+                      discoverTheme.title;
+                  }}
+                >
                   {artist.name}
                 </h3>
 
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-[8px] font-mono tracking-[0.15em] text-white/30">
+                <div
+                  className="mt-1 flex items-center"
+                  style={{
+                    gap: discoverTheme.list.rowGap,
+                  }}
+                >
+                  <span
+                    className="truncate font-mono uppercase"
+                    style={{
+                      fontSize:
+                        discoverTheme.list.artistSize,
+                      fontWeight:
+                        discoverTheme.list.artistWeight,
+                      letterSpacing:
+                        discoverTheme.list.artistTracking,
+                      color: discoverTheme.artist,
+                    }}
+                  >
                     {artist.genre}
                   </span>
 
-                  <span className="text-[7px] font-black tracking-widest text-[#b91c1c]">
+                  <span
+                    className="shrink-0 uppercase"
+                    style={{
+                      fontSize:
+                        discoverTheme.list.metadataSize,
+                      fontWeight:
+                        discoverTheme.list.movementWeight,
+                      letterSpacing:
+                        discoverTheme.list.movementTracking,
+                      color: discoverTheme.red,
+                    }}
+                  >
                     {artist.status}
                   </span>
                 </div>
               </div>
 
               {/* SONG COUNT */}
-              <div className="hidden sm:block text-right">
-                <p className="text-[8px] font-mono text-white/20 uppercase tracking-widest">
+              <div className="hidden text-right sm:block">
+                <p
+                  className="font-mono uppercase"
+                  style={{
+                    fontSize:
+                      discoverTheme.list.metadataSize,
+                    fontWeight:
+                      discoverTheme.list.metadataWeight,
+                    letterSpacing:
+                      discoverTheme.list.metadataTracking,
+                    color: discoverTheme.metadata,
+                  }}
+                >
                   BORA SONGS
                 </p>
 
-                <p className="text-sm font-black text-white mt-1">
+                <p
+                  className="mt-1 font-black"
+                  style={{
+                    fontSize:
+                      discoverTheme.list.titleSize,
+                    color: discoverTheme.text,
+                  }}
+                >
                   {artist.songs}
                 </p>
               </div>
 
               {/* MOVEMENT */}
-              <div className="flex items-center gap-1 text-[#D4AF37] min-w-[32px] justify-end">
+              <div
+                className="flex min-w-[32px] shrink-0 items-center justify-end font-mono"
+                style={{
+                  gap: '0.25rem',
+                  color: discoverTheme.gold,
+                  fontSize:
+                    discoverTheme.list.movementSize,
+                  fontWeight:
+                    discoverTheme.list.movementWeight,
+                  letterSpacing:
+                    discoverTheme.list.movementTracking,
+                }}
+              >
                 <MovementIcon movement={artist.movement} />
 
-                <span className="text-[9px] font-mono">
+                <span>
                   {Math.abs(artist.movement)}
                 </span>
               </div>

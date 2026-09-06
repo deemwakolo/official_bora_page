@@ -45,17 +45,37 @@ export default function ChartGUI({
 }: ChartGUIProps) {
   return (
     // SECTION NZIMA YA CHART
-    <section className="relative min-h-screen overflow-hidden bg-[#050505] text-white selection:bg-[#D4AF37] selection:text-black">
-
+    <section
+      className="relative min-h-screen overflow-hidden selection:bg-[var(--bora-selection-background)] selection:text-[var(--bora-selection-text)]"
+      style={{
+        backgroundColor: 'var(--bora-background)',
+        color: 'var(--bora-text)',
+      }}
+    >
       {/* BACKGROUND YA CHART */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[#050505]" />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: 'var(--bora-background)',
+          }}
+        />
 
         {/* GLOW YA GOLD UPANDE WA JUU */}
-        <div className="absolute left-1/2 top-0 h-[700px] w-[1000px] -translate-x-1/2 rounded-full bg-[#D4AF37]/[0.035] blur-[150px]" />
+        <div
+          className="absolute left-1/2 top-0 h-[700px] w-[1000px] -translate-x-1/2 rounded-full blur-[150px]"
+          style={{
+            backgroundColor: 'var(--bora-gold-glow)',
+          }}
+        />
 
         {/* GLOW YA RED UPANDE WA CHINI KULIA */}
-        <div className="absolute bottom-0 right-0 h-[600px] w-[600px] rounded-full bg-[#b91c1c]/[0.025] blur-[140px]" />
+        <div
+          className="absolute bottom-0 right-0 h-[600px] w-[600px] rounded-full blur-[140px]"
+          style={{
+            backgroundColor: 'var(--bora-red-glow)',
+          }}
+        />
       </div>
 
       {/* CONTAINER KUU YA CHART */}
@@ -98,30 +118,37 @@ export default function ChartGUI({
             // THEME YA POWER SCORE KULINGANA NA RANK
             const scoreTheme =
               rank === 1
-                ? 'text-[#D4AF37] drop-shadow-[0_0_18px_rgba(212,175,55,0.35)]'
+                ? 'text-[var(--bora-gold)] drop-shadow-[0_0_18px_rgba(212,175,55,0.35)]'
                 : rank === 2
                   ? 'text-[#CD7F32] drop-shadow-[0_0_16px_rgba(205,127,50,0.28)]'
                   : rank === 3
                     ? 'text-red-500 drop-shadow-[0_0_16px_rgba(239,68,68,0.22)]'
-                    : 'text-white/90';
+                    : 'text-[var(--bora-text)] opacity-90';
 
             return (
               // CARD NZIMA YA WIMBO MMOJA
               <article
                 key={item.id}
-                className={`group relative overflow-visible rounded-[2px] border border-white/[0.03] bg-[#090909]/50 px-1 py-1 transition-all duration-500 hover:-translate-y-1 hover:border-white/[0.14] hover:bg-[#0c0c0c] md:px-8 md:py-10 ${
+                className={`group relative overflow-visible rounded-[2px] border px-1 py-1 transition-all duration-500 hover:-translate-y-1 md:px-8 md:py-10 ${
                   rank === 1
-                    ? 'border-[#D4AF37]/20 shadow-[0_20px_80px_rgba(212,175,55,0.045)]'
+                    ? 'shadow-[0_20px_80px_rgba(212,175,55,0.045)]'
                     : ''
                 }`}
+                style={{
+                  borderColor:
+                    rank === 1
+                      ? 'rgba(212,175,55,0.20)'
+                      : 'var(--bora-border)',
+                  backgroundColor:
+                    'color-mix(in srgb, var(--bora-surface) 50%, transparent)',
+                }}
               >
-
                 {/* GLOW YA CARD INAYOONEKANA WAKATI WA HOVER */}
                 <div
                   className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 ${
                     rank === 1
                       ? 'bg-[radial-gradient(circle_at_8%_15%,rgba(212,175,55,0.12),transparent_32%)]'
-                      : 'bg-[radial-gradient(circle_at_8%_15%,rgba(255,255,255,0.045),transparent_28%)]'
+                      : 'bg-[radial-gradient(circle_at_8%_15%,rgba(128,128,128,0.045),transparent_28%)]'
                   }`}
                 />
 
@@ -133,13 +160,16 @@ export default function ChartGUI({
 
                     {/* SIZE NA CONTAINER YA COVER */}
                     <div
-                      className={`relative z-10 overflow-hidden bg-[#080808] shadow-2xl transition-all duration-500 ease-out group-hover:scale-[1.045] group-hover:shadow-[0_20px_45px_rgba(0,0,0,0.65)] ${
+                      className={`relative z-10 overflow-hidden shadow-2xl transition-all duration-500 ease-out group-hover:scale-[1.045] group-hover:shadow-[0_20px_45px_rgba(0,0,0,0.65)] ${
                         rank === 1
                           ? 'h-28 w-28 md:h-36 md:w-36'
                           : 'h-24 w-24 md:h-32 md:w-32'
                       }`}
+                      style={{
+                        backgroundColor:
+                          'var(--bora-background-deep)',
+                      }}
                     >
-
                       {/* PICHA YA ALBUM / WIMBO */}
                       <img
                         src={finalCover}
@@ -152,7 +182,13 @@ export default function ChartGUI({
 
                       {/* GOLD OUTLINE MAALUM KWA NUMBER 1 */}
                       {rank === 1 && (
-                        <div className="absolute inset-0 ring-1 ring-inset ring-[#D4AF37]/40" />
+                        <div
+                          className="absolute inset-0 ring-1 ring-inset"
+                          style={{
+                            '--tw-ring-color':
+                              'rgba(212,175,55,0.40)',
+                          } as React.CSSProperties}
+                        />
                       )}
                     </div>
 
@@ -160,19 +196,43 @@ export default function ChartGUI({
                     <div
                       className={`absolute -left-4 -top-6 z-20 font-black italic leading-none tracking-[-0.1em] transition-all duration-500 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:scale-110 ${
                         rank === 1
-                          ? 'text-[#D4AF37] drop-shadow-[0_8px_20px_rgba(212,175,55,0.35)] text-6xl md:text-7xl'
+                          ? 'text-6xl md:text-7xl'
                           : rank === 2
-                            ? 'text-[#CD7F32] drop-shadow-[0_8px_18px_rgba(205,127,50,0.28)] text-5xl md:text-6xl'
+                            ? 'text-5xl md:text-6xl'
                             : rank === 3
-                              ? 'text-red-500 drop-shadow-[0_8px_18px_rgba(239,68,68,0.22)] text-5xl md:text-6xl'
-                              : 'text-white/90 drop-shadow-[0_8px_18px_rgba(0,0,0,0.9)] text-5xl md:text-6xl'
+                              ? 'text-5xl md:text-6xl'
+                              : 'text-5xl md:text-6xl'
                       }`}
+                      style={{
+                        color:
+                          rank === 1
+                            ? 'var(--bora-gold)'
+                            : rank === 2
+                              ? '#CD7F32'
+                              : rank === 3
+                                ? '#ef4444'
+                                : 'var(--bora-text)',
+                        textShadow:
+                          rank === 1
+                            ? '0 8px 20px rgba(212,175,55,0.35)'
+                            : rank === 2
+                              ? '0 8px 18px rgba(205,127,50,0.28)'
+                              : rank === 3
+                                ? '0 8px 18px rgba(239,68,68,0.22)'
+                                : '0 8px 18px rgba(0,0,0,0.9)',
+                        opacity: rank > 3 ? 0.9 : 1,
+                      }}
                     >
                       {String(rank).padStart(2, '0')}
                     </div>
 
                     {/* DIAMOND DECORATION CHINI YA COVER */}
-                    <div className="absolute -bottom-3 -right-3 z-20 h-6 w-6 rotate-45 border-r border-b border-white/10 transition-all duration-500 group-hover:border-[#D4AF37]/30" />
+                    <div
+                      className="absolute -bottom-3 -right-3 z-20 h-6 w-6 rotate-45 border-r border-b transition-all duration-500 group-hover:border-[var(--bora-gold)]/30"
+                      style={{
+                        borderColor: 'var(--bora-border-strong)',
+                      }}
+                    />
                   </div>
 
                   {/* TITLE NA ARTIST */}
@@ -182,13 +242,24 @@ export default function ChartGUI({
                     <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 md:gap-x-4">
 
                       {/* JINA LA MSANII */}
-                      <span className="break-words text-[8px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] md:text-[10px] md:tracking-[0.4em]">
+                      <span
+                        className="break-words text-[8px] font-bold uppercase tracking-[0.22em] md:text-[10px] md:tracking-[0.4em]"
+                        style={{
+                          color: 'var(--bora-gold)',
+                        }}
+                      >
                         {displayArtist}
                       </span>
 
                       {/* LABEL YA CURRENT NUMBER 1 */}
                       {rank === 1 && (
-                        <span className="shrink-0 text-[7px] font-mono font-bold uppercase tracking-[0.3em] text-[#D4AF37]/55">
+                        <span
+                          className="shrink-0 text-[7px] font-mono font-bold uppercase tracking-[0.3em]"
+                          style={{
+                            color: 'var(--bora-gold)',
+                            opacity: 0.55,
+                          }}
+                        >
                           CURRENT #1
                         </span>
                       )}
@@ -220,7 +291,6 @@ export default function ChartGUI({
                       {item.yt_rank && (
                         <div className="flex items-center gap-2 text-red-500/70">
                           <Youtube size={11} />
-
                           <span className="text-[8px] font-mono font-bold uppercase tracking-[0.12em]">
                             #{item.yt_rank} YT
                           </span>
@@ -231,7 +301,6 @@ export default function ChartGUI({
                       {item.sp_rank && (
                         <div className="flex items-center gap-2 text-green-500/70">
                           <Music size={11} />
-
                           <span className="text-[8px] font-mono font-bold uppercase tracking-[0.12em]">
                             #{item.sp_rank} SP
                           </span>
@@ -248,26 +317,44 @@ export default function ChartGUI({
 
                       {/* POWER NA POINTS LABEL */}
                       <div className="mb-2 flex items-center justify-between">
-                        <span className="text-[7px] font-mono uppercase tracking-[0.25em] text-white/25">
+                        <span
+                          className="text-[7px] font-mono uppercase tracking-[0.25em]"
+                          style={{
+                            color: 'var(--bora-text)',
+                            opacity: 0.25,
+                          }}
+                        >
                           POWER
                         </span>
 
-                        <span className="text-[8px] font-mono text-white/25">
+                        <span
+                          className="text-[8px] font-mono"
+                          style={{
+                            color: 'var(--bora-text)',
+                            opacity: 0.25,
+                          }}
+                        >
                           PTS
                         </span>
                       </div>
 
                       {/* POWER BAR */}
-                      <div className="h-[3px] w-full overflow-hidden bg-white/[0.07]">
+                      <div
+                        className="h-[3px] w-full overflow-hidden"
+                        style={{
+                          backgroundColor:
+                            'var(--bora-border)',
+                        }}
+                      >
                         <div
                           className={`h-full transition-all duration-700 ${
                             rank === 1
-                              ? 'bg-[#D4AF37]'
+                              ? 'bg-[var(--bora-gold)]'
                               : rank === 2
                                 ? 'bg-slate-300'
                                 : rank === 3
                                   ? 'bg-red-500'
-                                  : 'bg-white/40'
+                                  : 'bg-[var(--bora-text)]/40'
                           }`}
                           style={{
                             width: `${Math.min(
@@ -300,7 +387,12 @@ export default function ChartGUI({
                             'up'
                           )
                         }
-                        className="group/vote flex h-11 items-center justify-center gap-2 border border-white/10 px-3 text-white/50 transition-all duration-300 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.08] hover:text-[#D4AF37] active:scale-90"
+                        className="group/vote flex h-11 items-center justify-center gap-2 border px-3 transition-all duration-300 hover:border-[var(--bora-gold)]/50 hover:bg-[var(--bora-gold)]/[0.08] hover:text-[var(--bora-gold)] active:scale-90"
+                        style={{
+                          borderColor:
+                            'var(--bora-border-strong)',
+                          color: 'var(--bora-text-muted)',
+                        }}
                       >
                         <ArrowUp
                           size={18}
@@ -324,7 +416,12 @@ export default function ChartGUI({
                             'down'
                           )
                         }
-                        className="group/vote flex h-11 items-center justify-center gap-2 border border-white/10 px-3 text-white/50 transition-all duration-300 hover:border-red-600/50 hover:bg-red-600/[0.08] hover:text-red-500 active:scale-90"
+                        className="group/vote flex h-11 items-center justify-center gap-2 border px-3 transition-all duration-300 hover:border-red-600/50 hover:bg-red-600/[0.08] hover:text-red-500 active:scale-90"
+                        style={{
+                          borderColor:
+                            'var(--bora-border-strong)',
+                          color: 'var(--bora-text-muted)',
+                        }}
                       >
                         <ArrowDown
                           size={18}
@@ -343,7 +440,13 @@ export default function ChartGUI({
                   <div className="flex shrink-0 -translate-x-1 flex-col items-end lg:hidden">
 
                     {/* POWER LABEL */}
-                    <span className="text-[7px] font-mono uppercase tracking-[0.2em] text-white/25">
+                    <span
+                      className="text-[7px] font-mono uppercase tracking-[0.2em]"
+                      style={{
+                        color: 'var(--bora-text)',
+                        opacity: 0.25,
+                      }}
+                    >
                       POWER
                     </span>
 
@@ -357,7 +460,12 @@ export default function ChartGUI({
                 </div>
 
                 {/* MOBILE VOTE ROW */}
-                <div className="mt-5 flex items-center justify-end gap-2 border-t border-white/[0.05] pt-4 lg:hidden">
+                <div
+                  className="mt-5 flex items-center justify-end gap-2 border-t pt-4 lg:hidden"
+                  style={{
+                    borderColor: 'var(--bora-border)',
+                  }}
+                >
 
                   {/* MOBILE BUTTON YA PANDISHA */}
                   <button
@@ -370,7 +478,12 @@ export default function ChartGUI({
                         'up'
                       )
                     }
-                    className="group/vote flex h-10 items-center justify-center gap-2 border border-white/10 px-4 text-white/50 transition-all duration-300 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/[0.08] hover:text-[#D4AF37] active:scale-90"
+                    className="group/vote flex h-10 items-center justify-center gap-2 border px-4 transition-all duration-300 hover:border-[var(--bora-gold)]/50 hover:bg-[var(--bora-gold)]/[0.08] hover:text-[var(--bora-gold)] active:scale-90"
+                    style={{
+                      borderColor:
+                        'var(--bora-border-strong)',
+                      color: 'var(--bora-text-muted)',
+                    }}
                   >
                     <ArrowUp
                       size={17}
@@ -394,7 +507,12 @@ export default function ChartGUI({
                         'down'
                       )
                     }
-                    className="group/vote flex h-10 items-center justify-center gap-2 border border-white/10 px-4 text-white/50 transition-all duration-300 hover:border-red-600/50 hover:bg-red-600/[0.08] hover:text-red-500 active:scale-90"
+                    className="group/vote flex h-10 items-center justify-center gap-2 border px-4 transition-all duration-300 hover:border-red-600/50 hover:bg-red-600/[0.08] hover:text-red-500 active:scale-90"
+                    style={{
+                      borderColor:
+                        'var(--bora-border-strong)',
+                      color: 'var(--bora-text-muted)',
+                    }}
                   >
                     <ArrowDown
                       size={17}

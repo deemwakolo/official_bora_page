@@ -1,7 +1,9 @@
 // app/layout.tsx
 
 import type { Metadata } from 'next';
+
 import { Inter, Cinzel } from 'next/font/google';
+
 import './globals.css';
 
 const inter = Inter({
@@ -37,11 +39,13 @@ export default function RootLayout({
         className={`
           ${inter.variable}
           ${cinzel.variable}
-          bg-[#050505]
-          text-white
           antialiased
           font-sans
         `}
+        style={{
+          backgroundColor: 'var(--bora-background)',
+          color: 'var(--bora-text)',
+        }}
       >
         {children}
       </body>

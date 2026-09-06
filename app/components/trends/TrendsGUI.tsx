@@ -7,6 +7,8 @@ import YouTubeSlide from './slides/YouTubeSlide';
 import SpotifySlide from './slides/SpotifySlide';
 import ArtistSlide from './slides/ArtistSlide';
 
+import trendsTheme from './TrendsTheme';
+
 type TrendSlide = 'throne' | 'youtube' | 'spotify' | 'artists';
 
 export default function TrendsGUI() {
@@ -65,42 +67,96 @@ export default function TrendsGUI() {
   };
 
   return (
-    <section className="w-full">
+    <section
+      className="w-full"
+      style={{
+        backgroundColor: trendsTheme.background,
+        color: trendsTheme.text,
+      }}
+    >
       {/* CAROUSEL YA TRENDS */}
       <div
         ref={carouselRef}
         onScroll={handleScroll}
         className="flex w-full snap-x snap-mandatory overflow-x-auto scrollbar-hide"
+        style={{
+          backgroundColor: trendsTheme.background,
+          color: trendsTheme.text,
+        }}
       >
-        <div className="w-full shrink-0 snap-center">
+        <div
+          className="w-full shrink-0 snap-center"
+          style={{
+            backgroundColor: trendsTheme.background,
+            color: trendsTheme.text,
+          }}
+        >
           <ThroneSlide />
         </div>
 
-        <div className="w-full shrink-0 snap-center">
+        <div
+          className="w-full shrink-0 snap-center"
+          style={{
+            backgroundColor: trendsTheme.background,
+            color: trendsTheme.text,
+          }}
+        >
           <YouTubeSlide />
         </div>
 
-        <div className="w-full shrink-0 snap-center">
+        <div
+          className="w-full shrink-0 snap-center"
+          style={{
+            backgroundColor: trendsTheme.background,
+            color: trendsTheme.text,
+          }}
+        >
           <SpotifySlide />
         </div>
 
-        <div className="w-full shrink-0 snap-center">
+        <div
+          className="w-full shrink-0 snap-center"
+          style={{
+            backgroundColor: trendsTheme.background,
+            color: trendsTheme.text,
+          }}
+        >
           <ArtistSlide />
         </div>
       </div>
 
       {/* NAVIGATION YA TRENDS */}
-      <div className="flex items-center justify-center gap-5 border-t border-white/[0.06] bg-[#050505] px-4 py-5">
+      <div
+        className="flex items-center justify-center gap-5 border-t px-4 py-5"
+        style={{
+          backgroundColor: trendsTheme.background,
+          borderColor: trendsTheme.border,
+        }}
+      >
         {slides.map((slide) => (
           <button
             key={slide}
             type="button"
             onClick={() => goToSlide(slide)}
-            className={`text-[8px] font-black uppercase tracking-[0.18em] transition-all duration-300 ${
-              activeSlide === slide
-                ? 'text-[#D4AF37]'
-                : 'text-white/30 hover:text-white/70'
-            }`}
+            className="text-[8px] font-black uppercase tracking-[0.18em] transition-all duration-300"
+            style={{
+              color:
+                activeSlide === slide
+                  ? trendsTheme.gold
+                  : trendsTheme.textSubtle,
+            }}
+            onMouseEnter={(event) => {
+              if (activeSlide !== slide) {
+                event.currentTarget.style.color =
+                  trendsTheme.textMuted;
+              }
+            }}
+            onMouseLeave={(event) => {
+              if (activeSlide !== slide) {
+                event.currentTarget.style.color =
+                  trendsTheme.textSubtle;
+              }
+            }}
           >
             {labels[slide]}
           </button>

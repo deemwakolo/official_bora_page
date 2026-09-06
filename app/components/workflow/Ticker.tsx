@@ -81,17 +81,45 @@ export default function Ticker({
   const stream = [...messages, ...messages];
 
   return (
-    <div className="relative flex h-[28px] w-full items-center overflow-hidden border-y border-white/10 bg-[#0a0a0a]">
-
+    <div
+      className="relative flex h-[28px] w-full items-center overflow-hidden border-y"
+      style={{
+        backgroundColor: 'var(--bora-surface)',
+        borderColor: 'var(--bora-border-strong)',
+        color: 'var(--bora-text)',
+      }}
+    >
       {/* BACKGROUND YA TICKER */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.025] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage:
+            "url('https://www.transparenttextures.com/patterns/carbon-fibre.png')",
+        }}
+      />
 
       {/* TAG YA SECTION */}
-      <div className="relative z-20 flex h-full shrink-0 items-center gap-1 bg-[#b91c1c] px-2 shadow-[3px_0_8px_rgba(185,28,28,0.25)]">
+      <div
+        className="relative z-20 flex h-full shrink-0 items-center gap-1 px-2"
+        style={{
+          backgroundColor: 'var(--bora-red)',
+          boxShadow:
+            '3px 0 8px var(--bora-red-glow)',
+        }}
+      >
+        <div
+          className="h-[3px] w-[3px] animate-pulse rounded-full"
+          style={{
+            backgroundColor: 'var(--bora-text)',
+          }}
+        />
 
-        <div className="h-[3px] w-[3px] animate-pulse rounded-full bg-white" />
-
-        <span className="text-[7px] font-black uppercase tracking-[0.16em] text-white">
+        <span
+          className="text-[7px] font-black uppercase tracking-[0.16em]"
+          style={{
+            color: 'var(--bora-text)',
+          }}
+        >
           {activeSection === 'top10'
             ? 'ACTION'
             : activeSection === 'trends'
@@ -109,24 +137,53 @@ export default function Ticker({
             key={index}
             className="flex items-center gap-2.5 px-4"
           >
-
             {/* LABEL YA UJUMBE */}
-            <span className="border-b border-[#D4AF37]/40 text-[7px] font-mono font-bold uppercase tracking-[0.16em] text-[#D4AF37]">
+            <span
+              className="border-b text-[7px] font-mono font-bold uppercase tracking-[0.16em]"
+              style={{
+                color: 'var(--bora-gold)',
+                borderColor: 'var(--bora-gold)',
+                opacity: 0.7,
+              }}
+            >
               [{item.label}]
             </span>
 
             {/* TAARIFA */}
-            <span className="text-[9px] font-medium uppercase tracking-[0.07em] text-white/70 md:text-[10px]">
+            <span
+              className="text-[9px] font-medium uppercase tracking-[0.07em] md:text-[10px]"
+              style={{
+                color: 'var(--bora-text-muted)',
+              }}
+            >
               {item.text}
             </span>
 
             {/* DIVIDER YA KATI */}
             <div className="ml-1 flex gap-[3px]">
-              <div className="h-[2px] w-[2px] rotate-45 bg-white/20" />
-              <div className="h-[2px] w-[2px] rotate-45 bg-[#b91c1c]" />
-              <div className="h-[2px] w-[2px] rotate-45 bg-white/20" />
-            </div>
+              <div
+                className="h-[2px] w-[2px] rotate-45"
+                style={{
+                  backgroundColor:
+                    'var(--bora-text-subtle)',
+                }}
+              />
 
+              <div
+                className="h-[2px] w-[2px] rotate-45"
+                style={{
+                  backgroundColor: 'var(--bora-red)',
+                }}
+              />
+
+              <div
+                className="h-[2px] w-[2px] rotate-45"
+                style={{
+                  backgroundColor:
+                    'var(--bora-text-subtle)',
+                }}
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -149,7 +206,6 @@ export default function Ticker({
           animation: stream 45s linear infinite;
         }
       `}</style>
-
     </div>
   );
 }

@@ -5,10 +5,8 @@ import React, { useState } from 'react';
 import Header from './Header';
 import Ticker from './Ticker';
 
-// SECTIONS ZOTE AMBAZO BORA INAZIONYESHA
 type Section = 'top10' | 'trends' | 'discover' | 'news';
 
-// TAARIFA AMBAZO BORASHELL INAPOKEA KWA AJILI YA KILA SECTION
 interface BoraShellProps {
   top10: React.ReactNode;
   trends: React.ReactNode;
@@ -39,13 +37,10 @@ export default function BoraShell({
     switch (activeSection) {
       case 'trends':
         return trends;
-
       case 'discover':
         return discover;
-
       case 'news':
         return news;
-
       case 'top10':
       default:
         return top10;
@@ -53,8 +48,13 @@ export default function BoraShell({
   };
 
   return (
-    <div className="w-full">
-
+    <div
+      className="w-full"
+      style={{
+        backgroundColor: 'var(--bora-background)',
+        color: 'var(--bora-text)',
+      }}
+    >
       {/* SUPER TICKER — INABADILIKA KULINGANA NA SECTION */}
       <Ticker activeSection={activeSection} />
 
@@ -62,17 +62,26 @@ export default function BoraShell({
       <Header />
 
       {/* SECTION NAVIGATION */}
-      <nav className="sticky top-[75px] z-40 w-full bg-[#080808]/92 backdrop-blur-xl">
-
+      <nav
+        className="sticky top-[75px] z-40 w-full backdrop-blur-xl"
+        style={{
+          backgroundColor:
+            'color-mix(in srgb, var(--bora-surface) 92%, transparent)',
+        }}
+      >
         {/* SOFT GOLD ATMOSPHERE */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-full overflow-hidden">
-          <div className="absolute left-1/2 top-[-50px] h-[120px] w-[600px] -translate-x-1/2 rounded-full bg-[#D4AF37]/[0.045] blur-[70px]" />
+          <div
+            className="absolute left-1/2 top-[-50px] h-[120px] w-[600px] -translate-x-1/2 rounded-full blur-[70px]"
+            style={{
+              backgroundColor: 'var(--bora-gold-glow)',
+            }}
+          />
         </div>
 
         {/* NAVIGATION BUTTONS */}
         <div className="relative mx-auto flex w-full max-w-7xl items-stretch">
           {sections.map((section) => {
-
             // KUJUA KAMA SECTION HII NDIYO INAYOONYESHWA
             const active = activeSection === section.id;
 
@@ -81,48 +90,39 @@ export default function BoraShell({
                 key={section.id}
                 type="button"
                 onClick={() => setActiveSection(section.id)}
-                className={`
-                  group
-                  relative
-                  w-1/4
-                  h-[58px] md:h-[78px]
-                  px-1 md:px-10
-                  flex items-center justify-center
-                  text-[13px] sm:text-[13px] md:text-[16px]
-                  font-black
-                  tracking-[0.04em] sm:tracking-[0.08em] md:tracking-[0.22em]
-                  whitespace-nowrap
-                  overflow-hidden
-                  transition-all duration-300
-
-                  ${
-                    active
-                      ? 'text-white bg-white/[0.035]'
-                      : 'text-white/40 hover:text-white/80 hover:bg-white/[0.018]'
+                className="group relative flex h-[58px] w-1/4 items-center justify-center overflow-hidden whitespace-nowrap px-1 text-[13px] font-black tracking-[0.04em] transition-all duration-300 sm:text-[13px] md:h-[78px] md:px-10 md:text-[16px] md:tracking-[0.22em]"
+                style={{
+                  color: active
+                    ? 'var(--bora-text)'
+                    : 'var(--bora-text-muted)',
+                  backgroundColor: active
+                    ? 'color-mix(in srgb, var(--bora-text) 3.5%, transparent)'
+                    : 'transparent',
+                }}
+                onMouseEnter={(event) => {
+                  if (!active) {
+                    event.currentTarget.style.color =
+                      'var(--bora-text)';
+                    event.currentTarget.style.backgroundColor =
+                      'color-mix(in srgb, var(--bora-text) 1.8%, transparent)';
                   }
-                `}
+                }}
+                onMouseLeave={(event) => {
+                  if (!active) {
+                    event.currentTarget.style.color =
+                      'var(--bora-text-muted)';
+                    event.currentTarget.style.backgroundColor =
+                      'transparent';
+                  }
+                }}
               >
-
                 {/* ALAMA YA SECTION KWA BACKGROUND */}
                 <span
-                  className={`
-                    absolute
-                    left-1/2
-                    top-1/2
-                    -translate-x-1/2
-                    -translate-y-1/2
-                    text-[25px] md:text-[34px]
-                    leading-none
-                    pointer-events-none
-                    select-none
-                    transition-all duration-300
-
-                    ${
-                      active
-                        ? 'opacity-[0.16] scale-110'
-                        : 'opacity-[0.035] group-hover:opacity-[0.09] group-hover:scale-105'
-                    }
-                  `}
+                  className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[25px] leading-none transition-all duration-300 md:text-[34px] ${
+                    active
+                      ? 'scale-110 opacity-[0.16]'
+                      : 'opacity-[0.035] group-hover:scale-105 group-hover:opacity-[0.09]'
+                  }`}
                 >
                   {section.emoji}
                 </span>
@@ -135,9 +135,21 @@ export default function BoraShell({
                 {/* GOLD ACTIVE INDICATOR */}
                 {active && (
                   <>
-                    <span className="absolute bottom-0 left-1/2 h-[2px] w-[42px] -translate-x-1/2 bg-[#D4AF37] md:w-[70px]" />
+                    <span
+                      className="absolute bottom-0 left-1/2 h-[2px] w-[42px] -translate-x-1/2 origin-center animate-[boraNavLineIn_400ms_cubic-bezier(0.22,1,0.36,1)] md:w-[70px]"
+                      style={{
+                        backgroundColor:
+                          'var(--bora-gold)',
+                      }}
+                    />
 
-                    <span className="absolute bottom-0 left-1/2 h-[14px] w-[70px] -translate-x-1/2 bg-[#D4AF37]/[0.12] blur-lg md:w-[110px]" />
+                    <span
+                      className="absolute bottom-0 left-1/2 h-[14px] w-[70px] -translate-x-1/2 origin-center blur-lg animate-[boraNavGlowIn_500ms_cubic-bezier(0.22,1,0.36,1)] md:w-[110px]"
+                      style={{
+                        backgroundColor:
+                          'var(--bora-gold-glow)',
+                      }}
+                    />
                   </>
                 )}
               </button>
@@ -148,9 +160,13 @@ export default function BoraShell({
 
       {/* ACTIVE SECTION CONTENT */}
       <section className="min-h-screen">
-        {renderSection()}
+        <div
+          key={activeSection}
+          className="animate-[boraSectionIn_450ms_cubic-bezier(0.22,1,0.36,1)]"
+        >
+          {renderSection()}
+        </div>
       </section>
-
     </div>
   );
 }

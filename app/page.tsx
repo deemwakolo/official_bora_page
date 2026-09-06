@@ -1,22 +1,34 @@
 import ChartWrapper from './components/ChartWrapper';
+
 import Throne from './components/trends/Throne';
+
 import Fresh from './components/discover/Fresh';
+
 import News from './components/news/News';
+
 import Footer from './components/workflow/Footer';
+
 import BoraShell from './components/workflow/BoraShell';
+
+import MasterGUI from './components/components-themes/MasterGUI';
 
 import { getRegistry } from '../lib/admin-actions';
 
 // NEXT.JS ISI-RENDER UPYA PAGE KWA CACHE
+
 export const dynamic = 'force-dynamic';
+
 export const revalidate = 0;
 
 // PAGE KUU YA BORA
+
 export default async function Home() {
   // CHUKUA DATA YA NYIMBO KUTOKA KWENYE REGISTRY
+
   const registryData = await getRegistry();
 
   // PANGA NYIMBO KWA MOMENTUM SCORE NA CHUKUA TOP 15
+
   const rankedSongs = (registryData || [])
     .map((item: any) => ({
       ...item,
@@ -30,76 +42,110 @@ export default async function Home() {
     .slice(0, 15);
 
   // LOG YA KUJUA ENGINE IMEPOKEA ENTRIES NGAPI
+
   console.log(
     `BORA ENGINE: System Active. Processing ${rankedSongs.length} entries.`
   );
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white antialiased flex flex-col relative overflow-x-hidden selection:bg-[#D4AF37] selection:text-black">
+    <MasterGUI>
+      <main
+        className="relative flex min-h-screen flex-col overflow-x-hidden antialiased"
+        style={{
+          backgroundColor: 'var(--bora-background)',
+          color: 'var(--bora-text)',
+        }}
+      >
+        {/* BACKGROUND GLOWS ZA BORA */}
 
-      {/* BACKGROUND GLOWS ZA BORA */}
-      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="pointer-events-none fixed inset-0 z-0">
+          {/* GOLD GLOW YA JUU */}
 
-        {/* GOLD GLOW YA JUU */}
-        <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[1000px] h-[700px] bg-[#D4AF37]/5 blur-[140px] rounded-full" />
+          <div
+            className="absolute left-1/2 top-[-15%] h-[700px] w-[1000px] -translate-x-1/2 rounded-full blur-[140px]"
+            style={{
+              backgroundColor: 'var(--bora-gold-glow)',
+            }}
+          />
 
-        {/* RED GLOW YA CHINI */}
-        <div className="absolute bottom-[-10%] right-[-5%] w-[600px] h-[600px] bg-[#b91c1c]/5 blur-[120px] rounded-full" />
+          {/* RED GLOW YA CHINI */}
 
-      </div>
+          <div
+            className="absolute bottom-[-10%] right-[-5%] h-[600px] w-[600px] rounded-full blur-[120px]"
+            style={{
+              backgroundColor: 'var(--bora-red-glow)',
+            }}
+          />
+        </div>
 
-      {/* CONTENT YOTE INAKAA JUU YA BACKGROUND */}
-      <div className="relative z-10 flex-1">
+        {/* CONTENT YOTE INAKAA JUU YA BACKGROUND */}
 
-        {/* BORASHELL INASIMAMIA TICKER, HEADER, NAV NA CONTENT */}
-        <BoraShell
-          top10={
-            <section className="w-full pt-8 md:pt-12">
-              {rankedSongs.length > 0 ? (
-                <ChartWrapper songs={rankedSongs} />
-              ) : (
-                <div className="text-center py-20 opacity-50">
+        <div className="relative z-10 flex-1">
+          {/* BORASHELL INASIMAMIA TICKER, HEADER, NAV NA CONTENT */}
 
-                  {/* GOLD LINE YA UJUMBE */}
-                  <div className="w-12 h-[1px] bg-[#D4AF37] mx-auto mb-6 opacity-40" />
+          <BoraShell
+            top10={
+              <section className="w-full pt-8 md:pt-12">
+                {rankedSongs.length > 0 ? (
+                  <ChartWrapper songs={rankedSongs} />
+                ) : (
+                  <div
+                    className="py-20 text-center"
+                    style={{
+                      color: 'var(--bora-text)',
+                      opacity: 0.5,
+                    }}
+                  >
+                    {/* GOLD LINE YA UJUMBE */}
 
-                  <p className="text-xl font-black italic tracking-[0.3em] uppercase">
-                    The Registry is Quiet
-                  </p>
+                    <div
+                      className="mx-auto mb-6 h-[1px] w-12"
+                      style={{
+                        backgroundColor:
+                          'var(--bora-gold)',
+                        opacity: 0.4,
+                      }}
+                    />
 
-                  <p className="text-[10px] font-mono mt-4 opacity-40 tracking-widest">
-                    CONNECTING_TO_MATITU_CORE...
-                  </p>
+                    <p className="text-xl font-black italic uppercase tracking-[0.3em]">
+                      The Registry is Quiet
+                    </p>
 
-                </div>
-              )}
-            </section>
-          }
+                    <p
+                      className="mt-4 font-mono text-[10px] tracking-widest"
+                      style={{
+                        color: 'var(--bora-text-subtle)',
+                        opacity: 0.4,
+                      }}
+                    >
+                      CONNECTING_TO_MATITU_CORE...
+                    </p>
+                  </div>
+                )}
+              </section>
+            }
+            trends={
+              <section className="w-full pt-8 md:pt-12">
+                <Throne />
+              </section>
+            }
+            discover={
+              <section className="w-full pt-8 md:pt-12">
+                <Fresh />
+              </section>
+            }
+            news={
+              <section className="w-full pb-20 pt-8 md:pt-12">
+                <News />
+              </section>
+            }
+          />
+        </div>
 
-          trends={
-            <section className="w-full pt-8 md:pt-12">
-              <Throne />
-            </section>
-          }
+        {/* FOOTER YA BORA */}
 
-          discover={
-            <section className="w-full pt-8 md:pt-12">
-              <Fresh />
-            </section>
-          }
-
-          news={
-            <section className="w-full pt-8 md:pt-12 pb-20">
-              <News />
-            </section>
-          }
-        />
-
-      </div>
-
-      {/* FOOTER YA BORA */}
-      <Footer />
-
-    </main>
+        <Footer />
+      </main>
+    </MasterGUI>
   );
 }

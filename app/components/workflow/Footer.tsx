@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+
 import {
   Instagram,
   Facebook,
@@ -10,11 +11,17 @@ import {
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-black text-white border-t border-white/5 py-5 relative overflow-hidden">
-
+    <footer
+      className="relative w-full overflow-hidden border-t py-5"
+      style={{
+        backgroundColor: 'var(--bora-background)',
+        color: 'var(--bora-text)',
+        borderColor: 'var(--bora-border)',
+      }}
+    >
       {/* TINGA TEXTURE */}
       <div
-        className="absolute bottom-0 left-0 right-0 w-full h-[250px] pointer-events-none z-0"
+        className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-[250px] w-full"
         style={{
           backgroundImage: "url('/assets/Tinga.png')",
           backgroundSize: 'cover',
@@ -28,67 +35,151 @@ export default function Footer() {
         }}
       />
 
-      <div className="max-w-7xl mx-auto relative z-10 px-6">
-
+      <div className="relative z-10 mx-auto max-w-7xl px-6">
         {/* BRAND */}
         <div className="flex flex-col items-center text-center">
-
-          <h3 className="text-lg font-black tracking-tighter uppercase italic">
-            BORA<span className="text-[#D4AF37]">.</span>
+          <h3 className="text-lg font-black uppercase italic tracking-tighter">
+            BORA
+            <span style={{ color: 'var(--bora-gold)' }}>.</span>
           </h3>
 
-          <p className="mt-1 text-[8px] text-[#b91c1c] uppercase tracking-[0.3em] font-mono">
+          <p
+            className="mt-1 font-mono text-[8px] uppercase tracking-[0.3em]"
+            style={{
+              color: 'var(--bora-red)',
+            }}
+          >
             BORA SOFTWARES
           </p>
-
         </div>
 
         {/* NAVIGATION */}
-        <div className="flex items-center justify-center flex-wrap gap-x-5 gap-y-2 mt-4">
-
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           <a
             href="/"
-            className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/50 hover:text-[#D4AF37] transition-colors"
+            className="text-[9px] font-bold uppercase tracking-[0.16em] transition-colors"
+            style={{
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+            }}
           >
             Navigation
           </a>
 
-          <span className="text-white/10">•</span>
+          <span
+            style={{
+              color: 'var(--bora-text-subtle)',
+            }}
+          >
+            •
+          </span>
 
           <a
             href="/Faq"
-            className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/50 hover:text-[#D4AF37] transition-colors"
+            className="text-[9px] font-bold uppercase tracking-[0.16em] transition-colors"
+            style={{
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+            }}
           >
             FAQs
           </a>
 
-          <span className="text-white/10">•</span>
+          <span
+            style={{
+              color: 'var(--bora-text-subtle)',
+            }}
+          >
+            •
+          </span>
 
           <a
             href="/#top20"
-            className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/50 hover:text-[#D4AF37] transition-colors"
+            className="text-[9px] font-bold uppercase tracking-[0.16em] transition-colors"
+            style={{
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+            }}
           >
             Charts
           </a>
 
-          <span className="text-white/10">•</span>
+          <span
+            style={{
+              color: 'var(--bora-text-subtle)',
+            }}
+          >
+            •
+          </span>
 
           <a
             href="/Faq"
-            className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/50 hover:text-[#D4AF37] transition-colors"
+            className="text-[9px] font-bold uppercase tracking-[0.16em] transition-colors"
+            style={{
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+            }}
           >
             Disclaimer
           </a>
-
         </div>
 
         {/* SOCIALS */}
-        <div className="flex items-center justify-center gap-3 mt-4">
-
+        <div className="mt-4 flex items-center justify-center gap-3">
           <a
             href="#"
             aria-label="Instagram"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/55 hover:text-[#D4AF37] hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-200"
+            style={{
+              borderColor: 'var(--bora-border-strong)',
+              backgroundColor:
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)',
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-gold)';
+              event.currentTarget.style.backgroundColor =
+                'var(--bora-gold-glow)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-border-strong)';
+              event.currentTarget.style.backgroundColor =
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)';
+            }}
           >
             <Instagram size={19} strokeWidth={1.8} />
           </a>
@@ -96,7 +187,29 @@ export default function Footer() {
           <a
             href="#"
             aria-label="TikTok"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/55 hover:text-[#D4AF37] hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-200"
+            style={{
+              borderColor: 'var(--bora-border-strong)',
+              backgroundColor:
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)',
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-gold)';
+              event.currentTarget.style.backgroundColor =
+                'var(--bora-gold-glow)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-border-strong)';
+              event.currentTarget.style.backgroundColor =
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)';
+            }}
           >
             <Music2 size={19} strokeWidth={1.8} />
           </a>
@@ -104,7 +217,29 @@ export default function Footer() {
           <a
             href="#"
             aria-label="WhatsApp"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/55 hover:text-[#D4AF37] hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-200"
+            style={{
+              borderColor: 'var(--bora-border-strong)',
+              backgroundColor:
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)',
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-gold)';
+              event.currentTarget.style.backgroundColor =
+                'var(--bora-gold-glow)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-border-strong)';
+              event.currentTarget.style.backgroundColor =
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)';
+            }}
           >
             <MessageCircle size={19} strokeWidth={1.8} />
           </a>
@@ -112,25 +247,53 @@ export default function Footer() {
           <a
             href="#"
             aria-label="Facebook"
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/55 hover:text-[#D4AF37] hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/[0.06] transition-all duration-200"
+            className="flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-200"
+            style={{
+              borderColor: 'var(--bora-border-strong)',
+              backgroundColor:
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)',
+              color: 'var(--bora-text-muted)',
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-gold)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-gold)';
+              event.currentTarget.style.backgroundColor =
+                'var(--bora-gold-glow)';
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.color =
+                'var(--bora-text-muted)';
+              event.currentTarget.style.borderColor =
+                'var(--bora-border-strong)';
+              event.currentTarget.style.backgroundColor =
+                'color-mix(in srgb, var(--bora-text) 3%, transparent)';
+            }}
           >
             <Facebook size={19} strokeWidth={1.8} />
           </a>
-
         </div>
 
         {/* DIVIDER */}
-        <div className="w-16 md:w-full h-px bg-white/5 mt-5 mb-3 mx-auto" />
+        <div
+          className="mx-auto mt-5 mb-3 h-px w-16 md:w-full"
+          style={{
+            backgroundColor: 'var(--bora-border)',
+          }}
+        />
 
         {/* COPYRIGHT */}
-        <div className="flex justify-center items-center">
-
-          <span className="text-[8px] font-mono text-[#b91c1c] uppercase tracking-[0.2em] whitespace-nowrap glow-red">
+        <div className="flex items-center justify-center">
+          <span
+            className="whitespace-nowrap font-mono text-[8px] uppercase tracking-[0.2em] glow-red"
+            style={{
+              color: 'var(--bora-red)',
+            }}
+          >
             © 2026 BORA SOFTWARES
           </span>
-
         </div>
-
       </div>
     </footer>
   );
