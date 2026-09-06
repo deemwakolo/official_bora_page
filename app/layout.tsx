@@ -1,10 +1,10 @@
 // app/layout.tsx
 
 import type { Metadata } from 'next';
-
 import { Inter, Cinzel } from 'next/font/google';
 
 import './globals.css';
+import MasterGUI from './components/components-themes/MasterGUI';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -47,7 +47,9 @@ export default function RootLayout({
           color: 'var(--bora-text)',
         }}
       >
-        {children}
+        <MasterGUI>
+          {children}
+        </MasterGUI>
       </body>
     </html>
   );
