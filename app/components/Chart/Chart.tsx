@@ -45,49 +45,11 @@ export default function Kura({
   } | null>(null);
 
   // KUBADILISHA DATA MPYA YA CHART NA KUHIFADHI RANK YA AWALI
-  useEffect(() => {
-    setLocalSongs((currentSongs) => {
-
-      // KAMA HAKUNA DATA YA ZAMANI, WIMBO MPYA HAUNA PREVIOUS RANK
-      if (currentSongs.length === 0) {
-        return initialSongs.map((song) => ({
-          ...song,
-          previous_rank: null,
-        }));
-      }
-
-      // KUPATA NAFASI YA ZAMANI YA KILA WIMBO
-      const previousRanks = new Map<
-        string | number,
-        number
-      >();
-
-      currentSongs.forEach((song, index) => {
-        if (song.id !== undefined) {
-          previousRanks.set(song.id, index + 1);
-        }
-      });
-
-      // KUPITIA CHART MPYA NA KUWEKA RANK YA AWALI
-      return initialSongs.map((song) => {
-
-        // KAMA WIMBO ULIKUWEPO KWENYE CHART YA AWALI
-        if (song.id !== undefined && previousRanks.has(song.id)) {
-          return {
-            ...song,
-            previous_rank:
-              previousRanks.get(song.id) ?? null,
-          };
-        }
-
-        // WIMBO HUU NI MPYA KWENYE CHART
-        return {
-          ...song,
-          previous_rank: null,
-        };
-      });
-    });
-  }, [initialSongs]);
+// DATA MPYA IKIFIKA, HIFADHI DATA YA DATABASE KAMA ILIVYO
+// PREVIOUS_RANK SASA INATOKA KWENYE DATABASE
+useEffect(() => {
+  setLocalSongs(initialSongs);
+}, [initialSongs]);
 
   // FUNCTION YA KUSHUGHULIKIA KURA
   const handleVote = (

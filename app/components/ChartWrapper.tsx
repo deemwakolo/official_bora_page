@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
 import Chart from './Chart/Chart';
+
 import { supabase } from '@/lib/supabase';
 
 /**
  * BORA REGISTRY INTERFACE
- * Matches the "Matitu Nation" SQL schema for the Tanzanian music charts.
+ * Muundo wa taarifa za wimbo kutoka kwenye database.
  */
 interface Song {
   id: string;
@@ -19,73 +21,187 @@ interface Song {
   sp_plays: number;
 }
 
-export default function ChartWrapper({ songs: initialSongs }: { songs: Song[] }) {
-  // 1. Initialize state with a stable empty array to prevent Next.js hydration errors.
+/**
+ * COMPONENT KUU YA KUFUNGA DATABASE NA CHART GUI
+ */
+export default function ChartWrapper({
+  songs: initialSongs,
+}: {
+  songs: Song[];
+}) {
+  // STATE YA NYIMBO INAYOTUMIKA KWENYE CHART
   const [songs, setSongs] = useState<Song[]>([]);
 
-  // 2. Sync and Sort whenever the server provides fresh initialSongs.
+  /**
+   * DATA MPYA IKIFIKA KUTOKA SERVER
+   * PANGA NYIMBO KWA MOMENTUM SCORE.
+   */
   useEffect(() => {
     const sorted = [...initialSongs].sort((a, b) => {
-      // Primary Sort: Fan Momentum (Uncapped).
+      // SCORE KUBWA INAKUWA JUU
       if (b.momentum_score !== a.momentum_score) {
         return b.momentum_score - a.momentum_score;
       }
-      // Tie-breaker: Original Database Slot.
+
+      // KAMA SCORE NI SAWA, TUMIA SLOT YA DATABASE
       return a.slot_number - b.slot_number;
     });
+
     setSongs(sorted);
   }, [initialSongs]);
 
   /**
-   * BORA ENGINE: RAW MOMENTUM HANDLER
-   * This logic allows votes to exceed 100 while managing active depreciation.
+   * BORA ENGINE:
+   * HUSHUGHULIKIA KURA NA KUBADILISHA MOMENTUM.
    */
-  const handleVote = async (id: string, type: 'up' | 'down') => {
-    // A. OPTIMISTIC UPDATE: Instant +1 or -1 point change for real-time feel.
+  const handleVote = async (
+    id: string,
+    type: 'up' | 'down'
+  ) => {
+    /**
+     * HATUA YA KWANZA:
+     * HIFADHI NAFASI YA KILA WIMBO KABLA YA KURA.
+     *
+     * Mfano:
+     * Wimbo A = #7
+     * Wimbo B = #3
+     */
+    const previousRanks = new Map<string, number>();
+
+    songs.forEach((song, index) => {
+      previousRanks.set(song.id, index + 1);
+    });
+
+    /**
+     * HATUA YA PILI:
+     * BADILISHA MOMENTUM INSTANTLY KWENYE UI.
+     */
     const updatedSongs = songs.map((song) => {
       if (song.id === id) {
-        const currentScore = Number(song.momentum_score) || 0;
+        const currentScore =
+          Number(song.momentum_score) || 0;
+
         return {
           ...song,
-          // Momentum grows infinitely with upvotes and drops with downvotes.
-          momentum_score: type === 'up' ? currentScore + 1 : currentScore - 1
+          momentum_score:
+            type === 'up'
+              ? currentScore + 1
+              : currentScore - 1,
         };
       }
+
       return song;
     });
 
-    // B. RE-RANKING: Sort instantly based on the updated uncapped scores.
+    /**
+     * HATUA YA TATU:
+     * PANGA UPYA CHART KWA MOMENTUM MPYA.
+     */
     const reRanked = [...updatedSongs].sort((a, b) => {
       if (b.momentum_score !== a.momentum_score) {
         return b.momentum_score - a.momentum_score;
       }
+
       return a.slot_number - b.slot_number;
     });
 
-    setSongs(reRanked);
+    /**
+     * HATUA YA NNE:
+     * WAPA KILA WIMBO RANK MPYA NA
+     * HIFADHI RANK YA ZAMANI KWENYE UI.
+     */
+    const rankedSongs = reRanked.map((song, index) => ({
+      ...song,
+      slot_number: index + 1,
+    }));
 
     /**
-     * C. DATABASE SYNC: Targeting the UUID via the unified RPC handler.
-     * Note: Ensure your Supabase RPC is named 'handle_song_vote' to match your strategic logic.
+     * UI INABADILIKA INSTANTLY.
+     */
+    setSongs(rankedSongs);
+
+    /**
+     * HATUA YA TANO:
+     * TUMA KURA KWENYE DATABASE.
      */
     try {
-      const { error } = await supabase.rpc('handle_song_vote', { 
-        song_id: id, 
-        vote_type: type 
-      });
+      const { error } = await supabase.rpc(
+        'handle_song_vote',
+        {
+          song_id: id,
+          vote_type: type,
+        }
+      );
 
-      if (error) throw error;
-      console.log(`BORA_SIGNAL: ${type.toUpperCase()} registered for ID: ${id}`);
+      if (error) {
+        throw error;
+      }
+
+      /**
+       * HATUA YA SITA:
+       * HIFADHI RANK MPYA NA RANK YA ZAMANI.
+       *
+       * Mfano:
+       * previous_rank = 7
+       * slot_number = 3
+       *
+       * ChartAnimation itaonyesha ↑4.
+       */
+      const rankUpdates = rankedSongs
+        .filter((song) => {
+          const oldRank = previousRanks.get(song.id);
+
+          return (
+            oldRank !== undefined &&
+            oldRank !== song.slot_number
+          );
+        })
+        .map((song) => ({
+          id: song.id,
+          slot_number: song.slot_number,
+          previous_rank:
+            previousRanks.get(song.id) ?? null,
+        }));
+
+      /**
+       * UPDATE KILA WIMBO ULIOBADILISHA NAFASI.
+       */
+      for (const update of rankUpdates) {
+        const { error: rankError } = await supabase
+          .from('songs')
+          .update({
+            slot_number: update.slot_number,
+            previous_rank: update.previous_rank,
+          })
+          .eq('id', update.id);
+
+        if (rankError) {
+          console.error(
+            'BORA_RANK_SYNC_FAILURE:',
+            rankError
+          );
+        }
+      }
+
+      console.log(
+        `BORA_SIGNAL: ${type.toUpperCase()} registered for ID: ${id}`
+      );
+
+      console.log(
+        `BORA_RANK_SYNC: ${rankUpdates.length} chart positions updated.`
+      );
     } catch (err) {
-      console.error("MATITU_CORE_SYNC_FAILURE:", err);
-      // Optional: If sync fails, you could revert 'setSongs' to the original 'songs' state.
+      console.error(
+        'MATITU_CORE_SYNC_FAILURE:',
+        err
+      );
     }
   };
 
   return (
-    <Chart 
-      songs={songs} 
-      onVote={handleVote} 
+    <Chart
+      songs={songs}
+      onVote={handleVote}
     />
   );
 }
