@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 
 import Top15Control from '../controls/Top15/Top15Control';
 import TrendsControl from '../controls/trends/TrendsControl';
-import DiscoverControl from '../controls/Discover/DiscoverControl';
-import NewsControl from '../controls/News/NewsControl';
+import DiscoverControl from '../controls/discover/DiscoverControl';
+import NewsControl from '../controls/news/NewsControl';
 
 type AdminSection =
   | 'top15'
