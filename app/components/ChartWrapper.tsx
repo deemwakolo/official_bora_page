@@ -6,6 +6,10 @@ import Chart from './Chart/Chart';
 
 import { supabase } from '@/lib/supabase';
 
+import { useMasterSound } from './components-themes/haptics/MasterSound';
+
+import { useMasterHaptics } from './components-themes/haptics/MasterHaptics';
+
 /**
  * BORA REGISTRY INTERFACE
  * Muundo wa taarifa za wimbo kutoka kwenye database.
@@ -29,6 +33,17 @@ export default function ChartWrapper({
 }: {
   songs: Song[];
 }) {
+  // MASTER FEEDBACK SYSTEMS
+  const {
+    playVotePing,
+    playShushaPing,
+  } = useMasterSound();
+
+  const {
+    voteHaptic,
+    shushaHaptic,
+  } = useMasterHaptics();
+
   // STATE YA NYIMBO INAYOTUMIKA KWENYE CHART
   const [songs, setSongs] = useState<Song[]>([]);
 
@@ -59,12 +74,22 @@ export default function ChartWrapper({
     type: 'up' | 'down'
   ) => {
     /**
+     * HATUA YA ZERO:
+     * FEEDBACK YA CLICK INAANZA MARA MOJA.
+     *
+     * SOUND + HAPTIC HAZISUBIRI DATABASE.
+     */
+    if (type === 'up') {
+      playVotePing();
+      voteHaptic();
+    } else {
+      playShushaPing();
+      shushaHaptic();
+    }
+
+    /**
      * HATUA YA KWANZA:
      * HIFADHI NAFASI YA KILA WIMBO KABLA YA KURA.
-     *
-     * Mfano:
-     * Wimbo A = #7
-     * Wimbo B = #3
      */
     const previousRanks = new Map<string, number>();
 
@@ -107,8 +132,7 @@ export default function ChartWrapper({
 
     /**
      * HATUA YA NNE:
-     * WAPA KILA WIMBO RANK MPYA NA
-     * HIFADHI RANK YA ZAMANI KWENYE UI.
+     * WAPA KILA WIMBO RANK MPYA.
      */
     const rankedSongs = reRanked.map((song, index) => ({
       ...song,
@@ -139,13 +163,16 @@ export default function ChartWrapper({
 
       /**
        * HATUA YA SITA:
+       * VOTE IMEKUBALIWA NA DATABASE.
+       *
+       * HAPA HATUFANYI SOUND/HAPTIC TENA.
+       *
+       * FEEDBACK YA CLICK ILIKWISHA MWANZO.
+       */
+
+      /**
+       * HATUA YA SABA:
        * HIFADHI RANK MPYA NA RANK YA ZAMANI.
-       *
-       * Mfano:
-       * previous_rank = 7
-       * slot_number = 3
-       *
-       * ChartAnimation itaonyesha ↑4.
        */
       const rankUpdates = rankedSongs
         .filter((song) => {
@@ -190,11 +217,27 @@ export default function ChartWrapper({
       console.log(
         `BORA_RANK_SYNC: ${rankUpdates.length} chart positions updated.`
       );
+
+      /**
+       * MUHIMU:
+       * SUCCESS INARUDI JUU.
+       *
+       * Chart.tsx ITAJUA KWAMBA DATABASE
+       * IMEKUBALI KURA NA NDIPO ITAANZA
+       * 2-SECOND POPUP.
+       */
+      return true;
     } catch (err) {
       console.error(
         'MATITU_CORE_SYNC_FAILURE:',
         err
       );
+
+      /**
+       * DATABASE HAJAKUBALI.
+       * USIANZISHE SUCCESS POPUP.
+       */
+      return false;
     }
   };
 

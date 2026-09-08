@@ -4,7 +4,11 @@ import React, { useEffect, useState } from 'react';
 
 import blackTheme from './themes/black';
 import whiteTheme from './themes/white';
+
 import ThemeToggle from './ThemeToggle';
+
+import { MasterSoundProvider } from './haptics/MasterSound';
+import { MasterHapticsProvider } from './haptics/MasterHaptics';
 
 type ThemeName = 'black' | 'white';
 
@@ -15,8 +19,11 @@ export default function MasterGUI({
 }: {
   children: React.ReactNode;
 }) {
-  const [theme, setTheme] = useState<ThemeName>('black');
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] =
+    useState<ThemeName>('black');
+
+  const [mounted, setMounted] =
+    useState(false);
 
   // HIFADHI NA KUREJESHA THEME ILIYOCHAGULIWA
   useEffect(() => {
@@ -24,7 +31,10 @@ export default function MasterGUI({
       THEME_STORAGE_KEY
     ) as ThemeName | null;
 
-    if (savedTheme === 'black' || savedTheme === 'white') {
+    if (
+      savedTheme === 'black' ||
+      savedTheme === 'white'
+    ) {
       setTheme(savedTheme);
     }
 
@@ -36,7 +46,9 @@ export default function MasterGUI({
     if (!mounted) return;
 
     const activeTheme =
-      theme === 'black' ? blackTheme : whiteTheme;
+      theme === 'black'
+        ? blackTheme
+        : whiteTheme;
 
     const root = document.documentElement;
 
@@ -144,19 +156,23 @@ export default function MasterGUI({
   }, [theme, mounted]);
 
   // BADILI THEME
-  const changeTheme = (nextTheme: ThemeName) => {
+  const changeTheme = (
+    nextTheme: ThemeName
+  ) => {
     setTheme(nextTheme);
   };
 
   return (
-    <>
-      {children}
+    <MasterSoundProvider>
+      <MasterHapticsProvider>
+        {children}
 
-      <ThemeToggle
-        theme={theme}
-        onThemeChange={changeTheme}
-        mounted={mounted}
-      />
-    </>
+        <ThemeToggle
+          theme={theme}
+          onThemeChange={changeTheme}
+          mounted={mounted}
+        />
+      </MasterHapticsProvider>
+    </MasterSoundProvider>
   );
 }

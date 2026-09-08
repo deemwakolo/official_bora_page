@@ -11,15 +11,16 @@ interface VoteAlertProps {
   } | null;
 }
 
-export default function VoteAlert({ alert }: VoteAlertProps) {
+export default function VoteAlert({
+  alert,
+}: VoteAlertProps) {
   if (!alert) return null;
 
   // Kuamua kama kura ni ya kupandisha au kushusha
   const isUp = alert.type === 'up';
 
   return (
-    <div className="fixed inset-0 z-[1000] pointer-events-none flex items-center justify-center">
-
+    <div className="fixed inset-0 z-[1000] pointer-events-auto flex items-center justify-center">
       {/* BACKDROP — Inablur screen yote wakati popup iko */}
       <div className="absolute inset-0 bg-black/25 backdrop-blur-md animate-vote-screen" />
 
@@ -58,8 +59,7 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
         "
       >
         <div className="relative flex flex-col items-center text-center">
-
-          {/* ICON — Alama ya 👍 au 👎 */}
+          {/* ICON */}
           <div
             className="
               text-5xl
@@ -73,7 +73,7 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
             {isUp ? '👍' : '👎'}
           </div>
 
-          {/* LABEL — Utambulisho wa signal ya BORA */}
+          {/* LABEL */}
           <span
             className={`
               text-[8px]
@@ -93,7 +93,7 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
             BORA SIGNAL
           </span>
 
-          {/* MESSAGE — Ujumbe mkuu wa popup */}
+          {/* MESSAGE */}
           <h2
             className={`
               text-4xl
@@ -113,7 +113,7 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
             {alert.msg}
           </h2>
 
-          {/* ID — Kitambulisho cha signal */}
+          {/* ID */}
           <span
             className="
               mt-3
@@ -129,12 +129,48 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
           >
             {alert.id}
           </span>
+
+          {/* 2 SECOND RETREATING TIMER */}
+          <div className="relative mt-7 h-8 w-8">
+            <svg
+              className="-rotate-90 h-8 w-8"
+              viewBox="0 0 32 32"
+            >
+              {/* TRACK */}
+              <circle
+                cx="16"
+                cy="16"
+                r="13"
+                fill="none"
+                stroke="rgba(255,255,255,0.15)"
+                strokeWidth="2"
+              />
+
+              {/* RETREATING CIRCLE */}
+              <circle
+                cx="16"
+                cy="16"
+                r="13"
+                fill="none"
+                stroke={
+                  isUp
+                    ? '#D4AF37'
+                    : '#ef4444'
+                }
+                strokeWidth="2"
+                strokeLinecap="round"
+                pathLength="100"
+                strokeDasharray="100"
+                strokeDashoffset="100"
+                className="animate-vote-countdown"
+              />
+            </svg>
+          </div>
         </div>
       </div>
 
       <style jsx>{`
-
-        /* POPUP — Inaingia karibu instantly na kubaki snappy */
+        /* POPUP */
         @keyframes voteIn {
           0% {
             opacity: 0;
@@ -157,7 +193,7 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
           }
         }
 
-        /* SCREEN — Blur ya screen inaanza mara moja */
+        /* SCREEN */
         @keyframes voteScreen {
           0% {
             opacity: 0;
@@ -176,7 +212,7 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
           }
         }
 
-        /* GLOW — Mwanga unaingia haraka nyuma ya glass */
+        /* GLOW */
         @keyframes voteGlow {
           0% {
             opacity: 0;
@@ -199,7 +235,7 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
           }
         }
 
-        /* ICON — Emoji ina-pop ndani ya popup */
+        /* ICON */
         @keyframes voteIcon {
           0% {
             opacity: 0;
@@ -225,21 +261,35 @@ export default function VoteAlert({ alert }: VoteAlertProps) {
           }
         }
 
-        /* TIMING — Popup yote inatumia sekunde 1.5 */
+        /* 2 SECOND COUNTDOWN */
+        @keyframes voteCountdown {
+          from {
+            stroke-dashoffset: 0;
+          }
+
+          to {
+            stroke-dashoffset: 100;
+          }
+        }
+
         .animate-vote-in {
-          animation: voteIn 1.5s ease-out forwards;
+          animation: voteIn 2s ease-out forwards;
         }
 
         .animate-vote-screen {
-          animation: voteScreen 1.5s ease-out forwards;
+          animation: voteScreen 2s ease-out forwards;
         }
 
         .animate-vote-glow {
-          animation: voteGlow 1.5s ease-out forwards;
+          animation: voteGlow 2s ease-out forwards;
         }
 
         .animate-vote-icon {
-          animation: voteIcon 1.5s ease-out forwards;
+          animation: voteIcon 2s ease-out forwards;
+        }
+
+        .animate-vote-countdown {
+          animation: voteCountdown 2s linear forwards;
         }
       `}</style>
     </div>

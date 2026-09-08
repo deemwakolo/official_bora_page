@@ -2,10 +2,16 @@
 
 import React, { useState } from 'react';
 
-import Top15Control from '../controls/Top15Control';
+import Top15Control from '../controls/Top15/Top15Control';
 import TrendsControl from '../controls/trends/TrendsControl';
+import DiscoverControl from '../controls/Discover/DiscoverControl';
+import NewsControl from '../controls/News/NewsControl';
 
-type AdminSection = 'top15' | 'trends' | 'discover' | 'news';
+type AdminSection =
+  | 'top15'
+  | 'trends'
+  | 'discover'
+  | 'news';
 
 export default function AdminShell() {
   const [activeSection, setActiveSection] =
@@ -42,14 +48,12 @@ export default function AdminShell() {
       }}
     >
       <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
-
-        {/* SECTION NAVIGATION */}
-
         <nav
           className="w-full border"
           style={{
             borderColor: 'var(--bora-border)',
-            backgroundColor: 'var(--bora-background-deep)',
+            backgroundColor:
+              'var(--bora-background-deep)',
           }}
         >
           <div className="grid w-full grid-cols-4">
@@ -74,7 +78,7 @@ export default function AdminShell() {
                   }}
                 >
                   <p
-                   className="whitespace-normal break-words font-cinzel text-[8px] font-black uppercase leading-tight tracking-[0.06em] sm:text-xs sm:tracking-[0.08em]"
+                    className="whitespace-normal break-words font-cinzel text-[8px] font-black uppercase leading-tight tracking-[0.06em] sm:text-xs sm:tracking-[0.08em]"
                     style={{
                       color: isActive
                         ? 'var(--bora-gold)'
@@ -101,8 +105,6 @@ export default function AdminShell() {
           </div>
         </nav>
 
-        {/* ACTIVE SECTION CONTENT */}
-
         <div className="mt-3">
           {activeSection === 'top15' && (
             <Top15Control />
@@ -113,50 +115,13 @@ export default function AdminShell() {
           )}
 
           {activeSection === 'discover' && (
-            <div
-              className="border p-6"
-              style={{
-                borderColor:
-                  'var(--bora-border)',
-                backgroundColor:
-                  'var(--bora-surface)',
-              }}
-            >
-              <p
-                className="text-[7px] font-black uppercase tracking-[0.2em]"
-                style={{
-                  color:
-                    'var(--bora-text-subtle)',
-                }}
-              >
-                DISCOVER CONTROL
-              </p>
-            </div>
+            <DiscoverControl />
           )}
 
           {activeSection === 'news' && (
-            <div
-              className="border p-6"
-              style={{
-                borderColor:
-                  'var(--bora-border)',
-                backgroundColor:
-                  'var(--bora-surface)',
-              }}
-            >
-              <p
-                className="text-[7px] font-black uppercase tracking-[0.2em]"
-                style={{
-                  color:
-                    'var(--bora-text-subtle)',
-                }}
-              >
-                NEWS CONTROL
-              </p>
-            </div>
+            <NewsControl />
           )}
         </div>
-
       </div>
     </main>
   );

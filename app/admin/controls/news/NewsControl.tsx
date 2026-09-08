@@ -2,61 +2,41 @@
 
 import React, { useState } from 'react';
 
-import ThroneControl from './ThroneControl';
-import YouTubeControl from './YouTubeControl';
-import SpotifyControl from './SpotifyControl';
-import ArtistControl from './ArtistControl';
+import FeaturedControl from './FeaturedControl';
+import FeedControl from './FeedControl';
 
-type TrendChild =
-  | 'Throne'
-  | 'YouTube'
-  | 'Spotify'
-  | 'Artist';
+type NewsChild =
+  | 'Featured'
+  | 'Feed';
 
 const children: {
-  id: TrendChild;
+  id: NewsChild;
   label: string;
   symbol: string;
 }[] = [
   {
-    id: 'Throne',
-    label: 'Throne',
-    symbol: '♛',
+    id: 'Featured',
+    label: 'Featured',
+    symbol: '★',
   },
   {
-    id: 'YouTube',
-    label: 'YouTube',
-    symbol: '▶',
-  },
-  {
-    id: 'Spotify',
-    label: 'Spotify',
-    symbol: '◉',
-  },
-  {
-    id: 'Artist',
-    label: 'Artist',
-    symbol: '●',
+    id: 'Feed',
+    label: 'Feed',
+    symbol: '≡',
   },
 ];
 
-export default function TrendsControl() {
+export default function NewsControl() {
   const [activeChild, setActiveChild] =
-    useState<TrendChild>('Throne');
+    useState<NewsChild>('Featured');
 
   const renderActiveControl = () => {
     switch (activeChild) {
-      case 'Throne':
-        return <ThroneControl />;
+      case 'Featured':
+        return <FeaturedControl />;
 
-      case 'YouTube':
-        return <YouTubeControl />;
-
-      case 'Spotify':
-        return <SpotifyControl />;
-
-      case 'Artist':
-        return <ArtistControl />;
+      case 'Feed':
+        return <FeedControl />;
 
       default:
         return null;
@@ -65,8 +45,6 @@ export default function TrendsControl() {
 
   return (
     <div className="w-full">
-      {/* FOUR TREND ENTRIES */}
-
       <div
         className="w-full border"
         style={{
@@ -74,23 +52,25 @@ export default function TrendsControl() {
         }}
       >
         {children.map((child, index) => {
-          const isActive = activeChild === child.id;
+          const isActive =
+            activeChild === child.id;
 
           return (
             <button
               key={child.id}
               type="button"
-              onClick={() => setActiveChild(child.id)}
+              onClick={() =>
+                setActiveChild(child.id)
+              }
               className="relative flex w-full items-center gap-4 border-b px-4 py-4 text-left transition-all duration-300 last:border-b-0 sm:px-5 sm:py-5"
               style={{
-                borderColor: 'var(--bora-border)',
+                borderColor:
+                  'var(--bora-border)',
                 backgroundColor: isActive
                   ? 'color-mix(in srgb, var(--bora-gold) 5%, var(--bora-surface))'
                   : 'var(--bora-surface)',
               }}
             >
-              {/* NUMBER */}
-
               <span
                 className="w-6 shrink-0 text-[8px] font-black"
                 style={{
@@ -101,8 +81,6 @@ export default function TrendsControl() {
               >
                 {String(index + 1).padStart(2, '0')}
               </span>
-
-              {/* SYMBOL */}
 
               <span
                 className="flex h-7 w-7 shrink-0 items-center justify-center text-[14px]"
@@ -115,8 +93,6 @@ export default function TrendsControl() {
                 {child.symbol}
               </span>
 
-              {/* NAME */}
-
               <span
                 className="font-cinzel text-[10px] font-black uppercase tracking-[0.14em]"
                 style={{
@@ -125,8 +101,6 @@ export default function TrendsControl() {
               >
                 {child.label}
               </span>
-
-              {/* ACTIVE LINE */}
 
               {isActive && (
                 <span
@@ -143,8 +117,6 @@ export default function TrendsControl() {
           );
         })}
       </div>
-
-      {/* ACTIVE CONTROL */}
 
       <div className="mt-3">
         {renderActiveControl()}
