@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 
 import WeeklySlide from './slides/WeeklySlide';import YouTubeSlide from './slides/YouTubeSlide';
+import WeeklyGUI from './WeeklyGUI';
 import SpotifySlide from './slides/SpotifySlide';
 import ArtistSlide from './slides/ArtistSlide';
 
@@ -87,7 +88,7 @@ const labels = {
             color: trendsTheme.text,
           }}
         >
-          <WeeklySlide />
+          <WeeklyGUI />
         </div>
 
         <div
