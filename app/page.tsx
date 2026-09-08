@@ -1,8 +1,7 @@
 
 import ChartWrapper from './components/ChartWrapper';
 
-import WeeklySlide from './components/trends/slides/WeeklySlide';
-import Fresh from './components/discover/Fresh';
+import TrendsGUI from './components/trends/TrendsGUI';import Fresh from './components/discover/Fresh';
 
 import News from './components/news/News';
 
@@ -138,13 +137,11 @@ export default async function Home() {
             </section>
           }
 
-          trends={
-            <section className="w-full pt-8 md:pt-12">
-
-              <WeeklySlide />
-
-            </section>
-          }
+         trends={
+  <section className="w-full pt-8 md:pt-12">
+    <TrendsGUI />
+  </section>
+}
 
           discover={
             <section className="w-full pt-8 md:pt-12">
