@@ -39,7 +39,7 @@ interface KuraProps {
   onVote: (
     id: string,
     type: 'up' | 'down'
-  ) => void | Promise<void>;
+  ) => boolean | Promise<boolean>;
 }
 
 // COMPONENT KUU INAYOSIMAMIA CHART NA KURA
@@ -82,7 +82,7 @@ export default function Kura({
           const currentScore =
             Number(song.momentum_score) || 0;
 
-          // KUONGEZA AU KUPUNGUZA SCORE
+          // KUONGEZA AU KUPUNZA SCORE
           return {
             ...song,
             momentum_score:
@@ -99,7 +99,16 @@ export default function Kura({
     // KUTUMA KURA KWENYE COMPONENT YA JUU
     // HAPA TUNASUBIRI DATABASE IKAMILISHE
     if (typeof onVote === 'function') {
-      await onVote(id.toString(), type);
+      const success = await onVote(
+        id.toString(),
+        type
+      );
+
+      // KAMA DATABASE IMEKATAA
+      // HATUANZISHI SUCCESS POPUP
+      if (!success) {
+        return;
+      }
     }
 
     // POPUP INAANZA TU BAADA YA VOTE KUFANIKIWA
