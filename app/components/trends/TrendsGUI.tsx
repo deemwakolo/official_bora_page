@@ -2,36 +2,32 @@
 
 import React, { useRef, useState } from 'react';
 
-import ThroneSlide from './slides/ThroneSlide';
-import YouTubeSlide from './slides/YouTubeSlide';
+import WeeklySlide from './slides/WeeklySlide';import YouTubeSlide from './slides/YouTubeSlide';
 import SpotifySlide from './slides/SpotifySlide';
 import ArtistSlide from './slides/ArtistSlide';
 
 import trendsTheme from './TrendsTheme';
 
-type TrendSlide = 'throne' | 'youtube' | 'spotify' | 'artists';
-
+type TrendSlide = 'weekly' | 'youtube' | 'spotify' | 'artists';
 export default function TrendsGUI() {
   // SLIDE ILIYO ACTIVE
-  const [activeSlide, setActiveSlide] =
-    useState<TrendSlide>('throne');
+const [activeSlide, setActiveSlide] =
+  useState<TrendSlide>('weekly');
 
-  // CONTAINER YA CAROUSEL
-  const carouselRef = useRef<HTMLDivElement>(null);
+const carouselRef = useRef<HTMLDivElement>(null);
 
-  const slides: TrendSlide[] = [
-    'throne',
-    'youtube',
-    'spotify',
-    'artists',
-  ];
-
-  const labels = {
-    throne: 'THRONE',
-    youtube: 'YOUTUBE',
-    spotify: 'SPOTIFY',
-    artists: 'ARTISTS',
-  };
+const slides: TrendSlide[] = [
+  'weekly',
+  'youtube',
+  'spotify',
+  'artists',
+];
+const labels = {
+  weekly: 'WEEKLY',
+  youtube: 'YOUTUBE',
+  spotify: 'SPOTIFY',
+  artists: 'ARTISTS',
+};
 
   // KUSOGEZA KWENYE SLIDE
   const goToSlide = (slide: TrendSlide) => {
@@ -91,7 +87,7 @@ export default function TrendsGUI() {
             color: trendsTheme.text,
           }}
         >
-          <ThroneSlide />
+          <WeeklySlide />
         </div>
 
         <div

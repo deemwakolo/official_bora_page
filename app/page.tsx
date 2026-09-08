@@ -1,22 +1,33 @@
+
 import ChartWrapper from './components/ChartWrapper';
-import Throne from './components/trends/Throne';
+
+import WeeklySlide from './components/trends/slides/WeeklySlide';
 import Fresh from './components/discover/Fresh';
+
 import News from './components/news/News';
+
 import Footer from './components/workflow/Footer';
+
 import BoraShell from './components/workflow/BoraShell';
 
 import { getRegistry } from '../lib/admin-actions';
 
 // NEXT.JS ISI-RENDER UPYA PAGE KWA CACHE
+
 export const dynamic = 'force-dynamic';
+
 export const revalidate = 0;
 
 // PAGE KUU YA BORA
+
 export default async function Home() {
+
   // CHUKUA DATA YA NYIMBO KUTOKA KWENYE REGISTRY
+
   const registryData = await getRegistry();
 
   // PANGA NYIMBO KWA MOMENTUM SCORE NA CHUKUA TOP 15
+
   const rankedSongs = (registryData || [])
     .map((item: any) => ({
       ...item,
@@ -31,6 +42,7 @@ export default async function Home() {
     .slice(0, 15);
 
   // LOG YA KUJUA ENGINE IMEPOKEA ENTRIES NGAPI
+
   console.log(
     `BORA ENGINE: System Active. Processing ${rankedSongs.length} entries.`
   );
@@ -43,9 +55,11 @@ export default async function Home() {
         color: 'var(--bora-text)',
       }}
     >
+
       {/* BACKGROUND GLOWS ZA BORA */}
 
       <div className="pointer-events-none fixed inset-0 z-0">
+
         {/* GOLD GLOW YA JUU */}
 
         <div
@@ -63,19 +77,26 @@ export default async function Home() {
             backgroundColor: 'var(--bora-red-glow)',
           }}
         />
+
       </div>
 
       {/* CONTENT YOTE INAKAA JUU YA BACKGROUND */}
 
       <div className="relative z-10 flex-1">
+
         {/* BORASHELL INASIMAMIA TICKER, HEADER, NAV NA CONTENT */}
 
         <BoraShell
+
           top10={
             <section className="w-full pt-8 md:pt-12">
+
               {rankedSongs.length > 0 ? (
+
                 <ChartWrapper songs={rankedSongs} />
+
               ) : (
+
                 <div
                   className="py-20 text-center"
                   style={{
@@ -83,6 +104,7 @@ export default async function Home() {
                     opacity: 0.5,
                   }}
                 >
+
                   {/* GOLD LINE YA UJUMBE */}
 
                   <div
@@ -108,34 +130,46 @@ export default async function Home() {
                   >
                     CONNECTING_TO_MATITU_CORE...
                   </p>
+
                 </div>
+
               )}
+
             </section>
           }
 
           trends={
             <section className="w-full pt-8 md:pt-12">
-              <Throne />
+
+              <WeeklySlide />
+
             </section>
           }
 
           discover={
             <section className="w-full pt-8 md:pt-12">
+
               <Fresh />
+
             </section>
           }
 
           news={
             <section className="w-full pb-20 pt-8 md:pt-12">
+
               <News />
+
             </section>
           }
+
         />
+
       </div>
 
       {/* FOOTER YA BORA */}
 
       <Footer />
+
     </main>
   );
 }

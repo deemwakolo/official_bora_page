@@ -2,10 +2,12 @@
 
 import React from 'react';
 
-import { ArrowUp, Crown, Zap } from 'lucide-react';
+import { ArrowUp, CalendarDays, Zap } from 'lucide-react';
 
-export default function ThroneSlide() {
-  // DATA YA MFANO YA WIMBO UNAOKAA KWENYE THRONE
+export default function WeeklySlide() {
+
+  // DATA YA MFANO YA WIMBO WA WEEKLY CHART
+
   const song = {
     rank: 1,
     previousRank: 4,
@@ -16,6 +18,7 @@ export default function ThroneSlide() {
   };
 
   return (
+
     <div
       className="relative flex min-h-[420px] w-full items-center justify-center overflow-hidden px-4 py-10"
       style={{
@@ -23,7 +26,9 @@ export default function ThroneSlide() {
         color: 'var(--bora-text)',
       }}
     >
+
       {/* GLOW YA NYUMA */}
+
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[110px]"
         style={{
@@ -32,11 +37,14 @@ export default function ThroneSlide() {
       />
 
       {/* CONTENT */}
+
       <div className="relative z-10 flex w-full max-w-2xl flex-col items-center text-center">
 
         {/* LABEL */}
+
         <div className="mb-6 flex items-center gap-2">
-          <Crown
+
+          <CalendarDays
             size={14}
             strokeWidth={2}
             style={{
@@ -50,11 +58,13 @@ export default function ThroneSlide() {
               color: 'var(--bora-gold)',
             }}
           >
-            THRONE
+            WEEKLY
           </span>
+
         </div>
 
         {/* RANK */}
+
         <div
           className="mb-2 font-mono text-[11px] font-bold tracking-[0.25em]"
           style={{
@@ -74,12 +84,14 @@ export default function ThroneSlide() {
         </div>
 
         {/* MOVEMENT */}
+
         <div
           className="mt-4 flex items-center gap-2"
           style={{
             color: 'var(--bora-gold)',
           }}
         >
+
           <ArrowUp
             size={15}
             strokeWidth={2.5}
@@ -88,10 +100,13 @@ export default function ThroneSlide() {
           <span className="text-[10px] font-black uppercase tracking-[0.18em]">
             +{song.movement} POSITIONS
           </span>
+
         </div>
 
         {/* SONG */}
+
         <div className="mt-8">
+
           <h2
             className="font-cinzel text-[30px] font-black uppercase leading-none tracking-[-0.02em] md:text-[42px]"
             style={{
@@ -109,9 +124,11 @@ export default function ThroneSlide() {
           >
             {song.artist}
           </p>
+
         </div>
 
         {/* MOMENTUM */}
+
         <div
           className="mt-8 flex items-center gap-2 border px-4 py-2"
           style={{
@@ -119,6 +136,7 @@ export default function ThroneSlide() {
             backgroundColor: 'var(--bora-surface)',
           }}
         >
+
           <Zap
             size={11}
             style={{
@@ -143,9 +161,11 @@ export default function ThroneSlide() {
           >
             {song.momentum}
           </span>
+
         </div>
 
       </div>
+
     </div>
   );
 }
