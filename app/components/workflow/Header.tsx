@@ -4,7 +4,12 @@ import React from 'react';
 
 import Link from 'next/link';
 
+import ThemeToggle from '../components-themes/ThemeToggle';
+import { useBoraTheme } from '../components-themes/MasterGUI';
+
 export default function Header() {
+  const { theme, changeTheme, mounted } = useBoraTheme();
+
   return (
     <header
       className="sticky top-0 z-50 w-full overflow-hidden border-b"
@@ -140,6 +145,16 @@ export default function Header() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* THEME CONTROL AREA */}
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-end px-4 pb-3 md:px-8 md:pb-4">
+        <ThemeToggle
+          theme={theme}
+          onThemeChange={changeTheme}
+          mounted={mounted}
+          inline
+        />
       </div>
 
       {/* SOFT TRANSITION INTO BORA SHELL */}

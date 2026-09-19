@@ -14,6 +14,27 @@ type ThemeName = 'black' | 'white';
 
 const THEME_STORAGE_KEY = 'bora-theme';
 
+/*
+ * THEME CONTEXT — INARUHUSU HEADER KUFIKIA
+ * THEME ILIYOPO BILA KUTENGENEZA STATE YA PILI.
+ */
+interface ThemeContextValue {
+  theme: ThemeName;
+  changeTheme: (theme: ThemeName) => void;
+  mounted: boolean;
+}
+
+const BoraThemeContext =
+  React.createContext<ThemeContextValue>({
+    theme: 'black',
+    changeTheme: () => {},
+    mounted: false,
+  });
+
+export function useBoraTheme() {
+  return React.useContext(BoraThemeContext);
+}
+
 export default function MasterGUI({
   children,
 }: {
@@ -163,16 +184,21 @@ export default function MasterGUI({
   };
 
   return (
-    <MasterSoundProvider>
-      <MasterHapticsProvider>
-        {children}
+    <BoraThemeContext.Provider
+      value={{ theme, changeTheme, mounted }}
+    >
+      <MasterSoundProvider>
+        <MasterHapticsProvider>
+          {children}
 
-        <ThemeToggle
-          theme={theme}
-          onThemeChange={changeTheme}
-          mounted={mounted}
-        />
-      </MasterHapticsProvider>
-    </MasterSoundProvider>
+          {/* THEME TOGGLE IMEHAMISHWA KWENYE HEADER */}
+          {/* <ThemeToggle
+            theme={theme}
+            onThemeChange={changeTheme}
+            mounted={mounted}
+          /> */}
+        </MasterHapticsProvider>
+      </MasterSoundProvider>
+    </BoraThemeContext.Provider>
   );
 }

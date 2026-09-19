@@ -14,12 +14,18 @@ interface ThemeToggleProps {
   theme: ThemeName;
   onThemeChange: (theme: ThemeName) => void;
   mounted?: boolean;
+  /*
+   * RENDER NDANI YA HEADER BADALA YA KUELEA
+   * JUU YA NAVBAR YA CHINI.
+   */
+  inline?: boolean;
 }
 
 export default function ThemeToggle({
   theme,
   onThemeChange,
   mounted = true,
+  inline = false,
 }: ThemeToggleProps) {
   const { toggleHaptic } = useMasterHaptics();
 
@@ -211,10 +217,11 @@ export default function ThemeToggle({
   return (
     <div
       className={`
-        fixed bottom-4 z-[100]
+        ${
+          inline
+            ? 'relative'
+            : `fixed bottom-4 z-[100]
         sm:bottom-5
-        transition-all duration-700
-        ease-[cubic-bezier(0.22,1,0.36,1)]
         ${
           active
             ? 'left-1/2 -translate-x-1/2 translate-y-0 opacity-100'
@@ -224,7 +231,10 @@ export default function ThemeToggle({
           active
             ? 'left-1/2 -translate-x-1/2'
             : 'right-5'
+        }`
         }
+        transition-all duration-700
+        ease-[cubic-bezier(0.22,1,0.36,1)]
       `}
       onPointerEnter={wakeToggle}
       onPointerDown={handlePointerDown}

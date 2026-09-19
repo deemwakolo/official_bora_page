@@ -1,13 +1,14 @@
 
 import ChartWrapper from './components/ChartWrapper';
 
-import TrendsGUI from './components/trends/TrendsGUI';import Fresh from './components/discover/Fresh';
+import TrendsGUI from './components/trends/TrendsGUI';
 
 import News from './components/news/News';
 
 import Footer from './components/workflow/Footer';
 
-import BoraShell from './components/workflow/BoraShell';
+import PublicShell from './components/workflow/PublicShell';
+
 
 import { getRegistry } from '../lib/admin-actions';
 
@@ -85,87 +86,22 @@ export default async function Home() {
 
         {/* BORASHELL INASIMAMIA TICKER, HEADER, NAV NA CONTENT */}
 
-        <BoraShell
-
+        <PublicShell
           top10={
             <section className="w-full pt-8 md:pt-12">
-
-              {rankedSongs.length > 0 ? (
-
-                <ChartWrapper songs={rankedSongs} />
-
-              ) : (
-
-                <div
-                  className="py-20 text-center"
-                  style={{
-                    color: 'var(--bora-text)',
-                    opacity: 0.5,
-                  }}
-                >
-
-                  {/* GOLD LINE YA UJUMBE */}
-
-                  <div
-                    className="mx-auto mb-6 h-[1px] w-12"
-                    style={{
-                      backgroundColor:
-                        'var(--bora-gold)',
-                      opacity: 0.4,
-                    }}
-                  />
-
-                  <p className="text-xl font-black italic uppercase tracking-[0.3em]">
-                    The Registry is Quiet
-                  </p>
-
-                  <p
-                    className="mt-4 font-mono text-[10px] tracking-widest"
-                    style={{
-                      color:
-                        'var(--bora-text-subtle)',
-                      opacity: 0.4,
-                    }}
-                  >
-                    CONNECTING_TO_MATITU_CORE...
-                  </p>
-
-                </div>
-
-              )}
-
+              <ChartWrapper songs={rankedSongs} />
             </section>
           }
-
-         trends={
-  <section className="w-full pt-8 md:pt-12">
-    <TrendsGUI />
-  </section>
-}
-
-          discover={
-            <section className="w-full pt-8 md:pt-12">
-
-              <Fresh />
-
-            </section>
-          }
-
-          news={
-            <section className="w-full pb-20 pt-8 md:pt-12">
-
-              <News />
-
-            </section>
-          }
-
+          trends={<TrendsGUI />}
+          news={<News />}
         />
+
 
       </div>
 
       {/* FOOTER YA BORA */}
 
-      <Footer />
+      {/* <Footer /> */}
 
     </main>
   );

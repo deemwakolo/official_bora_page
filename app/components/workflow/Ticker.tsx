@@ -2,80 +2,116 @@
 
 import React from 'react';
 
-type Section = 'top10' | 'trends' | 'discover' | 'news';
+type Section =
+  | 'charts'
+  | 'trending'
+  | 'vote'
+  | 'updates'
+  | 'profile';
 
 interface TickerProps {
   activeSection: Section;
 }
 
+const sectionMessages: Record<
+  Section,
+  { label: string; text: string }[]
+> = {
+  charts: [
+    {
+      label: 'CHART',
+      text: 'CHART YA BORA INASONGA KULINGANA NA SIGNAL ZA MUZIKI',
+    },
+    {
+      label: 'RANK',
+      text: 'ANGALIA NYIMBO ZINAZOONGOZA CHART',
+    },
+    {
+      label: 'SIGNAL',
+      text: 'BORA INAFUATILIA MWENDO WA NYIMBO',
+    },
+  ],
+
+  trending: [
+    {
+      label: 'PULSE',
+      text: 'HAPA UTAONA TRENDS ZINAZOSONGA SASA',
+    },
+    {
+      label: 'RISING',
+      text: 'WASANII NA NYIMBO WANAOPANDA KWA KASI',
+    },
+    {
+      label: 'TREND',
+      text: 'FUATILIA SIGNAL KUTOKA KWENYE PLATFORMS',
+    },
+  ],
+
+  vote: [
+    {
+      label: 'ACTION',
+      text: 'PIGA KURA SASA — BONYEZA PANDISHA KUINUA WIMBO',
+    },
+    {
+      label: 'MOVE',
+      text: 'KURA YAKO INAWEZA KUBADILISHA CHART',
+    },
+    {
+      label: 'SIGNAL',
+      text: 'KILA KURA INAONGEZA SIGNAL KWENYE REALTIME CHART',
+    },
+  ],
+
+  updates: [
+    {
+      label: 'BRIEFING',
+      text: 'HAPA NDIPO UNAPOPATA KINACHOTOKEA KWENYE MUZIKI',
+    },
+    {
+      label: 'ARTIST',
+      text: 'HABARI NA MATUKIO YA WASANII',
+    },
+    {
+      label: 'FRESH',
+      text: 'RELEASE MPYA NA MATUKIO YANAYOANZA KUSONGA',
+    },
+  ],
+
+  profile: [
+    {
+      label: 'PROFILE',
+      text: 'PROFILE YA BORA ITAKUJA BAADAYE',
+    },
+    {
+      label: 'BORA',
+      text: 'SEHEMU YAKO YA BORA INAJENGWA',
+    },
+    {
+      label: 'NEXT',
+      text: 'FEATURES ZA PROFILE ZITAFUNGULIWA BAADAYE',
+    },
+  ],
+};
+
+const sectionTags: Record<Section, string> = {
+  charts: 'CHART',
+  trending: 'PULSE',
+  vote: 'ACTION',
+  updates: 'BRIEFING',
+  profile: 'PROFILE',
+};
+
 export default function Ticker({
   activeSection,
 }: TickerProps) {
-  // UJUMBE WA KILA SECTION YA BORA
-  const sectionMessages = {
-    top10: [
-      {
-        label: 'ACTION',
-        text: 'PIGA KURA SASA — BONYEZA PANDISHA KUINUA WIMBO',
-      },
-      {
-        label: 'MOVE',
-        text: 'DIAMOND APANDA NAFASI NNE',
-      },
-      {
-        label: 'SIGNAL',
-        text: 'KURA YAKO INAWEZA KUBADILISHA CHART',
-      },
-    ],
+  // NORMALIZE SECTION ILI OLD / UNEXPECTED VALUES ZISIVUNJE TICKER
+  const safeSection: Section =
+    activeSection in sectionMessages
+      ? activeSection
+      : 'charts';
 
-    trends: [
-      {
-        label: 'PULSE',
-        text: 'HAPA UTAONA TRENDS ZINAZOSONGA SASA',
-      },
-      {
-        label: 'STREAK',
-        text: 'SIELEWI YAKAA NAMBA MOJA WIKI MBILI',
-      },
-      {
-        label: 'RISING',
-        text: 'WASANII NA NYIMBO WANAOPANDA KWA KASI',
-      },
-    ],
-
-    discover: [
-      {
-        label: 'DISCOVER',
-        text: 'GUNDUA NYIMBO NA WASANII WANAOIBUKA',
-      },
-      {
-        label: 'FRESH',
-        text: 'RELEASE MPYA ZINAZOANZA KUVUTA ATTENTION',
-      },
-      {
-        label: 'WATCH',
-        text: 'KUNA KITU KIPYA KINACHOANZA KUSONGA',
-      },
-    ],
-
-    news: [
-      {
-        label: 'BRIEFING',
-        text: 'HAPA NDIPO UNAPOPATA KINACHOTOKEA KWENYE MUZIKI',
-      },
-      {
-        label: 'ARTIST',
-        text: 'HABARI NA MATUKIO YA WASANII',
-      },
-      {
-        label: 'INDUSTRY',
-        text: 'KINACHOTOKEA KWENYE SEKTA YA MUZIKI TANZANIA',
-      },
-    ],
-  };
-
-  // KUCHAGUA UJUMBE WA SECTION ILIYO ACTIVE
-  const messages = sectionMessages[activeSection];
+  // CHAGUA UJUMBE WA SECTION ILIYO ACTIVE
+  const messages = sectionMessages[safeSection];
 
   // KURUDUFISHA DATA ILI TICKER IENDELEE BILA KUKATIKA
   const stream = [...messages, ...messages];
@@ -103,8 +139,7 @@ export default function Ticker({
         className="relative z-20 flex h-full shrink-0 items-center gap-1 px-2"
         style={{
           backgroundColor: 'var(--bora-red)',
-          boxShadow:
-            '3px 0 8px var(--bora-red-glow)',
+          boxShadow: '3px 0 8px var(--bora-red-glow)',
         }}
       >
         <div
@@ -120,13 +155,7 @@ export default function Ticker({
             color: 'var(--bora-text)',
           }}
         >
-          {activeSection === 'top10'
-            ? 'ACTION'
-            : activeSection === 'trends'
-              ? 'PULSE'
-              : activeSection === 'discover'
-                ? 'DISCOVER'
-                : 'BRIEFING'}
+          {sectionTags[safeSection]}
         </span>
       </div>
 
@@ -134,7 +163,7 @@ export default function Ticker({
       <div className="flex whitespace-nowrap animate-stream hover:[animation-play-state:paused]">
         {stream.map((item, index) => (
           <div
-            key={index}
+            key={`${safeSection}-${index}`}
             className="flex items-center gap-2.5 px-4"
           >
             {/* LABEL YA UJUMBE */}
