@@ -18,7 +18,7 @@ export default function PublicShell({
   news,
 }: PublicShellProps) {
   const [activeSection, setActiveSection] =
-    useState<Section>('charts');
+    useState<Section>('vote');
 
   const renderSection = () => {
     switch (activeSection) {
