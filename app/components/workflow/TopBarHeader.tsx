@@ -17,7 +17,7 @@ export default function TopBarHeader({
       <div
         aria-hidden
         className={`
-          pointer-events-none absolute inset-0 opacity-[0.70]
+          pointer-events-none absolute inset-0
           transition-opacity duration-500 ease-out
           ${retracted ? 'opacity-0' : 'opacity-[0.70]'}
         `}
@@ -185,12 +185,8 @@ export default function TopBarHeader({
         className={`
           absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 font-cinzel
           text-[22px] font-black uppercase leading-none tracking-[-0.045em]
-          transition-all duration-500 ease-out
-          ${
-            retracted
-              ? 'translate-y-[-50%] opacity-100'
-              : 'pointer-events-none translate-y-[-30%] opacity-0'
-          }
+          transition-opacity duration-500 ease-out
+          ${retracted ? 'opacity-100' : 'pointer-events-none opacity-0'}
         `}
         style={{ color: 'var(--bora-text)' }}
       >
