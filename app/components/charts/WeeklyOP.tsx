@@ -4,67 +4,77 @@ import React from 'react';
 
 import MomentChart, {
   MomentChartData,
+  MomentSong,
 } from './MomentChart';
+import { SongMetadata } from './TapOP';
 
 // WEEKLY OPERATOR — wiring layer ya WEEKLY chart.
 // Hapa ndipo data source ya WEEKLY itaunganishwa baadaye
 // (Supabase/API). Kwa sasa: placeholder data pekee.
+
+// MOVEMENT — ▲ N / ▼ N / = / NEW
+const weeklyMovement: MomentSong['movement'][] = [
+  { kind: 'new' },
+  { kind: 'up', delta: 3 },
+  { kind: 'down', delta: 2 },
+  { kind: 'same' },
+  { kind: 'up', delta: 1 },
+  { kind: 'new' },
+  { kind: 'down', delta: 4 },
+  { kind: 'same' },
+  { kind: 'up', delta: 2 },
+  { kind: 'new' },
+];
+
+// SONG METADATA — placeholder (haina score/points)
+const weeklyMetadata = (
+  rank: number
+): SongMetadata => ({
+  title: `PLACEHOLDER SONG ${String(rank).padStart(2, '0')}`,
+  artist: 'PLACEHOLDER ARTIST',
+  feature: '—',
+  producer: 'PLACEHOLDER PRODUCER',
+  releaseDate: 'PLACEHOLDER DATE',
+  genre: 'PLACEHOLDER GENRE',
+  artwork: '',
+  youtube: '',
+  spotify: '',
+  boomplay: '',
+});
+
 export const weeklyChartData: MomentChartData = {
   title: 'TOP 10 SONGS',
   periodLabel: 'WEEKLY',
-  badge: 'PLACEHOLDER',
-  songs: [
+  date: 'PLACEHOLDER WEEK',
+  highlights: [
     {
-      rank: 1,
-      title: 'PLACEHOLDER SONG 01',
-      artist: 'PLACEHOLDER ARTIST',
+      id: 'no-1',
+      label: 'NUMBER ONE',
+      value: 'PLACEHOLDER SONG 01',
     },
     {
-      rank: 2,
-      title: 'PLACEHOLDER SONG 02',
-      artist: 'PLACEHOLDER ARTIST',
+      id: 'highest-jump',
+      label: 'HIGHEST JUMP',
+      value: 'PLACEHOLDER SONG 02',
+      note: '▲ 3',
     },
     {
-      rank: 3,
-      title: 'PLACEHOLDER SONG 03',
-      artist: 'PLACEHOLDER ARTIST',
+      id: 'steepest-fall',
+      label: 'STEEPEST FALL',
+      value: 'PLACEHOLDER SONG 07',
+      note: '▼ 4',
     },
     {
-      rank: 4,
-      title: 'PLACEHOLDER SONG 04',
-      artist: 'PLACEHOLDER ARTIST',
-    },
-    {
-      rank: 5,
-      title: 'PLACEHOLDER SONG 05',
-      artist: 'PLACEHOLDER ARTIST',
-    },
-    {
-      rank: 6,
-      title: 'PLACEHOLDER SONG 06',
-      artist: 'PLACEHOLDER ARTIST',
-    },
-    {
-      rank: 7,
-      title: 'PLACEHOLDER SONG 07',
-      artist: 'PLACEHOLDER ARTIST',
-    },
-    {
-      rank: 8,
-      title: 'PLACEHOLDER SONG 08',
-      artist: 'PLACEHOLDER ARTIST',
-    },
-    {
-      rank: 9,
-      title: 'PLACEHOLDER SONG 09',
-      artist: 'PLACEHOLDER ARTIST',
-    },
-    {
-      rank: 10,
-      title: 'PLACEHOLDER SONG 10',
-      artist: 'PLACEHOLDER ARTIST',
+      id: 'new-entry',
+      label: 'NEW ENTRY',
+      value: 'PLACEHOLDER SONG 06',
     },
   ],
+  songs: weeklyMovement.map((movement, index) => ({
+    rank: index + 1,
+    movement,
+    metadata: weeklyMetadata(index + 1),
+  })),
 };
 
 export default function WeeklyOP() {

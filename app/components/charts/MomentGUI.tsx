@@ -2,8 +2,16 @@
 
 import React, { useRef, useState } from 'react';
 
-import WeeklyOP from './WeeklyOP';
-import MonthlyOP from './MonthlyOP';
+import WeeklyOP, {
+  weeklyChartData,
+} from './WeeklyOP';
+import MonthlyOP, {
+  monthlyChartData,
+} from './MonthlyOP';
+import {
+  MomentChartData,
+  MomentChartHeader,
+} from './MomentChart';
 
 // PERIOD ZA CHART
 type ChartPeriod = 'weekly' | 'monthly';
@@ -20,12 +28,22 @@ const periodLabels = {
 
 // PANE REGISTRY — GUI moja, operators mbili.
 // Weekly na Monthly zote zinatumia GUI hii hii (hakuna duplicate).
+// data inatoka kwa operator husika (MomentGUI haihardcode period/date).
 const panes: {
   id: ChartPeriod;
   Pane: React.ComponentType;
+  data: MomentChartData;
 }[] = [
-  { id: 'weekly', Pane: WeeklyOP },
-  { id: 'monthly', Pane: MonthlyOP },
+  {
+    id: 'weekly',
+    Pane: WeeklyOP,
+    data: weeklyChartData,
+  },
+  {
+    id: 'monthly',
+    Pane: MonthlyOP,
+    data: monthlyChartData,
+  },
 ];
 
 export default function MomentGUI() {
@@ -46,6 +64,10 @@ export default function MomentGUI() {
 
   // PERIOD PANE INAYOONEKANA KWA SASA
   const activeIndex = periods.indexOf(activePeriod);
+
+  // DATA YA PERIOD ACTIVE (period label + date + highlights)
+  const activeData =
+    panes[activeIndex]?.data ?? panes[0].data;
 
   // KUHAMIA KWENYE PANE FULANI
   const goToIndex = (index: number) => {
@@ -132,6 +154,11 @@ export default function MomentGUI() {
       }}
     >
 
+      {/* CHART HEADER — BORA / TOP 10 SONGS / PERIOD CHART / DATE */}
+      <div className="mb-5">
+        <MomentChartHeader data={activeData} />
+      </div>
+
       {/* PERIOD SWITCH */}
       <div className="mx-auto mb-6 flex w-full max-w-5xl items-center justify-center px-4">
         <div
@@ -214,35 +241,6 @@ export default function MomentGUI() {
           </div>
 
         ))}
-
-      </div>
-
-      {/* CAROUSEL INDICATORS */}
-      <div className="mt-5 flex items-center justify-center gap-3">
-
-        {periods.map((period, index) => {
-
-          const active = activeIndex === index;
-
-          return (
-            <button
-              key={`indicator-${period}`}
-              type="button"
-              onClick={() => goToIndex(index)}
-              aria-label={periodLabels[period]}
-              className="h-[3px] rounded-full transition-all duration-300"
-              style={{
-                width: active ? '32px' : '14px',
-                backgroundColor: active
-                  ? 'var(--bora-gold)'
-                  : 'color-mix(in srgb, var(--bora-text-subtle) 55%, transparent)',
-                boxShadow: active
-                  ? '0 0 12px var(--bora-gold-glow)'
-                  : 'none',
-              }}
-            />
-          );
-        })}
 
       </div>
 
