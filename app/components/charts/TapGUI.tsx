@@ -21,6 +21,9 @@ export default function TapGUI({
   useEffect(() => {
     if (!song) return;
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
@@ -28,6 +31,7 @@ export default function TapGUI({
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [song, onClose]);
@@ -38,7 +42,7 @@ export default function TapGUI({
   const links = platformLinks(metadata);
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center">
 
       {/* BACKDROP */}
       <button
@@ -245,4 +249,3 @@ function MetaRow({
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface VoteAlertProps {
   // Taarifa za popup ya kura
@@ -14,13 +14,24 @@ interface VoteAlertProps {
 export default function VoteAlert({
   alert,
 }: VoteAlertProps) {
+  useEffect(() => {
+    if (!alert) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [alert]);
+
   if (!alert) return null;
 
   // Kuamua kama kura ni ya kupandisha au kushusha
   const isUp = alert.type === 'up';
 
   return (
-    <div className="pointer-events-auto fixed inset-0 z-[1000] flex items-center justify-center">
+    <div className="pointer-events-auto fixed inset-0 z-[3000] flex items-center justify-center">
       {/* BACKDROP — Inablur screen yote wakati popup iko */}
       <div className="animate-vote-screen pointer-events-none absolute inset-0 bg-black/25 backdrop-blur-md" />
 
