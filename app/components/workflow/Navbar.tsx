@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 
 import {
   BarChart3,
@@ -9,9 +9,6 @@ import {
   Bell,
   User,
 } from 'lucide-react';
-
-import { useMasterSound } from '../components-themes/haptics/MasterSound';
-import { useMasterHaptics } from '../components-themes/haptics/MasterHaptics';
 
 export type Section =
   | 'charts'
@@ -62,66 +59,18 @@ export default function Navbar({
   activeSection,
   onSectionChange,
 }: NavbarProps) {
-  const { playVotePing } = useMasterSound();
-  const { voteHaptic, toggleHaptic } = useMasterHaptics();
-
-  const [hidden, setHidden] = useState(false);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-
-      // Always show navbar at the very top.
-      if (currentScrollY <= 20) {
-        setHidden(false);
-        lastScrollY.current = currentScrollY;
-        return;
-      }
-
-      // Small movement threshold prevents jitter.
-      const delta = currentScrollY - lastScrollY.current;
-
-      if (Math.abs(delta) < 8) {
-        return;
-      }
-
-      // Scrolling down = hide.
-      // Scrolling up = reveal.
-      if (delta > 0) {
-        setHidden(true);
-      } else {
-        setHidden(false);
-      }
-
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
   const handlePress = (id: Section) => {
-    if (id === 'vote') {
-      voteHaptic();
-      playVotePing();
-    } else {
-      toggleHaptic();
-    }
-
     onSectionChange(id);
   };
 
   return (
     <nav
-      className={`
-        pointer-events-none fixed bottom-0 left-0 right-0 z-[100] w-full
-        transition-transform duration-300 ease-out
-        ${hidden ? 'translate-y-full' : 'translate-y-0'}
-      `}
+      className="
+        pointer-events-none
+        fixed bottom-0 left-0 right-0
+        z-[100]
+        w-full
+      "
     >
       {/* PAGE → NAVBAR FADE */}
       <div

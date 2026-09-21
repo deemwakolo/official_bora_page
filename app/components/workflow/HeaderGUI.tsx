@@ -2,161 +2,142 @@
 
 import React from 'react';
 
-import { X } from 'lucide-react';
-
 import Ham from './Ham';
-
 import TopBarHeader from './TopBarHeader';
-
-import ThemeToggle from '../components-themes/ThemeToggle';
-import { useBoraTheme } from '../components-themes/MasterGUI';
-
-const MENU_ITEMS = [
-  { id: 'charts', label: 'Charts' },
-  { id: 'trending', label: 'Trending' },
-  { id: 'vote', label: 'Vote' },
-  { id: 'updates', label: 'Updates' },
-  { id: 'profile', label: 'Profile' },
-];
+import Sidebar from './Sidebar';
 
 interface HeaderGUIProps {
-  retracted: boolean;
-  menuOpen: boolean;
-  onOpenMenu: () => void;
-  onCloseMenu: () => void;
+  retracted: boolean;
+  menuOpen: boolean;
+  onOpenMenu: () => void;
+  onCloseMenu: () => void;
 }
 
 export default function HeaderGUI({
-  retracted,
-  menuOpen,
-  onOpenMenu,
-  onCloseMenu,
+  retracted,
+  menuOpen,
+  onOpenMenu,
+  onCloseMenu,
 }: HeaderGUIProps) {
-  const { theme, changeTheme, mounted } = useBoraTheme();
+  return (
+    <>
+      {/* HEADER FLOW RESERVATION */}
+      <div
+        aria-hidden
+        className="h-[125px] w-full md:h-[145px]"
+      />
 
-  return (
-    <header
-      className="sticky top-0 z-50 w-full"
-      style={{
-        backgroundColor: 'var(--bora-background-deep)',
-        color: 'var(--bora-text)',
-      }}
-    >
-      {/* UNIFIED HEADER SURFACE — SEHEMU MOJA INAYOBADILIKA */}
-      <div
-        className={`
-          relative w-full overflow-hidden
-          transition-all duration-500 ease-out
-          ${retracted ? 'h-[56px]' : 'h-[125px] md:h-[145px]'}
-          ${
-            retracted
-              ? 'shadow-[0_8px_30px_rgba(0,0,0,0.45)]'
-              : 'shadow-none'
-          }
-        `}
-        style={{
-          backgroundColor: 'var(--bora-background-deep)',
-          borderBottom: retracted
-            ? '1px solid var(--bora-border)'
-            : '1px solid transparent',
-        }}
-      >
-        {/* TOP BAR — RETRACTING HEADER CONTENT */}
-        <TopBarHeader retracted={retracted} />
+      {/* FIXED HEADER */}
+      <header
+        className="fixed left-0 right-0 top-0 z-50 w-full"
+        style={{
+          color: 'var(--bora-text)',
+        }}
+      >
+        {/* VISUAL HEADER */}
+        <div
+          className={`
+            relative w-full overflow-hidden
+            will-change-[height]
+            transition-[height]
+            duration-[450ms]
+            ease-[cubic-bezier(0.16,1,0.3,1)]
+            ${
+              retracted
+                ? 'h-[56px]'
+                : 'h-[125px] md:h-[145px]'
+            }
+          `}
+          style={{
+            backgroundColor:
+              'var(--bora-background-deep)',
+            borderBottom: retracted
+              ? '1px solid var(--bora-border)'
+              : '1px solid transparent',
+            boxShadow: retracted
+              ? '0 8px 30px rgba(0,0,0,0.45)'
+              : 'none',
+          }}
+        >
+          {/* MAST VISUAL */}
+          <div className="absolute inset-0 z-10">
+            <TopBarHeader retracted={retracted} />
+          </div>
 
-        {/* HAMBURGER */}
-          <Ham
-            retracted={retracted}
-            menuOpen={menuOpen}
-            onOpen={onOpenMenu}
-          />
+          {/* HAMBURGER */}
+          <div className="relative z-[200]">
+            <Ham
+              retracted={retracted}
+              menuOpen={menuOpen}
+              onOpen={onOpenMenu}
+            />
+          </div>
 
-      </div>
+          {/* RED LIVE FLICKER */}
+          <div
+            className="
+              pointer-events-none
+              absolute right-4 top-1/2 z-[150]
+              flex -translate-y-1/2
+              items-center gap-2
+              md:right-8
+            "
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className="
+                  absolute inset-0
+                  animate-ping
+                  rounded-full
+                  opacity-60
+                "
+                style={{
+                  backgroundColor:
+                    'var(--bora-red)',
+                }}
+              />
 
-      {/* SIDE MENU — BACKDROP */}
-      <button
-        type="button"
-        aria-label="Close menu"
-        onClick={() => onCloseMenu()}
-        tabIndex={menuOpen ? 0 : -1}
-        className={`
-          fixed inset-0 z-40 bg-black/60 transition-opacity duration-300
-          ${menuOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}
-        `}
-      />
+              <span
+                className="
+                  relative
+                  h-2.5 w-2.5
+                  rounded-full
+                "
+                style={{
+                  backgroundColor:
+                    'var(--bora-red)',
+                  boxShadow:
+                    '0 0 10px var(--bora-red)',
+                }}
+              />
+            </span>
 
-      {/* SIDE MENU — PANEL */}
-      <aside
-        aria-hidden={!menuOpen}
-        className={`
-          fixed bottom-0 left-0 top-0 z-50 flex w-[280px] max-w-[85vw] flex-col
-          transition-transform duration-300 ease-out
-          ${menuOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
-        style={{
-          backgroundColor: 'var(--bora-background-deep)',
-          color: 'var(--bora-text)',
-          borderRight: '1px solid var(--bora-border)',
-        }}
-      >
-        {/* MENU HEADER */}
-        <div className="flex h-[56px] items-center justify-between px-4">
-          <span className="font-cinzel text-[18px] font-black uppercase tracking-[-0.045em]">
-            BORA
-            <span style={{ color: 'var(--bora-gold)' }}>.</span>
-          </span>
+            <span
+              className="
+                hidden
+                font-mono
+                text-[8px]
+                font-bold
+                uppercase
+                tracking-[0.2em]
+                sm:block
+              "
+              style={{
+                color:
+                  'var(--bora-text-muted)',
+              }}
+            >
+              LIVE
+            </span>
+          </div>
+        </div>
+      </header>
 
-          <button
-            type="button"
-            onClick={() => onCloseMenu()}
-            aria-label="Close menu"
-            className="flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ color: 'var(--bora-text-muted)' }}
-          >
-            <X size={20} strokeWidth={2} />
-          </button>
-        </div>
-
-        {/* MENU NAVIGATION */}
-        <nav className="flex flex-col gap-1 px-3">
-          {MENU_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onCloseMenu()}
-              aria-label={item.label}
-              className="rounded-xl px-4 py-3 text-left text-[13px] font-bold uppercase tracking-[0.14em] transition-colors"
-              style={{ color: 'var(--bora-text-muted)' }}
-              onMouseEnter={(event) => {
-                event.currentTarget.style.color = 'var(--bora-gold)';
-              }}
-              onMouseLeave={(event) => {
-                event.currentTarget.style.color = 'var(--bora-text-muted)';
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* MENU THEME */}
-        <div className="px-7 pb-2">
-          <ThemeToggle
-            theme={theme}
-            onThemeChange={changeTheme}
-            mounted={mounted}
-            inline
-          />
-        </div>
-
-        {/* MENU FOOTER */}
-        <div
-          className="mt-auto px-7 pb-6 font-mono text-[8px] uppercase tracking-[0.3em]"
-          style={{ color: 'var(--bora-text-subtle)' }}
-        >
-          Tanzania Music Chart
-        </div>
-      </aside>
-    </header>
-  );
+      {/* SIDEBAR */}
+      <Sidebar
+        menuOpen={menuOpen}
+        onClose={onCloseMenu}
+      />
+    </>
+  );
 }
