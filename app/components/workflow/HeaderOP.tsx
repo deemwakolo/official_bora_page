@@ -2,38 +2,46 @@
 
 import { useEffect, useState } from 'react';
 
+// Umbali wa scroll unaobadilisha header kutoka 0 (fully expanded)
+// hadi 1 (fully retracted). Transformation ni CONTINUOUS — kila pixel
+// ya scroll inasogeza elements, hakuna threshold jump.
+export const HEADER_SCROLL_DISTANCE = 140;
+
 export interface HeaderOP {
-  retracted: boolean;
+  progress: number;
   menuOpen: boolean;
   openMenu: () => void;
   closeMenu: () => void;
   toggleMenu: () => void;
 }
 
-// Two thresholds instead of one, with a dead zone between them.
-// A single "> 40" line flips back and forth on every micro-scroll
-// near that point, restarting the CSS transition each time — that's
-// the glitch/stuck feeling. This gives scroll a 60px buffer where
-// nothing changes, so it only flips once per decisive direction.
-const RETRACT_AT = 80; // must pass this (scrolling down) to shrink
-const EXPAND_AT = 20;  // must come back under this (scrolling up) to expand
-
 export function useHeaderOP(): HeaderOP {
-  const [retracted, setRetracted] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     let raf = 0;
+    let last = -1;
 
     const update = () => {
       raf = 0;
-      const y = window.scrollY;
 
-      setRetracted((prev) => {
-        if (!prev && y > RETRACT_AT) return true;
-        if (prev && y < EXPAND_AT) return false;
-        return prev;
-      });
+      const raw =
+        window.scrollY / HEADER_SCROLL_DISTANCE;
+
+      const clamped = Math.min(
+        Math.max(raw, 0),
+        1
+      );
+
+      // Rounding 3 decimals: enough resolution for a smooth
+      // 0 -> 1 sweep, but haipigi render kwa kila sub-pixel.
+      const next = Math.round(clamped * 1000) / 1000;
+
+      if (next === last) return;
+
+      last = next;
+      setProgress(next);
     };
 
     const onScroll = () => {
@@ -43,7 +51,9 @@ export function useHeaderOP(): HeaderOP {
 
     update();
 
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', onScroll, {
+      passive: true,
+    });
 
     return () => {
       window.removeEventListener('scroll', onScroll);
@@ -71,7 +81,7 @@ export function useHeaderOP(): HeaderOP {
   const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   return {
-    retracted,
+    progress,
     menuOpen,
     openMenu,
     closeMenu,

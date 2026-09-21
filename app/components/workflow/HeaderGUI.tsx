@@ -7,137 +7,214 @@ import TopBarHeader from './TopBarHeader';
 import Sidebar from './Sidebar';
 
 interface HeaderGUIProps {
-  retracted: boolean;
-  menuOpen: boolean;
-  onOpenMenu: () => void;
-  onCloseMenu: () => void;
+  progress: number;
+  menuOpen: boolean;
+  onOpenMenu: () => void;
+  onCloseMenu: () => void;
 }
 
+// Continuous transformation: --bora-hp (0 = expanded, 1 = retracted)
+// inaendesha kila kitu kwa calc(). Native CSS Scroll-Driven Animation
+// inachukua over pale browser inaposupport (animation-timeline),
+// otherwise React progress (HeaderOP) inaradi hiyo var.
+const HEADER_CSS = `
+@property --bora-hp {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+.bora-hdr-surface {
+  --bora-h-open: 125px;
+  --bora-h-closed: 56px;
+  height: calc(
+    var(--bora-h-open) -
+      (var(--bora-h-open) - var(--bora-h-closed)) *
+      var(--bora-hp)
+  );
+}
+
+@media (min-width: 768px) {
+  .bora-hdr-surface {
+    --bora-h-open: 145px;
+  }
+}
+
+.bora-hdr-brand {
+  --bora-fs-open: 40px;
+  font-size: calc(
+    var(--bora-fs-open) -
+      (var(--bora-fs-open) - 22px) * var(--bora-hp)
+  );
+}
+
+@media (min-width: 640px) {
+  .bora-hdr-brand {
+    --bora-fs-open: 46px;
+  }
+}
+
+@media (min-width: 768px) {
+  .bora-hdr-brand {
+    --bora-fs-open: 60px;
+  }
+}
+
+.bora-hdr-tagline {
+  overflow: hidden;
+  max-height: calc(16px - 16px * var(--bora-hp));
+  margin-top: calc(8px - 8px * var(--bora-hp));
+}
+
+@supports (animation-timeline: scroll()) {
+  .bora-hdr-surface {
+    animation: bora-hdr-sweep linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 140px;
+  }
+}
+
+@keyframes bora-hdr-sweep {
+  from {
+    --bora-hp: 0;
+  }
+  to {
+    --bora-hp: 1;
+  }
+}
+`;
+
 export default function HeaderGUI({
-  retracted,
-  menuOpen,
-  onOpenMenu,
-  onCloseMenu,
+  progress,
+  menuOpen,
+  onOpenMenu,
+  onCloseMenu,
 }: HeaderGUIProps) {
-  return (
-    <>
-      {/* HEADER FLOW RESERVATION */}
-      <div
-        aria-hidden
-        className="h-[125px] w-full md:h-[145px]"
-      />
+  const p = Math.min(Math.max(progress, 0), 1);
 
-      {/* FIXED HEADER */}
-      <header
-        className="fixed left-0 right-0 top-0 z-50 w-full"
-        style={{
-          color: 'var(--bora-text)',
-        }}
-      >
-        {/* VISUAL HEADER */}
-        <div
-          className={`
-            relative w-full overflow-hidden
-            will-change-[height]
-            transition-[height]
-            duration-[450ms]
-            ease-[cubic-bezier(0.16,1,0.3,1)]
-            ${
-              retracted
-                ? 'h-[56px]'
-                : 'h-[125px] md:h-[145px]'
-            }
-          `}
-          style={{
-            backgroundColor:
-              'var(--bora-background-deep)',
-            borderBottom: retracted
-              ? '1px solid var(--bora-border)'
-              : '1px solid transparent',
-            boxShadow: retracted
-              ? '0 8px 30px rgba(0,0,0,0.45)'
-              : 'none',
-          }}
-        >
-          {/* MAST VISUAL */}
-          <div className="absolute inset-0 z-10">
-            <TopBarHeader retracted={retracted} />
-          </div>
+  return (
+    <>
+      <style
+        dangerouslySetInnerHTML={{ __html: HEADER_CSS }}
+      />
 
-          {/* HAMBURGER */}
-          <div className="relative z-[200]">
-            <Ham
-              retracted={retracted}
-              menuOpen={menuOpen}
-              onOpen={onOpenMenu}
-            />
-          </div>
+      {/* HEADER FLOW RESERVATION */}
+      <div
+        aria-hidden
+        className="h-[125px] w-full md:h-[145px]"
+      />
 
-          {/* RED LIVE FLICKER */}
-          <div
-            className="
-              pointer-events-none
-              absolute right-4 top-1/2 z-[150]
-              flex -translate-y-1/2
-              items-center gap-2
-              md:right-8
-            "
-          >
-            <span className="relative flex h-2.5 w-2.5">
-              <span
-                className="
-                  absolute inset-0
-                  animate-ping
-                  rounded-full
-                  opacity-60
-                "
-                style={{
-                  backgroundColor:
-                    'var(--bora-red)',
-                }}
-              />
+      {/* FIXED HEADER */}
+      <header
+        className="fixed left-0 right-0 top-0 z-50 w-full"
+        style={{
+          color: 'var(--bora-text)',
+        }}
+      >
+        {/* VISUAL HEADER — SURFACE MOJA INAYOBADILIKA */}
+        <div
+          className="bora-hdr-surface relative w-full overflow-hidden"
+          style={
+            {
+              '--bora-hp': p,
+              backgroundColor:
+                'var(--bora-background-deep)',
+              borderBottom: `1px solid color-mix(in srgb, var(--bora-border) ${Math.round(
+                p * 100
+              )}%, transparent)`,
+              boxShadow:
+                p <= 0.001
+                  ? 'none'
+                  : `0 ${(8 * p).toFixed(1)}px ${(
+                      30 * p
+                    ).toFixed(1)}px rgba(0,0,0,${(
+                      0.45 * p
+                    ).toFixed(2)})`,
+            } as React.CSSProperties
+          }
+        >
+          {/* MAST VISUAL */}
+          <div className="absolute inset-0">
+            <TopBarHeader />
+          </div>
 
-              <span
-                className="
-                  relative
-                  h-2.5 w-2.5
-                  rounded-full
-                "
-                style={{
-                  backgroundColor:
-                    'var(--bora-red)',
-                  boxShadow:
-                    '0 0 10px var(--bora-red)',
-                }}
-              />
-            </span>
+          {/* HAMBURGER */}
+          <Ham
+            menuOpen={menuOpen}
+            onOpen={onOpenMenu}
+          />
 
-            <span
-              className="
-                hidden
-                font-mono
-                text-[8px]
-                font-bold
-                uppercase
-                tracking-[0.2em]
-                sm:block
-              "
-              style={{
-                color:
-                  'var(--bora-text-muted)',
-              }}
-            >
-              LIVE
-            </span>
-          </div>
-        </div>
-      </header>
+          {/* RED LIVE FLICKER */}
+          <div
+            className="
+              pointer-events-none
+              absolute right-4 top-1/2 z-[150]
+              flex
+              items-center gap-2
+              md:right-8
+            "
+            style={{
+              opacity: 1 - p,
+              transform: `translateY(-50%) translateX(${(
+                8 * p
+              ).toFixed(1)}px)`,
+            }}
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className="
+                  absolute inset-0
+                  animate-ping
+                  rounded-full
+                  opacity-60
+                "
+                style={{
+                  backgroundColor:
+                    'var(--bora-red)',
+                }}
+              />
 
-      {/* SIDEBAR */}
-      <Sidebar
-        menuOpen={menuOpen}
-        onClose={onCloseMenu}
-      />
-    </>
-  );
+              <span
+                className="
+                  relative
+                  h-2.5 w-2.5
+                  rounded-full
+                "
+                style={{
+                  backgroundColor:
+                    'var(--bora-red)',
+                  boxShadow:
+                    '0 0 10px var(--bora-red)',
+                }}
+              />
+            </span>
+
+            <span
+              className="
+                hidden
+                font-mono
+                text-[8px]
+                font-bold
+                uppercase
+                tracking-[0.2em]
+                sm:block
+              "
+              style={{
+                color:
+                  'var(--bora-text-muted)',
+              }}
+            >
+              LIVE
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* SIDEBAR */}
+      <Sidebar
+        menuOpen={menuOpen}
+        onClose={onCloseMenu}
+      />
+    </>
+  );
 }
