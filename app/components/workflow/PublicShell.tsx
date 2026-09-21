@@ -70,7 +70,12 @@ export default function PublicShell({
   return (
     <>
       <BoraShell>
-        {renderSection()}
+        <div
+          key={activeSection}
+          className="bora-section-transition"
+        >
+          {renderSection()}
+        </div>
       </BoraShell>
 
       <Navbar
