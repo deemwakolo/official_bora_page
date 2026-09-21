@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 import BoraShell from './BoraShell';
 import Navbar, { Section } from './Navbar';
-import ChartsGUI from './../charts/ChartsGUI';
+import MomentGUI from './../charts/MomentGUI';
 
 interface PublicShellProps {
   top10: React.ReactNode;
@@ -56,7 +56,7 @@ export default function PublicShell({
         );
 
       case 'charts':
-        return <ChartsGUI />;
+        return <MomentGUI />;
 
       default:
         return top10;
