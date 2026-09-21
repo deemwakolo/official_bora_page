@@ -5,22 +5,17 @@ import Link from 'next/link';
 export default function TopBarHeader() {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* TINGA TEXTURE — INAKANDAMIZWA NDANI YA COMPACT BAR */}
+      {/* TINGA TEXTURE — FULL-SIZE BACKGROUND INAYOMEZWA NDANI YA MAST */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 origin-top"
+        className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage: "url('/assets/Tinga.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'top center',
           backgroundRepeat: 'no-repeat',
-          maskImage:
-            'linear-gradient(to bottom, black 0%, black 35%, transparent 100%)',
-          WebkitMaskImage:
-            'linear-gradient(to bottom, black 0%, black 35%, transparent 100%)',
-          opacity: 'calc(0.70 - 0.52 * var(--bora-hp))',
-          transform:
-            'scale(calc(1 - 0.45 * var(--bora-hp)))',
+          opacity: 'calc(0.70 - 0.60 * var(--bora-hp))',
+          filter: 'blur(calc(var(--bora-hp) * 7px))',
         }}
       />
 
@@ -31,7 +26,7 @@ export default function TopBarHeader() {
         style={{
           background:
             'linear-gradient(to bottom, color-mix(in srgb, var(--bora-background) 20%, transparent), color-mix(in srgb, var(--bora-background-deep) 65%, transparent), var(--bora-background-deep))',
-          opacity: 'calc(1 - 0.55 * var(--bora-hp))',
+          opacity: 'calc(1 - 0.20 * var(--bora-hp))',
         }}
       />
 
