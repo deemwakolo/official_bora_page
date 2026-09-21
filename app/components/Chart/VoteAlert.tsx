@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface VoteAlertProps {
   // Taarifa za popup ya kura
@@ -30,7 +31,8 @@ export default function VoteAlert({
   // Kuamua kama kura ni ya kupandisha au kushusha
   const isUp = alert.type === 'up';
 
-  return (
+  return createPortal(
+    (
     <div className="pointer-events-auto fixed inset-0 z-[3000] flex items-center justify-center">
       {/* BACKDROP — Inablur screen yote wakati popup iko */}
       <div className="animate-vote-screen pointer-events-none absolute inset-0 bg-black/25 backdrop-blur-md" />
@@ -305,5 +307,7 @@ export default function VoteAlert({
         }
       `}</style>
     </div>
+    ),
+    document.body
   );
 }

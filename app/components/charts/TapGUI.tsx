@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
   TapTarget,
@@ -41,7 +42,8 @@ export default function TapGUI({
   const { metadata } = song;
   const links = platformLinks(metadata);
 
-  return (
+  return createPortal(
+    (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center">
 
       {/* BACKDROP */}
@@ -217,6 +219,8 @@ export default function TapGUI({
 
       </div>
     </div>
+    ),
+    document.body
   );
 }
 
