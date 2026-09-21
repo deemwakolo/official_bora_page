@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import {
@@ -19,6 +19,9 @@ export default function TapGUI({
   song,
   onClose,
 }: TapGUIProps) {
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!song) return;
 
@@ -26,7 +29,7 @@ export default function TapGUI({
     document.body.style.overflow = 'hidden';
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -36,6 +39,32 @@ export default function TapGUI({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [song, onClose]);
+
+  useEffect(() => {
+    setIsClosing(false);
+
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, [song]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  const requestClose = () => {
+    if (isClosing) return;
+
+    setIsClosing(true);
+
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      onClose();
+    }, 180);
+  };
 
   if (!song) return null;
 
@@ -50,13 +79,13 @@ export default function TapGUI({
       <button
         type="button"
         aria-label="Close song info"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={requestClose}
+        className={isClosing ? 'absolute inset-0 animate-tap-backdrop-out bg-black/70' : 'absolute inset-0 animate-tap-backdrop-in bg-black/70'}
       />
 
       {/* PANEL */}
       <div
-        className="relative max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-[28px] border p-5 sm:rounded-[28px]"
+        className={isClosing ? 'relative max-h-[88vh] w-full max-w-lg animate-tap-panel-out overflow-y-auto rounded-t-[28px] border p-5 sm:rounded-[28px]' : 'relative max-h-[88vh] w-full max-w-lg animate-tap-panel-in overflow-y-auto rounded-t-[28px] border p-5 sm:rounded-[28px]'}
         style={{
           backgroundColor:
             'color-mix(in srgb, var(--bora-background-deep) 96%, transparent)',
@@ -77,7 +106,7 @@ export default function TapGUI({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Close song info"
             className="flex h-9 items-center gap-2 rounded-full border px-4 text-[8px] font-black uppercase tracking-[0.22em]"
             style={{
@@ -91,7 +120,7 @@ export default function TapGUI({
         </div>
 
         {/* COVER + TITLE */}
-        <div className="flex items-center gap-4">
+        <div className="flex animate-tap-content-in items-center gap-4">
 
           <span
             className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border"
