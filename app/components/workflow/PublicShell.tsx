@@ -20,6 +20,10 @@ export default function PublicShell({
   const [activeSection, setActiveSection] =
     useState<Section>('vote');
 
+  const changeSection = (section: Section) => {
+    setActiveSection(section);
+  };
+
   const renderSection = () => {
     switch (activeSection) {
       case 'trending':
@@ -71,7 +75,7 @@ export default function PublicShell({
 
       <Navbar
         activeSection={activeSection}
-        onSectionChange={setActiveSection}
+        onSectionChange={changeSection}
       />
     </>
   );

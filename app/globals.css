@@ -32,6 +32,11 @@
 
   --bora-gold-glow: rgba(212,175,55,0.05);
   --bora-red-glow: rgba(185,28,28,0.05);
+
+  --bora-motion-fast: 180ms;
+  --bora-motion-ui: 250ms;
+  --bora-motion-section: 350ms;
+  --bora-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 
@@ -162,4 +167,53 @@
 ::selection {
   background: var(--bora-selection-background);
   color: var(--bora-selection-text);
+}
+
+
+/* BORA CONTENT VIEW TRANSITIONS */
+
+::view-transition-old(bora-content) {
+  animation: bora-content-out 180ms ease-out both;
+}
+
+::view-transition-new(bora-content) {
+  animation: bora-content-in 300ms var(--bora-motion-ease) both;
+}
+
+@keyframes bora-content-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes bora-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* REDUCED MOTION */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

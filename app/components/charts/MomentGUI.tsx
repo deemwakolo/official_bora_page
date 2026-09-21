@@ -32,18 +32,29 @@ export default function MomentGUI() {
   const activeData = panes[activeIndex]?.data ?? panes[0].data;
   const goToIndex = (index: number) => {
     const clamped = Math.max(0, Math.min(total - 1, index));
+
     if (carouselRef.current) {
-      carouselRef.current.scrollTo({ left: clamped * carouselRef.current.clientWidth, behavior: 'smooth' });
+      carouselRef.current.scrollTo({
+        left: clamped * carouselRef.current.clientWidth,
+        behavior: 'smooth',
+      });
     }
-    setActivePeriod(periods[clamped]);
   };
   const handleScroll = () => {
     if (!carouselRef.current) return;
+
     const width = carouselRef.current.clientWidth;
     if (!width) return;
-    const index = Math.round(carouselRef.current.scrollLeft / width);
+
+    const index = Math.round(
+      carouselRef.current.scrollLeft / width
+    );
+
     const period = periods[index];
-    if (period) setActivePeriod(period);
+
+    if (period && period !== activePeriod) {
+      setActivePeriod(period);
+    }
   };
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     touchStartX.current = event.touches[0].clientX;

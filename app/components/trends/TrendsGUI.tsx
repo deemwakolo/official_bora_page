@@ -40,8 +40,6 @@ const labels = {
       left: index * carouselRef.current.clientWidth,
       behavior: 'smooth',
     });
-
-    setActiveSlide(slide);
   };
 
   // KUJUA SLIDE ILIYOONEKANA
@@ -58,7 +56,7 @@ const labels = {
 
     const slide = slides[index];
 
-    if (slide) {
+    if (slide && slide !== activeSlide) {
       setActiveSlide(slide);
     }
   };
