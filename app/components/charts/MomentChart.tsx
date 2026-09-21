@@ -53,13 +53,12 @@ export default function MomentChart({ data, paneKey }: MomentChartProps) {
   const closeTap = () => setTapIndex(null);
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <div className="overflow-hidden rounded-[1.4rem] border" style={{ backgroundColor: 'var(--bora-background-deep)', borderColor: 'var(--bora-border)', boxShadow: '0 24px 60px -24px rgba(0,0,0,0.65)' }}>
-        <div className="px-2 py-2 sm:px-3">
+      <div className="px-1 sm:px-2">
           <div className="px-3 pb-1 pt-2 text-[8px] font-black uppercase tracking-[0.32em]" style={{ color: 'var(--bora-text-subtle)' }}>Top 10</div>
           {songs.map((s) => {
             const i = songs.indexOf(s);
             return (
-              <button key={s.rank} type="button" onClick={() => setTapIndex(i)} aria-label={'Open ' + s.metadata.title} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left" style={{ borderBottom: '1px solid var(--bora-border)' }}>
+              <button key={s.rank} type="button" onClick={() => setTapIndex(i)} aria-label={'Open ' + s.metadata.title} className="flex w-full items-center gap-3 px-3 py-3.5 text-left transition-opacity active:opacity-70" style={{ borderBottom: '1px solid var(--bora-border)' }}>
                 <span className="w-6 shrink-0 text-center font-cinzel text-[15px] font-black" style={{ color: s.rank <= 3 ? 'var(--bora-gold)' : 'var(--bora-text-muted)' }}>{s.rank}</span>
                 <Artwork src={s.metadata.artwork} className="h-11 w-11" />
                 <span className="min-w-0 flex-1">
@@ -70,7 +69,6 @@ export default function MomentChart({ data, paneKey }: MomentChartProps) {
               </button>
             );
           })}
-        </div>
       </div>
       <TapGUI song={selected ? { rank: selected.rank, metadata: selected.metadata } : null} onClose={closeTap} />
     </div>
