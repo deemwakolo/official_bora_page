@@ -96,22 +96,7 @@ export default function Kura({
       })
     );
 
-    // KUTUMA KURA KWENYE COMPONENT YA JUU
-    // HAPA TUNASUBIRI DATABASE IKAMILISHE
-    if (typeof onVote === 'function') {
-      const success = await onVote(
-        id.toString(),
-        type
-      );
-
-      // KAMA DATABASE IMEKATAA
-      // HATUANZISHI SUCCESS POPUP
-      if (!success) {
-        return;
-      }
-    }
-
-    // POPUP INAANZA TU BAADA YA VOTE KUFANIKIWA
+    // POPUP INAJIBU TOUCH MARA MOJA — HAISUBIRI onVote KUKAMILIKA
     setAlert({
       id: title,
       type,
@@ -125,6 +110,15 @@ export default function Kura({
     setTimeout(() => {
       setAlert(null);
     }, 2000);
+
+    // KUTUMA KURA KWENYE COMPONENT YA JUU
+    // KURA INAENDLEA NYUMA KWA DATABASE
+    if (typeof onVote === 'function') {
+      await onVote(
+        id.toString(),
+        type
+      );
+    }
   };
 
   return (

@@ -184,14 +184,14 @@ export default function VoteAlert({
       </div>
 
       <style jsx>{`
-        /* POPUP */
+        /* POPUP — INAYOINGIZWA TARATIBU (SUBTLE ENTRANCE) */
         @keyframes voteIn {
           0% {
             opacity: 0;
-            transform: translateY(0) scale(0.96);
+            transform: translateY(10px) scale(0.985);
           }
 
-          8% {
+          10% {
             opacity: 1;
             transform: translateY(0) scale(1);
           }
@@ -203,7 +203,7 @@ export default function VoteAlert({
 
           100% {
             opacity: 0;
-            transform: translateY(0) scale(1.025);
+            transform: translateY(0) scale(1.02);
           }
         }
 
@@ -287,7 +287,7 @@ export default function VoteAlert({
         }
 
         .animate-vote-in {
-          animation: voteIn 2s ease-out forwards;
+          animation: voteIn 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
 
         .animate-vote-screen {
