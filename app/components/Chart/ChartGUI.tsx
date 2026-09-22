@@ -361,12 +361,12 @@ export default function ChartGUI({
                             'up'
                           )
                         }
-                        className="group/vote flex h-12 items-center justify-center gap-2 border border-[var(--bora-gold)] bg-[var(--bora-gold)]/[0.10] px-4 text-[var(--bora-gold)] shadow-[0_0_14px_rgba(212,175,55,0.28),inset_0_0_10px_rgba(212,175,55,0.06)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.16] hover:shadow-[0_0_20px_rgba(212,175,55,0.42),inset_0_0_12px_rgba(212,175,55,0.08)] active:scale-95"
+                        className="group/vote bora-pandisha flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--bora-gold)]/75 bg-[var(--bora-gold)]/[0.07] px-6 text-[var(--bora-gold)] shadow-[0_0_18px_rgba(255,196,0,0.28)] transition-[transform,background-color,border-color,box-shadow] duration-300 ease-out hover:scale-[1.035] hover:border-[var(--bora-gold)] hover:bg-[var(--bora-gold)]/[0.11] hover:shadow-[0_0_24px_rgba(255,196,0,0.42)] active:scale-[0.96]"
                       >
                         <ArrowUp
                           size={18}
                           strokeWidth={1.8}
-                          className="transition-transform duration-300 group-hover/vote:-translate-y-1 group-hover/vote:scale-110"
+                          className="bora-pandisha-icon"
                         />
 
                         <span className="text-[8px] font-black uppercase tracking-[0.18em]">
@@ -385,7 +385,7 @@ export default function ChartGUI({
                             'down'
                           )
                         }
-                        className="group/vote flex h-11 items-center justify-center gap-2 border border-red-600/40 bg-red-600/[0.045] px-3 text-red-500 transition-all duration-300 hover:bg-red-600/[0.10] active:scale-95"
+                        className="group/vote flex h-11 items-center justify-center gap-2 rounded-full border border-red-600/45 bg-red-600/[0.035] px-4 text-red-500 transition-[transform,background-color,border-color,box-shadow] duration-300 ease-out hover:scale-[1.025] hover:border-red-500/70 hover:bg-red-600/[0.08] hover:shadow-[0_0_14px_rgba(220,20,60,0.22)] active:scale-[0.96]"
                       >
                         <ArrowDown
                           size={18}
@@ -442,12 +442,12 @@ export default function ChartGUI({
                         'up'
                       )
                     }
-                    className="group/vote flex h-12 items-center justify-center gap-2 border border-[var(--bora-gold)] bg-[var(--bora-gold)]/[0.10] px-5 text-[var(--bora-gold)] shadow-[0_0_14px_rgba(212,175,55,0.28),inset_0_0_10px_rgba(212,175,55,0.06)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.16] hover:shadow-[0_0_20px_rgba(212,175,55,0.42),inset_0_0_12px_rgba(212,175,55,0.08)] active:scale-90"
+                    className="group/vote bora-pandisha flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--bora-gold)]/75 bg-[var(--bora-gold)]/[0.07] px-5 text-[var(--bora-gold)] shadow-[0_0_16px_rgba(255,196,0,0.28)] transition-[transform,background-color,border-color,box-shadow] duration-300 ease-out hover:scale-[1.035] hover:border-[var(--bora-gold)] hover:bg-[var(--bora-gold)]/[0.11] hover:shadow-[0_0_22px_rgba(255,196,0,0.42)] active:scale-[0.96]"
                   >
                     <ArrowUp
                       size={17}
                       strokeWidth={1.8}
-                      className="transition-transform duration-300 group-hover/vote:-translate-y-1 group-hover/vote:scale-110"
+                      className="bora-pandisha-icon"
                     />
 
                     <span className="text-[9px] font-black uppercase tracking-[0.15em]">
@@ -466,7 +466,7 @@ export default function ChartGUI({
                         'down'
                       )
                     }
-                    className="group/vote flex h-10 items-center justify-center gap-2 border border-red-600/40 bg-red-600/[0.045] px-3 text-red-500 transition-all duration-300 hover:bg-red-600/[0.10] active:scale-90"
+                    className="group/vote flex h-10 items-center justify-center gap-2 rounded-full border border-red-600/45 bg-red-600/[0.035] px-3 text-red-500 transition-[transform,background-color,border-color,box-shadow] duration-300 ease-out hover:scale-[1.025] hover:border-red-500/70 hover:bg-red-600/[0.08] hover:shadow-[0_0_12px_rgba(220,20,60,0.20)] active:scale-[0.94]"
                   >
                     <ArrowDown
                       size={17}
@@ -484,6 +484,45 @@ export default function ChartGUI({
           })}
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes boraPandishaBorder {
+          0%,
+          100% {
+            border-color: color-mix(in srgb, var(--bora-gold) 68%, transparent);
+            box-shadow: 0 0 14px rgba(255, 196, 0, 0.22);
+          }
+
+          50% {
+            border-color: var(--bora-gold);
+            box-shadow: 0 0 22px rgba(255, 196, 0, 0.38);
+          }
+        }
+
+        .bora-pandisha {
+          animation: boraPandishaBorder 3s ease-in-out infinite;
+        }
+
+        .bora-pandisha-icon {
+          transition:
+            transform 300ms cubic-bezier(0.68, -0.55, 0.27, 2.5),
+            opacity 200ms ease;
+        }
+
+        .bora-pandisha:hover .bora-pandisha-icon {
+          transform: translateY(-2px) scale(1.08);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .bora-pandisha {
+            animation: none;
+          }
+
+          .bora-pandisha-icon {
+            transition: none;
+          }
+        }
+      `}</style>
     </section>
   );
 }
