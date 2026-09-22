@@ -11,6 +11,7 @@ interface HeaderGUIProps {
   menuOpen: boolean;
   onOpenMenu: () => void;
   onCloseMenu: () => void;
+  forceCompact: boolean;
 }
 
 // Continuous transformation: --bora-hp (0 = expanded, 1 = retracted)
@@ -74,6 +75,12 @@ const HEADER_CSS = `
   }
 }
 
+/* PROFILE: SCROLL TIMELINE INAZIMWA, HEADER INAISHIA COMPACT MILELE */
+.bora-hdr-profile {
+  --bora-hp: 1 !important;
+  animation: none !important;
+}
+
 @keyframes bora-hdr-sweep {
   from {
     --bora-hp: 0;
@@ -89,8 +96,11 @@ export default function HeaderGUI({
   menuOpen,
   onOpenMenu,
   onCloseMenu,
+  forceCompact,
 }: HeaderGUIProps) {
-  const p = Math.min(Math.max(progress, 0), 1);
+  const p = forceCompact
+    ? 1
+    : Math.min(Math.max(progress, 0), 1);
 
   return (
     <>
@@ -101,7 +111,11 @@ export default function HeaderGUI({
       {/* HEADER FLOW RESERVATION */}
       <div
         aria-hidden
-        className="h-[125px] w-full md:h-[145px]"
+        className={
+          forceCompact
+            ? 'h-[56px] w-full'
+            : 'h-[125px] w-full md:h-[145px]'
+        }
       />
 
       {/* FIXED HEADER */}
@@ -113,7 +127,9 @@ export default function HeaderGUI({
       >
         {/* VISUAL HEADER — SURFACE MOJA INAYOBADILIKA */}
         <div
-          className="bora-hdr-surface relative w-full overflow-hidden"
+          className={`bora-hdr-surface relative w-full overflow-hidden ${
+            forceCompact ? 'bora-hdr-profile' : ''
+          }`}
           style={
             {
               '--bora-hp': p,

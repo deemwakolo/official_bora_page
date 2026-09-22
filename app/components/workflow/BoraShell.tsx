@@ -6,10 +6,12 @@ import Header from './Header';
 
 interface BoraShellProps {
   children: React.ReactNode;
+  forceCompactHeader?: boolean;
 }
 
 export default function BoraShell({
   children,
+  forceCompactHeader = false,
 }: BoraShellProps) {
   return (
     <div
@@ -20,7 +22,7 @@ export default function BoraShell({
       }}
     >
       {/* HEADER */}
-      <Header />
+      <Header forceCompact={forceCompactHeader} />
 
       {/* ACTIVE SECTION CONTENT */}
       <section className="min-h-screen">

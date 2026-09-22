@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["next-env.d.ts", "app/components/profile/**/*", "app/components/workflow/**/*", "app/page.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

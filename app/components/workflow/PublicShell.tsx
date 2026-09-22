@@ -49,7 +49,7 @@ export default function PublicShell({
 
   return (
     <>
-      <BoraShell>
+      <BoraShell forceCompactHeader={activeSection === 'profile'}>
         <div
           key={activeSection}
           className="bora-section-transition"

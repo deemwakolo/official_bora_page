@@ -3,7 +3,13 @@
 import { useHeaderOP } from './HeaderOP';
 import HeaderGUI from './HeaderGUI';
 
-export default function Header() {
+interface HeaderProps {
+  forceCompact?: boolean;
+}
+
+export default function Header({
+  forceCompact = false,
+}: HeaderProps) {
   const {
     progress,
     menuOpen,
@@ -17,6 +23,7 @@ export default function Header() {
       menuOpen={menuOpen}
       onOpenMenu={openMenu}
       onCloseMenu={closeMenu}
+      forceCompact={forceCompact}
     />
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 
 // CURTAIN YA PROFILE: INAFUNIKA PROFILE KWA BLUR
@@ -9,22 +8,14 @@ import { useRouter } from 'next/navigation';
 export default function ProfileCurtain() {
   const router = useRouter();
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
   const openFaq = () => {
     router.push('/Faq');
   };
 
-  return createPortal(
-    <div className="pointer-events-none fixed inset-0 z-[60]">
-      {/* FROST LAYER: CONTENT INAONEKANA ILA IMEBLUR — INAENDELEA KUSOGEA CHINI YAKE */}
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-lg" />
+  return (
+    <div className="pointer-events-none absolute inset-0 z-40">
+      {/* FROST LAYER: CONTENT INAONEKANA ILA IMEBLUR */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-2xl" />
 
       {/* FROST SHEEN */}
       <div className="absolute inset-0 bg-white/[0.03]" />
@@ -97,7 +88,6 @@ export default function ProfileCurtain() {
           }
         }
       `}</style>
-    </div>,
-    document.body
+    </div>
   );
 }
