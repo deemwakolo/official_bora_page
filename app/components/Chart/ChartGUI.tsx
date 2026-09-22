@@ -158,10 +158,10 @@ export default function ChartGUI({
 
                     {/* SIZE NA CONTAINER YA COVER */}
                     <div
-                      className={`relative z-10 overflow-hidden shadow-2xl transition-all duration-500 ease-out group-hover:scale-[1.045] group-hover:shadow-[0_20px_45px_rgba(0,0,0,0.65)] ${
+                      className={`relative z-10 overflow-hidden rounded-full shadow-2xl transition-all duration-500 ease-out group-hover:scale-[1.045] group-hover:shadow-[0_20px_45px_rgba(0,0,0,0.65)] ${
                         rank === 1
-                          ? 'h-28 w-28 md:h-36 md:w-36'
-                          : 'h-24 w-24 md:h-32 md:w-32'
+                          ? 'h-[120px] w-[120px] md:h-[152px] md:w-[152px]'
+                          : 'h-[104px] w-[104px] md:h-[136px] md:w-[136px]'
                       }`}
                       style={{
                         backgroundColor:
@@ -361,7 +361,7 @@ export default function ChartGUI({
                             'up'
                           )
                         }
-                        className="group/vote flex h-12 items-center justify-center gap-2 border border-[var(--bora-gold)]/45 bg-[var(--bora-gold)]/[0.06] px-4 text-[var(--bora-gold)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.12] active:scale-95"
+                        className="group/vote flex h-12 items-center justify-center gap-2 border border-[var(--bora-gold)] bg-[var(--bora-gold)]/[0.10] px-4 text-[var(--bora-gold)] shadow-[0_0_14px_rgba(212,175,55,0.28),inset_0_0_10px_rgba(212,175,55,0.06)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.16] hover:shadow-[0_0_20px_rgba(212,175,55,0.42),inset_0_0_12px_rgba(212,175,55,0.08)] active:scale-95"
                       >
                         <ArrowUp
                           size={18}
@@ -442,7 +442,7 @@ export default function ChartGUI({
                         'up'
                       )
                     }
-                    className="group/vote flex h-11 items-center justify-center gap-2 border border-[var(--bora-gold)]/45 bg-[var(--bora-gold)]/[0.06] px-4 text-[var(--bora-gold)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.12] active:scale-90"
+                    className="group/vote flex h-12 items-center justify-center gap-2 border border-[var(--bora-gold)] bg-[var(--bora-gold)]/[0.10] px-5 text-[var(--bora-gold)] shadow-[0_0_14px_rgba(212,175,55,0.28),inset_0_0_10px_rgba(212,175,55,0.06)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.16] hover:shadow-[0_0_20px_rgba(212,175,55,0.42),inset_0_0_12px_rgba(212,175,55,0.08)] active:scale-90"
                   >
                     <ArrowUp
                       size={17}
