@@ -14,18 +14,18 @@ interface SpotifySong {
 }
 
 export default function SpotifySlide() {
-  // DATA YA MFANO YA SPOTIFY TOP 10
+  // DATA YA MFANO YA SPOTIFY TOP 10 — MOCK, ITABADILISHWA NA API BAADAYE
   const songs: SpotifySong[] = [
-    { rank: 1, title: 'SIGNAL', artist: 'BORA ARTIST', movement: 3 },
-    { rank: 2, title: 'NIGHT DRIVE', artist: 'BORA ARTIST', movement: 1 },
-    { rank: 3, title: 'MOTO', artist: 'BORA ARTIST', movement: -2 },
-    { rank: 4, title: 'MALAIKA', artist: 'BORA ARTIST', movement: 4 },
-    { rank: 5, title: 'CITY LIGHTS', artist: 'BORA ARTIST', movement: 0 },
-    { rank: 6, title: 'KESHO', artist: 'BORA ARTIST', movement: -1 },
-    { rank: 7, title: 'NANI', artist: 'BORA ARTIST', movement: 2 },
-    { rank: 8, title: 'MASHUP', artist: 'BORA ARTIST', movement: 0 },
-    { rank: 9, title: 'KIVULI', artist: 'BORA ARTIST', movement: -3 },
-    { rank: 10, title: 'MWANGA', artist: 'BORA ARTIST', movement: 1 },
+    { rank: 1, title: 'KIMBAGA KIMBAGA', artist: 'MARIOO', movement: 2 },
+    { rank: 2, title: 'RAHA', artist: 'RAYVANNY', movement: 1 },
+    { rank: 3, title: 'NISAMEHE', artist: 'NAVY KENZO', movement: -1 },
+    { rank: 4, title: 'MAPENZI', artist: 'ZUCHU', movement: 4 },
+    { rank: 5, title: 'SINA WEWE', artist: 'ALIKIBA', movement: 0 },
+    { rank: 6, title: 'NDANI', artist: 'HARMONIZE', movement: -1 },
+    { rank: 7, title: 'HATARI', artist: 'LAVA LAVA', movement: 2 },
+    { rank: 8, title: 'TAMU', artist: 'BARNABA', movement: 0 },
+    { rank: 9, title: 'SIJUI', artist: 'NANDI MADIDA', movement: -3 },
+    { rank: 10, title: 'MWEMBE', artist: 'YANKEE BOY', movement: 1 },
   ];
 
   return (

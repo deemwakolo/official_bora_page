@@ -14,18 +14,18 @@ interface YouTubeSong {
 }
 
 export default function YouTubeSlide() {
-  // DATA YA MFANO YA YOUTUBE TOP 10
+  // DATA YA MFANO YA YOUTUBE TOP 10 — MOCK, ITABADILISHWA NA API BAADAYE
   const songs: YouTubeSong[] = [
-    { rank: 1, title: 'SIGNAL', artist: 'BORA ARTIST', movement: 2 },
-    { rank: 2, title: 'NIGHT DRIVE', artist: 'BORA ARTIST', movement: -1 },
-    { rank: 3, title: 'MOTO', artist: 'BORA ARTIST', movement: 0 },
-    { rank: 4, title: 'MALAIKA', artist: 'BORA ARTIST', movement: 3 },
-    { rank: 5, title: 'CITY LIGHTS', artist: 'BORA ARTIST', movement: -2 },
-    { rank: 6, title: 'KESHO', artist: 'BORA ARTIST', movement: 1 },
-    { rank: 7, title: 'NANI', artist: 'BORA ARTIST', movement: 0 },
-    { rank: 8, title: 'MASHUP', artist: 'BORA ARTIST', movement: -1 },
-    { rank: 9, title: 'KIVULI', artist: 'BORA ARTIST', movement: 2 },
-    { rank: 10, title: 'MWANGA', artist: 'BORA ARTIST', movement: 0 },
+    { rank: 1, title: 'NISAMEHE', artist: 'NAVY KENZO', movement: 4 },
+    { rank: 2, title: 'MAPENZI', artist: 'ZUCHU', movement: 2 },
+    { rank: 3, title: 'SINA WEWE', artist: 'ALIKIBA', movement: -1 },
+    { rank: 4, title: 'KIMBAGA KIMBAGA', artist: 'MARIOO', movement: 3 },
+    { rank: 5, title: 'NDANI', artist: 'HARMONIZE', movement: -2 },
+    { rank: 6, title: 'RAHA', artist: 'RAYVANNY', movement: 1 },
+    { rank: 7, title: 'SIJUI', artist: 'NANDI MADIDA', movement: 0 },
+    { rank: 8, title: 'TAMU', artist: 'BARNABA', movement: -1 },
+    { rank: 9, title: 'MWEMBE', artist: 'YANKEE BOY', movement: 2 },
+    { rank: 10, title: 'HATARI', artist: 'LAVA LAVA', movement: 0 },
   ];
 
   return (

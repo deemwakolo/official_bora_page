@@ -2,29 +2,26 @@
 
 import React, { useRef, useState } from 'react';
 
-import WeeklySlide from './slides/WeeklySlide';import YouTubeSlide from './slides/YouTubeSlide';
-import WeeklyGUI from './WeeklyGUI';
+import YouTubeSlide from './slides/YouTubeSlide';
 import SpotifySlide from './slides/SpotifySlide';
 import ArtistSlide from './slides/ArtistSlide';
 
 import trendsTheme from './TrendsTheme';
 
-type TrendSlide = 'weekly' | 'youtube' | 'spotify' | 'artists';
+type TrendSlide = 'youtube' | 'spotify' | 'artists';
 export default function TrendsGUI() {
   // SLIDE ILIYO ACTIVE
 const [activeSlide, setActiveSlide] =
-  useState<TrendSlide>('weekly');
+  useState<TrendSlide>('youtube');
 
 const carouselRef = useRef<HTMLDivElement>(null);
 
 const slides: TrendSlide[] = [
-  'weekly',
   'youtube',
   'spotify',
   'artists',
 ];
 const labels = {
-  weekly: 'WEEKLY',
   youtube: 'YOUTUBE',
   spotify: 'SPOTIFY',
   artists: 'ARTISTS',
@@ -79,16 +76,6 @@ const labels = {
           color: trendsTheme.text,
         }}
       >
-        <div
-          className="w-full shrink-0 snap-center"
-          style={{
-            backgroundColor: trendsTheme.background,
-            color: trendsTheme.text,
-          }}
-        >
-          <WeeklyGUI />
-        </div>
-
         <div
           className="w-full shrink-0 snap-center"
           style={{
