@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import BoraShell from './BoraShell';
 import Navbar, { Section } from './Navbar';
 import MomentGUI from './../charts/MomentGUI';
+import Profile from './../profile/Profile';
 
 interface PublicShellProps {
   top10: React.ReactNode;
@@ -36,28 +37,7 @@ export default function PublicShell({
         return news;
 
       case 'profile':
-        return (
-          <section className="flex min-h-[70vh] items-center justify-center px-6">
-            <div className="text-center">
-              <div className="mb-4 text-4xl opacity-50">
-                ◎
-              </div>
-
-              <h2 className="font-cinzel text-2xl font-bold">
-                PROFILE
-              </h2>
-
-              <p
-                className="mt-3 text-sm"
-                style={{
-                  color: 'var(--bora-text-muted)',
-                }}
-              >
-                Profile features are coming later.
-              </p>
-            </div>
-          </section>
-        );
+        return <Profile />;
 
       case 'charts':
         return <MomentGUI />;
