@@ -4,6 +4,8 @@ import React from 'react';
 import ChartAnimation from './ChartAnimation';
 
 import {
+  Youtube,
+  Music,
   ArrowUp,
   ArrowDown,
 } from 'lucide-react';
@@ -236,25 +238,14 @@ export default function ChartGUI({
                   {/* TITLE NA ARTIST */}
                   <div className="min-w-0 flex-1 py-1 md:py-3">
 
-                    {/* JINA LA WIMBO — HERO */}
-                    <h3
-                      className={`break-words font-black uppercase leading-[0.92] tracking-[-0.05em] transition-transform duration-500 group-hover:translate-x-1 ${
-                        rank === 1
-                          ? 'text-2xl md:text-5xl'
-                          : 'text-xl md:text-4xl'
-                      }`}
-                    >
-                      {displayTitle}
-                    </h3>
-
                     {/* JINA LA MSANII + CHART MOVEMENT */}
-                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 md:mt-4 md:gap-x-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 md:gap-x-4">
 
                       {/* JINA LA MSANII */}
                       <span
-                        className="break-words text-[9px] font-bold uppercase tracking-[0.24em] md:text-[10px] md:tracking-[0.35em]"
+                        className="break-words text-[8px] font-bold uppercase tracking-[0.22em] md:text-[10px] md:tracking-[0.4em]"
                         style={{
-                          color: 'var(--bora-text-muted)',
+                          color: 'var(--bora-gold)',
                         }}
                       >
                         {displayArtist}
@@ -280,6 +271,41 @@ export default function ChartGUI({
                           previousRank={previousRank}
                         />
                       </div>
+                    </div>
+
+                    {/* JINA LA WIMBO */}
+                    <h3
+                      className={`break-words font-black uppercase leading-[0.92] tracking-[-0.05em] transition-transform duration-500 group-hover:translate-x-1 ${
+                        rank === 1
+                          ? 'text-2xl md:text-5xl'
+                          : 'text-xl md:text-4xl'
+                      }`}
+                    >
+                      {displayTitle}
+                    </h3>
+
+                    {/* RANKING ZA YOUTUBE NA SPOTIFY */}
+                    <div className="mt-4 flex flex-wrap items-center gap-3 md:mt-6 md:gap-4">
+
+                      {/* YOUTUBE RANK */}
+                      {item.yt_rank && (
+                        <div className="flex items-center gap-2 text-red-500/70">
+                          <Youtube size={11} />
+                          <span className="text-[8px] font-mono font-bold uppercase tracking-[0.12em]">
+                            #{item.yt_rank} YT
+                          </span>
+                        </div>
+                      )}
+
+                      {/* SPOTIFY RANK */}
+                      {item.sp_rank && (
+                        <div className="flex items-center gap-2 text-green-500/70">
+                          <Music size={11} />
+                          <span className="text-[8px] font-mono font-bold uppercase tracking-[0.12em]">
+                            #{item.sp_rank} SP
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -341,7 +367,7 @@ export default function ChartGUI({
 
                       {/* POWER SCORE KUBWA */}
                       <div
-                        className={`relative mt-1 -translate-x-1 overflow-visible text-right text-5xl font-black italic leading-none tracking-[-0.08em] tabular-nums transition-all duration-500 group-hover:-translate-x-2 group-hover:scale-105 ${scoreTheme}`}
+                        className={`relative mt-1 -translate-x-1 overflow-visible text-right text-6xl font-black italic leading-none tracking-[-0.08em] tabular-nums transition-all duration-500 group-hover:-translate-x-2 group-hover:scale-105 ${scoreTheme}`}
                       >
                         {score}
                       </div>
@@ -361,7 +387,12 @@ export default function ChartGUI({
                             'up'
                           )
                         }
-                        className="group/vote flex h-12 items-center justify-center gap-2 border border-[var(--bora-gold)]/45 bg-[var(--bora-gold)]/[0.06] px-4 text-[var(--bora-gold)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.12] active:scale-95"
+                        className="group/vote flex h-11 items-center justify-center gap-2 border px-3 transition-all duration-300 hover:border-[var(--bora-gold)]/50 hover:bg-[var(--bora-gold)]/[0.08] hover:text-[var(--bora-gold)] active:scale-90"
+                        style={{
+                          borderColor:
+                            'var(--bora-border-strong)',
+                          color: 'var(--bora-text-muted)',
+                        }}
                       >
                         <ArrowUp
                           size={18}
@@ -385,7 +416,12 @@ export default function ChartGUI({
                             'down'
                           )
                         }
-                        className="group/vote flex h-11 items-center justify-center gap-2 border border-red-600/40 bg-red-600/[0.045] px-3 text-red-500 transition-all duration-300 hover:bg-red-600/[0.10] active:scale-95"
+                        className="group/vote flex h-11 items-center justify-center gap-2 border px-3 transition-all duration-300 hover:border-red-600/50 hover:bg-red-600/[0.08] hover:text-red-500 active:scale-90"
+                        style={{
+                          borderColor:
+                            'var(--bora-border-strong)',
+                          color: 'var(--bora-text-muted)',
+                        }}
                       >
                         <ArrowDown
                           size={18}
@@ -442,7 +478,12 @@ export default function ChartGUI({
                         'up'
                       )
                     }
-                    className="group/vote flex h-11 items-center justify-center gap-2 border border-[var(--bora-gold)]/45 bg-[var(--bora-gold)]/[0.06] px-4 text-[var(--bora-gold)] transition-all duration-300 hover:bg-[var(--bora-gold)]/[0.12] active:scale-90"
+                    className="group/vote flex h-10 items-center justify-center gap-2 border px-4 transition-all duration-300 hover:border-[var(--bora-gold)]/50 hover:bg-[var(--bora-gold)]/[0.08] hover:text-[var(--bora-gold)] active:scale-90"
+                    style={{
+                      borderColor:
+                        'var(--bora-border-strong)',
+                      color: 'var(--bora-text-muted)',
+                    }}
                   >
                     <ArrowUp
                       size={17}
@@ -466,7 +507,12 @@ export default function ChartGUI({
                         'down'
                       )
                     }
-                    className="group/vote flex h-10 items-center justify-center gap-2 border border-red-600/40 bg-red-600/[0.045] px-3 text-red-500 transition-all duration-300 hover:bg-red-600/[0.10] active:scale-90"
+                    className="group/vote flex h-10 items-center justify-center gap-2 border px-4 transition-all duration-300 hover:border-red-600/50 hover:bg-red-600/[0.08] hover:text-red-500 active:scale-90"
+                    style={{
+                      borderColor:
+                        'var(--bora-border-strong)',
+                      color: 'var(--bora-text-muted)',
+                    }}
                   >
                     <ArrowDown
                       size={17}
