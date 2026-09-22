@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 
-// CURTAIN YA PROFILE: INAFUNIKA PROFILE KWA BLUR
+// CURTAIN YA PROFILE: GIANT FROSTED GLASS
 // HAIFUNGI SCROLLING, SI MODAL, ? INAISHIA KWA FAQ PAGE
 export default function ProfileCurtain() {
   const router = useRouter();
@@ -14,11 +14,20 @@ export default function ProfileCurtain() {
 
   return (
     <div className="pointer-events-none absolute inset-0 z-40">
-      {/* FROST LAYER: CONTENT INAONEKANA ILA IMEBLUR */}
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-2xl" />
+      {/* GIANT FROSTED GLASS LAYER */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backdropFilter: 'blur(1px)',
+          backgroundColor: 'rgba(8, 8, 8, 0.32)',
+          border: '1px solid rgba(255, 255, 255, 0.04)',
+          boxShadow:
+            'inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.35)',
+        }}
+      />
 
       {/* FROST SHEEN */}
-      <div className="absolute inset-0 bg-white/[0.03]" />
+      <div className="absolute inset-0 bg-white/[0.075]" />
 
       {/* ? FIXED KATIKATI YA VIEWPORT */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center">
@@ -29,20 +38,21 @@ export default function ProfileCurtain() {
           onClick={openFaq}
           className="pointer-events-auto flex h-36 w-36 cursor-pointer items-center justify-center rounded-full transition-transform duration-300 hover:scale-[1.05] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--bora-gold)]/60"
         >
-          {/* SEALED GRAPHIC: ~80px */}
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-full">
-            <div className="bora-curtain-ring absolute inset-0 rounded-full border border-[var(--bora-gold)]/40" />
-
-            {/* CRIMSON AURA NDANI YA RADIUS, NYUMA YA ? */}
+          {/* SOLID RADIUS: ? INABAKI CRISP JUU YA GLASS */}
+          <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-[var(--bora-gold)]/55 bg-[#080808] shadow-[0_0_30px_rgba(255,196,0,0.22)]">
+            {/* CRIMSON AURA */}
             <div
               className="absolute inset-0 rounded-full"
               style={{
                 backgroundImage:
-                  'radial-gradient(circle, rgba(220, 20, 60, 0.45) 0%, rgba(220, 20, 60, 0.15) 45%, transparent 72%)',
+                  'radial-gradient(circle, rgba(220, 20, 60, 0.32) 0%, rgba(220, 20, 60, 0.10) 48%, transparent 72%)',
               }}
             />
 
-            <span className="relative font-cinzel text-5xl font-black text-[var(--bora-gold)]">
+            {/* GOLD RING */}
+            <div className="bora-curtain-ring absolute inset-1 rounded-full border border-[var(--bora-gold)]/45" />
+
+            <span className="relative z-10 font-cinzel text-6xl font-black leading-none text-[var(--bora-gold)]">
               ?
             </span>
           </div>
@@ -51,14 +61,8 @@ export default function ProfileCurtain() {
 
       <style jsx>{`
         .bora-curtain-ring {
-          background-color: color-mix(
-            in srgb,
-            var(--bora-surface) 40%,
-            transparent
-          );
-          box-shadow: 0 0 24px rgba(255, 196, 0, 0.18);
-          animation: boraCurtainBreath 3s ease-in-out
-            infinite;
+          box-shadow: 0 0 18px rgba(255, 196, 0, 0.14);
+          animation: boraCurtainBreath 3s ease-in-out infinite;
         }
 
         @keyframes boraCurtainBreath {
@@ -67,13 +71,13 @@ export default function ProfileCurtain() {
             box-shadow: 0 0 18px rgba(255, 196, 0, 0.14);
             border-color: color-mix(
               in srgb,
-              var(--bora-gold) 40%,
+              var(--bora-gold) 45%,
               transparent
             );
           }
 
           50% {
-            box-shadow: 0 0 30px rgba(255, 196, 0, 0.3);
+            box-shadow: 0 0 30px rgba(255, 196, 0, 0.28);
             border-color: color-mix(
               in srgb,
               var(--bora-gold) 70%,

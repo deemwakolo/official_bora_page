@@ -9,8 +9,7 @@ const profile = {
   displayName: 'Dee',
   username: 'deemwakolo',
   bio: 'Tanzanian music lover 🇹🇿',
-  avatarUrl:
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
+  avatarUrl: '',
 };
 
 export default function Profile() {
