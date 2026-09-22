@@ -6,12 +6,14 @@ import Top15Control from '../controls/Top15/Top15Control';
 import TrendsControl from '../controls/trends/TrendsControl';
 import DiscoverControl from '../controls/discover/DiscoverControl';
 import NewsControl from '../controls/news/NewsControl';
+import FAQControl from '../controls/faq/FAQControl';
 
 type AdminSection =
   | 'top15'
   | 'trends'
   | 'discover'
-  | 'news';
+  | 'news'
+  | 'faq';
 
 export default function AdminShell() {
   const [activeSection, setActiveSection] =
@@ -37,6 +39,10 @@ export default function AdminShell() {
       id: 'news',
       label: 'NEWS',
     },
+    {
+      id: 'faq',
+      label: 'FAQ',
+    },
   ];
 
   return (
@@ -56,7 +62,7 @@ export default function AdminShell() {
               'var(--bora-background-deep)',
           }}
         >
-          <div className="grid w-full grid-cols-4">
+          <div className="grid w-full grid-cols-5">
             {sections.map((section) => {
               const isActive =
                 activeSection === section.id;
@@ -120,6 +126,10 @@ export default function AdminShell() {
 
           {activeSection === 'news' && (
             <NewsControl />
+          )}
+
+          {activeSection === 'faq' && (
+            <FAQControl />
           )}
         </div>
       </div>

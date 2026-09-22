@@ -9,6 +9,7 @@ import ProfileActivity from './ProfileActivity';
 import ProfileSongs from './ProfileSongs';
 import ProfileArtists from './ProfileArtists';
 import ProfileAccount from './ProfileAccount';
+import ProfileCurtain from './ProfileCurtain';
 
 export interface ProfileData {
   displayName: string;
@@ -31,30 +32,42 @@ export default function ProfileGUI({
     useState<ProfileTab>('activity');
 
   return (
-    <section className="w-full px-4 pb-24 pt-6 md:px-6 md:pt-8">
-      <div className="mx-auto w-full max-w-2xl">
-        {/* IDENTITY */}
-        <ProfileHeader profile={profile} />
+    <>
+      {/* PROFILE CONTENT: HAIGUSWI NDANI */}
+      <div className="relative">
+        <section className="w-full px-4 pb-24 pt-6 md:px-6 md:pt-8">
+          <div className="mx-auto w-full max-w-2xl">
+            {/* IDENTITY */}
+            <ProfileHeader profile={profile} />
 
-        {/* FAN METRICS */}
-        <FanMetrics />
+            {/* FAN METRICS */}
+            <FanMetrics />
 
-        {/* TABS */}
-        <ProfileTabs
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
+            {/* TABS */}
+            <ProfileTabs
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
 
-        {/* ACTIVE TAB CONTENT */}
-        <div className="mt-4">
-          {activeTab === 'activity' && <ProfileActivity />}
-          {activeTab === 'songs' && <ProfileSongs />}
-          {activeTab === 'artists' && <ProfileArtists />}
-        </div>
+            {/* ACTIVE TAB CONTENT */}
+            <div className="mt-4">
+              {activeTab === 'activity' && (
+                <ProfileActivity />
+              )}
+              {activeTab === 'songs' && <ProfileSongs />}
+              {activeTab === 'artists' && (
+                <ProfileArtists />
+              )}
+            </div>
 
-        {/* ACCOUNT MANAGEMENT (NJE YA TABS) */}
-        <ProfileAccount />
+            {/* ACCOUNT MANAGEMENT (NJE YA TABS) */}
+            <ProfileAccount />
+          </div>
+        </section>
+
+        {/* CURTAIN: INAFUNIKA PAGE NZIMA (SIBLING YA CONTENT) */}
+        <ProfileCurtain />
       </div>
-    </section>
+    </>
   );
 }
