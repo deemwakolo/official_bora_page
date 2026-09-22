@@ -5,62 +5,16 @@ import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 
 import newsTheme from './NewsTheme';
+import type { NewsItem } from './newsData';
 
-interface NewsItem {
-  id: number;
-  category: string;
-  title: string;
-  timestamp: string;
-  excerpt: string;
-  image: string;
-  isHot?: boolean;
+interface NewsFeedProps {
+  items: NewsItem[];
 }
 
-// PLACEHOLDER NEWS: COCKPIT ITAINGIA DATA HAPA BAADAYE
-const newsData: NewsItem[] = [
-  {
-    id: 2,
-    category: 'INDUSTRY',
-    title: 'The Rise of Bongo-Drill: A New Sonic Frontier',
-    timestamp: '18:12 / 26 APR',
-    excerpt:
-      'A new wave of artists is pushing Tanzanian drill into unexpected territory.',
-    image:
-      'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 3,
-    category: 'STUDIO TECH',
-    title: 'Matitu Nation Unveils Creative Suite',
-    timestamp: '16:40 / 26 APR',
-    excerpt:
-      'Inside the tools and spaces shaping the next generation of local creators.',
-    image:
-      'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 4,
-    category: 'CULTURE',
-    title: 'Visual Identity: The Beast Titan Aesthetic',
-    timestamp: '14:22 / 26 APR',
-    excerpt:
-      'How Tanzanian artists are turning visual identity into part of the music itself.',
-    image:
-      'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 5,
-    category: 'MARKET',
-    title: 'Iringa Music Scene: The Nzihi Corridor',
-    timestamp: '11:08 / 26 APR',
-    excerpt:
-      'A closer look at the regional movement developing outside the traditional music hubs.',
-    image:
-      'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=900&q=80',
-  },
-];
-
-export default function NewsFeed() {
+// COMPONENT HII NI PURELY VISUAL: INAPOKEA ITEMS TU
+export default function NewsFeed({
+  items,
+}: NewsFeedProps) {
   return (
     <div className="flex flex-col">
       {/* NEWS FEED HEADER */}
@@ -104,7 +58,7 @@ export default function NewsFeed() {
           borderColor: newsTheme.border,
         }}
       >
-        {newsData.map((item, index) => (
+        {items.map((item, index) => (
           <article
             key={item.id}
             className="group relative flex"

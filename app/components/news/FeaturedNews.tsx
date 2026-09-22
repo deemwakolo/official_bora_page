@@ -5,30 +5,16 @@ import React from 'react';
 import { ArrowUpRight, Flame } from 'lucide-react';
 
 import newsTheme from './NewsTheme';
+import type { FeaturedNewsItem } from './newsData';
 
-interface FeaturedNewsItem {
-  category: string;
-  title: string;
-  timestamp: string;
-  excerpt: string;
-  image: string;
-  isHot?: boolean;
+interface FeaturedNewsProps {
+  story: FeaturedNewsItem;
 }
 
-// PLACEHOLDER FEATURED NEWS: COCKPIT ITAINGIA DATA HAPA BAADAYE
-const featuredNews: FeaturedNewsItem = {
-  category: 'CHART PULSE',
-  title:
-    'Sielewi Dominates the Bora Top 20 for the Third Week',
-  timestamp: '20:44 / 26 APR',
-  excerpt:
-    'The latest BORA numbers show continued momentum as the track holds its position at the top of the chart.',
-  image:
-    'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1400&q=80',
-  isHot: true,
-};
-
-export default function FeaturedNews() {
+// COMPONENT HII NI PURELY VISUAL: INAPOKEA STORY TU
+export default function FeaturedNews({
+  story,
+}: FeaturedNewsProps) {
   return (
     <article
       className="group relative overflow-hidden border"
@@ -41,7 +27,7 @@ export default function FeaturedNews() {
       {/* FEATURED IMAGE */}
       <div className="relative aspect-[16/10] overflow-hidden">
         <img
-          src={featuredNews.image}
+          src={story.image}
           alt=""
           className="h-full w-full object-cover opacity-75 transition-transform duration-700 group-hover:scale-105"
         />
@@ -50,7 +36,7 @@ export default function FeaturedNews() {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
 
         {/* HOT SIGNAL */}
-        {featuredNews.isHot && (
+        {story.isHot && (
           <div
             className="absolute left-4 top-4 flex items-center gap-2 px-3 py-2"
             style={{
@@ -109,7 +95,7 @@ export default function FeaturedNews() {
               letterSpacing: newsTheme.featured.categoryTracking,
             }}
           >
-            {featuredNews.category}
+            {story.category}
           </span>
 
           <span
@@ -127,7 +113,7 @@ export default function FeaturedNews() {
               letterSpacing: newsTheme.featured.timestampTracking,
             }}
           >
-            {featuredNews.timestamp}
+            {story.timestamp}
           </span>
         </div>
 
@@ -141,7 +127,7 @@ export default function FeaturedNews() {
             lineHeight: newsTheme.featured.headlineLineHeight,
           }}
         >
-          {featuredNews.title}
+          {story.title}
         </h3>
 
         {/* EXCERPT */}
@@ -154,7 +140,7 @@ export default function FeaturedNews() {
             lineHeight: newsTheme.featured.excerptLineHeight,
           }}
         >
-          {featuredNews.excerpt}
+          {story.excerpt}
         </p>
 
         {/* ACTION */}

@@ -5,8 +5,20 @@ import React from 'react';
 import FeaturedNews from './FeaturedNews';
 import NewsFeed from './NewsFeed';
 import newsTheme from './NewsTheme';
+import type {
+  FeaturedNewsItem,
+  NewsItem,
+} from './newsData';
 
-export default function NewsGUI() {
+interface NewsGUIProps {
+  featured: FeaturedNewsItem;
+  feed: NewsItem[];
+}
+
+export default function NewsGUI({
+  featured,
+  feed,
+}: NewsGUIProps) {
   // GUI KUU YA NEWS: INAPANGA FEATURED STORY NA NEWS FEED
 
   return (
@@ -99,10 +111,10 @@ export default function NewsGUI() {
         }}
       >
         {/* FEATURED NEWS */}
-        <FeaturedNews />
+        <FeaturedNews story={featured} />
 
         {/* NEWS FEED */}
-        <NewsFeed />
+        <NewsFeed items={feed} />
       </div>
     </section>
   );
