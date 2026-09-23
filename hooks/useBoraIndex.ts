@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+﻿import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
+const supabase = createClient();
 
 export function useBoraIndex() {
   const [songs, setSongs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   /**
-   * ⚡ THE ELITE 20 UI FILTER
+   * âš¡ THE ELITE 20 UI FILTER
    * Retrieves only the Top 20 point-earners from the 30-song pool.
    */
   const fetchRankings = useCallback(async () => {
@@ -15,7 +17,7 @@ export function useBoraIndex() {
       .from('songs')
       .select('*')
       .order('momentum_score', { ascending: false })
-      .limit(20); // ⚡ STRICT UI LIMIT: The other 10 remain in the "Shadow Pool"
+      .limit(20); // âš¡ STRICT UI LIMIT: The other 10 remain in the "Shadow Pool"
 
     if (error) {
       console.error('BORA_SYNC_ERROR:', error.message);
@@ -53,7 +55,7 @@ export function useBoraIndex() {
   }, [fetchRankings]);
 
   /**
-   * ⚡ BORA PULSE (OPTIMISTIC VOTING)
+   * âš¡ BORA PULSE (OPTIMISTIC VOTING)
    */
   const handleVote = async (id: string, type: 'up' | 'down') => {
     const adjustment = type === 'up' ? 1 : -1;

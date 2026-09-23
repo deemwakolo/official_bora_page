@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 import Chart from './Chart/Chart';
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 import { useMasterSound } from './components-themes/haptics/MasterSound';
 
@@ -24,6 +24,8 @@ interface Song {
   yt_views: number;
   sp_plays: number;
 }
+
+const supabase = createClient();
 
 /**
  * COMPONENT KUU YA KUFUNGA DATABASE NA CHART GUI
