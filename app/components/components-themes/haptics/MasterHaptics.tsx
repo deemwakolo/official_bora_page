@@ -4,9 +4,12 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useState,
 } from 'react';
 
 interface MasterHapticsContextValue {
+  hapticsEnabled: boolean;
+  setHapticsEnabled: (value: boolean) => void;
   voteHaptic: () => void;
   shushaHaptic: () => void;
   toggleHaptic: () => void;
@@ -20,33 +23,36 @@ export function MasterHapticsProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const voteHaptic = useCallback(() => {
+  const [hapticsEnabled, setHapticsEnabled] =
+    useState(true);
+
+  const vibrate = useCallback((pattern: number | number[]) => {
+    if (!hapticsEnabled) return;
+
     if (typeof navigator === 'undefined') return;
 
     if ('vibrate' in navigator) {
-      navigator.vibrate(18);
+      navigator.vibrate(pattern);
     }
-  }, []);
+  }, [hapticsEnabled]);
+
+  const voteHaptic = useCallback(() => {
+    vibrate(18);
+  }, [vibrate]);
 
   const shushaHaptic = useCallback(() => {
-    if (typeof navigator === 'undefined') return;
-
-    if ('vibrate' in navigator) {
-      navigator.vibrate([12, 45, 12]);
-    }
-  }, []);
+    vibrate([12, 45, 12]);
+  }, [vibrate]);
 
   const toggleHaptic = useCallback(() => {
-    if (typeof navigator === 'undefined') return;
-
-    if ('vibrate' in navigator) {
-      navigator.vibrate([10, 35, 10]);
-    }
-  }, []);
+    vibrate([10, 35, 10]);
+  }, [vibrate]);
 
   return (
     <MasterHapticsContext.Provider
       value={{
+        hapticsEnabled,
+        setHapticsEnabled,
         voteHaptic,
         shushaHaptic,
         toggleHaptic,

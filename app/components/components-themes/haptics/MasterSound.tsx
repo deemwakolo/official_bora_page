@@ -5,9 +5,12 @@ import React, {
   useCallback,
   useContext,
   useRef,
+  useState,
 } from 'react';
 
 interface MasterSoundContextValue {
+  soundEnabled: boolean;
+  setSoundEnabled: (value: boolean) => void;
   playVotePing: () => void;
   playShushaPing: () => void;
 }
@@ -26,8 +29,13 @@ export function MasterSoundProvider({
   const shushaAudioRef =
     useRef<HTMLAudioElement | null>(null);
 
+  const [soundEnabled, setSoundEnabled] =
+    useState(true);
+
   const playVotePing = useCallback(() => {
     if (typeof window === 'undefined') return;
+
+    if (!soundEnabled) return;
 
     if (!voteAudioRef.current) {
       voteAudioRef.current = new Audio(
@@ -53,6 +61,8 @@ export function MasterSoundProvider({
   const playShushaPing = useCallback(() => {
     if (typeof window === 'undefined') return;
 
+    if (!soundEnabled) return;
+
     if (!shushaAudioRef.current) {
       shushaAudioRef.current = new Audio(
         '/assets/belldown.mp3'
@@ -77,6 +87,8 @@ export function MasterSoundProvider({
   return (
     <MasterSoundContext.Provider
       value={{
+        soundEnabled,
+        setSoundEnabled,
         playVotePing,
         playShushaPing,
       }}

@@ -1,20 +1,15 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
-
-import { createClient } from '@/lib/supabase/client';
+﻿'use client';
 
 import AdminLoginBackground from './graphics/AdminLoginBackground';
 import AdminLoginBrand from './graphics/AdminLoginBrand';
+import AdminLoginToggle from './components/AdminLoginToggle';
 import GitHubLogin from './auth/GitHubLogin';
 import AuthDivider from './auth/AuthDivider';
 import PasskeyLogin from './auth/PasskeyLogin';
 import EmailPasswordLogin from './auth/EmailPasswordLogin';
 import LoginFooter from './components/LoginFooter';
 
-import type {
-  AdminLoginState,
-} from './AdminLoginOP';
+import type { AdminLoginState } from './AdminLoginOP';
 
 interface AdminLoginGUIProps {
   state: AdminLoginState;
@@ -26,14 +21,14 @@ interface AdminLoginGUIProps {
   ) => void;
 }
 
+// BORA LOGIN COMPOSITION LAYER
+// Z-0 Tinga, Z-1 atmosphere, Z-10 login, Z-20 toggle.
 export default function AdminLoginGUI({
   state,
   onGitHub,
   onPasskey,
   onEmailPassword,
 }: AdminLoginGUIProps) {
-  const router = useRouter();
-
   const isLoading =
     (state as { status: string }).status === 'loading';
 
@@ -48,6 +43,7 @@ export default function AdminLoginGUI({
             >
               Authentication Verified
             </p>
+
             <p
               className="mt-2 text-[7px] font-bold uppercase tracking-[0.2em]"
               style={{ color: 'var(--bora-text-muted)' }}
@@ -88,7 +84,11 @@ export default function AdminLoginGUI({
 
             <EmailPasswordLogin
               loading={isLoading}
-              error={state.status === 'error' ? state.message : ''}
+              error={
+                state.status === 'error'
+                  ? state.message
+                  : ''
+              }
               onSubmit={onEmailPassword}
             />
           </>
@@ -98,35 +98,42 @@ export default function AdminLoginGUI({
 
   return (
     <main
-      className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4"
+      className="relative min-h-screen w-full overflow-hidden"
       style={{
         backgroundColor: 'var(--bora-background)',
         color: 'var(--bora-text)',
       }}
     >
+      {/* BACKGROUND LAYER (Z-0 / Z-1) */}
       <AdminLoginBackground />
 
-      <div className="relative z-10 w-full max-w-md -translate-y-12">
-        <AdminLoginBrand />
+      {/* FOREGROUND LAYER (Z-10) */}
+      <div className="relative z-10 flex min-h-screen w-full items-center justify-center px-4">
+        <div className="w-full max-w-md -translate-y-12">
+          <AdminLoginBrand />
 
-        <div
-          className="relative overflow-hidden rounded-2xl border p-6 sm:p-8"
-          style={{
-            borderColor:
-              'color-mix(in srgb, var(--bora-gold) 28%, var(--bora-border-strong))',
-            background:
-              'linear-gradient(145deg, color-mix(in srgb, var(--bora-surface) 78%, transparent), color-mix(in srgb, var(--bora-background-deep) 82%, transparent))',
-            backdropFilter: 'blur(28px) saturate(120%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(120%)',
-            boxShadow:
-              '0 30px 100px rgba(0,0,0,0.5), 0 0 60px var(--bora-gold-glow), inset 0 1px 0 color-mix(in srgb, var(--bora-text) 9%, transparent), inset 0 0 50px color-mix(in srgb, var(--bora-gold) 3%, transparent)',
-          }}
-        >
-          {renderCard()}
+          <div
+            className="relative overflow-hidden rounded-2xl border p-6 sm:p-8"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--bora-gold) 28%, var(--bora-border-strong))',
+              background:
+                'linear-gradient(145deg, color-mix(in srgb, var(--bora-surface) 78%, transparent), color-mix(in srgb, var(--bora-background-deep) 82%, transparent))',
+              backdropFilter: 'blur(28px) saturate(120%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(120%)',
+              boxShadow:
+                '0 30px 100px rgba(0,0,0,0.5), 0 0 60px var(--bora-gold-glow), inset 0 1px 0 color-mix(in srgb, var(--bora-text) 9%, transparent), inset 0 0 50px color-mix(in srgb, var(--bora-gold) 3%, transparent)',
+            }}
+          >
+            {renderCard()}
+          </div>
+
+          <LoginFooter />
         </div>
-
-        <LoginFooter />
       </div>
+
+      {/* FIXED BOTTOM-CENTER CONTROL (Z-20) */}
+      <AdminLoginToggle />
     </main>
   );
 }
