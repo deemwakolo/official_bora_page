@@ -5,17 +5,19 @@ import HeaderGUI from './HeaderGUI';
 
 interface HeaderProps {
   forceCompact?: boolean;
+  lockHeaderAtFullRetraction?: boolean;
 }
 
 export default function Header({
   forceCompact = false,
+  lockHeaderAtFullRetraction = false,
 }: HeaderProps) {
   const {
     progress,
     menuOpen,
     openMenu,
     closeMenu,
-  } = useHeaderOP();
+  } = useHeaderOP(lockHeaderAtFullRetraction);
 
   return (
     <HeaderGUI

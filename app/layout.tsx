@@ -1,21 +1,26 @@
 // app/layout.tsx
 
 import type { Metadata } from 'next';
-import { Inter, Cinzel } from 'next/font/google';
+
+import localFont from 'next/font/local';
 
 import './globals.css';
 import MasterGUI from './components/components-themes/MasterGUI';
 
-const inter = Inter({
-  subsets: ['latin'],
+// LOCAL FONTS: variable TTFs, self-hosted. Hakuna Google/CDN.
+// Inter: variable opsz,wght — full weight range inapatikana.
+const inter = localFont({
+  src: './fonts/Inter/Inter-VariableFont_opsz,wght.ttf',
   variable: '--font-inter',
+  weight: '100 900',
   display: 'swap',
 });
 
-const cinzel = Cinzel({
-  subsets: ['latin'],
-  weight: ['400', '700', '900'],
+// Cinzel: variable wght 400-900 — inaunga mkono 400, 700, 900.
+const cinzel = localFont({
+  src: './fonts/Cinzel/Cinzel-VariableFont_wght.ttf',
   variable: '--font-cinzel',
+  weight: '400 900',
   display: 'swap',
 });
 
@@ -36,12 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body
-        className={`
-          ${inter.variable}
-          ${cinzel.variable}
-          antialiased
-          font-sans
-        `}
+        className={`${inter.variable} ${cinzel.variable} antialiased font-sans`}
         style={{
           backgroundColor: 'var(--bora-background)',
           color: 'var(--bora-text)',

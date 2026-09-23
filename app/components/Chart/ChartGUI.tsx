@@ -192,7 +192,7 @@ export default function ChartGUI({
 
                     {/* NUMBER YA RANK INAYOKAA JUU YA COVER */}
                     <div
-                      className={`absolute -left-4 -top-6 z-20 font-black italic leading-none tracking-[-0.1em] transition-all duration-500 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:scale-110 ${
+                      className={`absolute -left-4 -top-6 z-20 font-cinzel font-black italic leading-none tracking-[-0.1em] transition-all duration-500 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:scale-110 ${
                         rank === 1
                           ? 'text-6xl md:text-7xl'
                           : rank === 2
@@ -238,7 +238,7 @@ export default function ChartGUI({
 
                     {/* JINA LA WIMBO — HERO */}
                     <h3
-                      className={`break-words font-black uppercase leading-[0.92] tracking-[-0.05em] transition-transform duration-500 group-hover:translate-x-1 ${
+                      className={`break-words font-cinzel font-black uppercase leading-[0.92] tracking-[-0.05em] transition-transform duration-500 group-hover:translate-x-1 ${
                         rank === 1
                           ? 'text-2xl md:text-5xl'
                           : 'text-xl md:text-4xl'
@@ -252,7 +252,7 @@ export default function ChartGUI({
 
                       {/* JINA LA MSANII */}
                       <span
-                        className="break-words text-[9px] font-bold uppercase tracking-[0.24em] md:text-[10px] md:tracking-[0.35em]"
+                        className="break-words font-cinzel text-[9px] font-bold uppercase tracking-[0.24em] md:text-[10px] md:tracking-[0.35em]"
                         style={{
                           color: 'var(--bora-text-muted)',
                         }}

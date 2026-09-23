@@ -7,11 +7,13 @@ import Header from './Header';
 interface BoraShellProps {
   children: React.ReactNode;
   forceCompactHeader?: boolean;
+  lockHeaderAtFullRetraction?: boolean;
 }
 
 export default function BoraShell({
   children,
   forceCompactHeader = false,
+  lockHeaderAtFullRetraction = false,
 }: BoraShellProps) {
   return (
     <div
@@ -22,7 +24,12 @@ export default function BoraShell({
       }}
     >
       {/* HEADER */}
-      <Header forceCompact={forceCompactHeader} />
+      <Header
+        forceCompact={forceCompactHeader}
+        lockHeaderAtFullRetraction={
+          lockHeaderAtFullRetraction
+        }
+      />
 
       {/* ACTIVE SECTION CONTENT */}
       <section className="min-h-screen">

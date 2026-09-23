@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Umbali wa scroll unaobadilisha header kutoka 0 (fully expanded)
 // hadi 1 (fully retracted). Transformation ni CONTINUOUS — kila pixel
@@ -15,9 +15,22 @@ export interface HeaderOP {
   toggleMenu: () => void;
 }
 
-export function useHeaderOP(): HeaderOP {
+export function useHeaderOP(
+  lockHeaderAtFullRetraction = false
+): HeaderOP {
   const [progress, setProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // VOTE FULL-RETRACTION LATCH: in-memory tu, hakuna persistence.
+  // Ref ndani ya scroll handler — haisumbuliwi na stale closures.
+  const fullRetractionLocked = useRef(false);
+
+  // Kutoka Vote (au refresh/section change): unlock mara moja.
+  useEffect(() => {
+    if (lockHeaderAtFullRetraction) return;
+
+    fullRetractionLocked.current = false;
+  }, [lockHeaderAtFullRetraction]);
 
   useEffect(() => {
     let raf = 0;
@@ -25,6 +38,16 @@ export function useHeaderOP(): HeaderOP {
 
     const update = () => {
       raf = 0;
+
+      // Latch iko active: progress inabaki 1, hata kama
+      // mtumiaji anarudi juu (scroll upward).
+      if (fullRetractionLocked.current) {
+        if (last !== 1) {
+          last = 1;
+          setProgress(1);
+        }
+        return;
+      }
 
       const raw =
         window.scrollY / HEADER_SCROLL_DISTANCE;
@@ -37,6 +60,12 @@ export function useHeaderOP(): HeaderOP {
       // Rounding 3 decimals: enough resolution for a smooth
       // 0 -> 1 sweep, but haipigi render kwa kila sub-pixel.
       const next = Math.round(clamped * 1000) / 1000;
+
+      // Vote: ukifika full retraction, funga hapa — scrolling
+      // upward hairudishi header hadi mtumiaji atoke Vote.
+      if (lockHeaderAtFullRetraction && next >= 1) {
+        fullRetractionLocked.current = true;
+      }
 
       if (next === last) return;
 
@@ -60,7 +89,7 @@ export function useHeaderOP(): HeaderOP {
 
       if (raf) cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [lockHeaderAtFullRetraction]);
 
   useEffect(() => {
     if (!menuOpen) return;

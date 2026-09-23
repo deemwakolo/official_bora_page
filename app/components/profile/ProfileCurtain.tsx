@@ -3,8 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 
-// CURTAIN YA PROFILE: GIANT FROSTED GLASS
-// HAIFUNGI SCROLLING, SI MODAL, ? INAISHIA KWA FAQ PAGE
+// PROFILE CURTAIN: PAGE-BASED FROSTED GLASS
+// FIXED TO THE VIEWPORT, BLURS THE ENTIRE PAGE BEHIND IT
 export default function ProfileCurtain() {
   const router = useRouter();
 
@@ -13,12 +13,13 @@ export default function ProfileCurtain() {
   };
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-40">
-      {/* GIANT FROSTED GLASS LAYER */}
+    <div className="pointer-events-none fixed inset-0 z-40">
+      {/* PAGE-BASED BLUR: FULL VIEWPORT */}
       <div
-        className="absolute inset-0"
+        className="pointer-events-none fixed inset-0"
         style={{
-          backdropFilter: 'blur(1px)',
+          backdropFilter: 'blur(9px)',
+          WebkitBackdropFilter: 'blur(9px)',
           backgroundColor: 'rgba(8, 8, 8, 0.32)',
           border: '1px solid rgba(255, 255, 255, 0.04)',
           boxShadow:
@@ -26,19 +27,17 @@ export default function ProfileCurtain() {
         }}
       />
 
-      {/* FROST SHEEN */}
-      <div className="absolute inset-0 bg-white/[0.075]" />
+      {/* PAGE-BASED FROST SHEEN */}
+      <div className="pointer-events-none fixed inset-0 bg-white/[0.075]" />
 
-      {/* ? FIXED KATIKATI YA VIEWPORT */}
+      {/* CENTERED ACTION */}
       <div className="pointer-events-none fixed inset-0 flex items-center justify-center">
-        {/* HIT TARGET KUBWA: 144px */}
         <button
           type="button"
           aria-label="Learn how BORA works"
           onClick={openFaq}
           className="pointer-events-auto flex h-36 w-36 cursor-pointer items-center justify-center rounded-full transition-transform duration-300 hover:scale-[1.05] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--bora-gold)]/60"
         >
-          {/* SOLID RADIUS: ? INABAKI CRISP JUU YA GLASS */}
           <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-[var(--bora-gold)]/55 bg-[#080808] shadow-[0_0_30px_rgba(255,196,0,0.22)]">
             {/* CRIMSON AURA */}
             <div
