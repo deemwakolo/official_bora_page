@@ -44,7 +44,7 @@ export default function UpdatePasswordPage() {
       return;
     }
 
-    router.replace('/admin/control-room');
+    router.replace('/admin/room-selector');
   };
 
   return (

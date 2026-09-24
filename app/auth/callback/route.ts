@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 // BORA OAUTH CALLBACK: GitHub (PKCE) inakutana hapa.
-// Code → exchangeCodeForSession → cookie session → Control Room.
+// Code → exchangeCodeForSession → cookie session → Room Selector.
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
 
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
   return NextResponse.redirect(
     new URL(
-      '/admin/control-room',
+      '/admin/room-selector',
       requestUrl.origin
     )
   );

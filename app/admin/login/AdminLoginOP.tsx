@@ -29,9 +29,11 @@ export default function AdminLoginOP() {
       : { status: 'idle' }
   );
 
-  const enterControlRoom = useCallback(() => {
+  // AUTHENTICATION IMEKAMILIKA → BORA DOORWAY (room selector).
+  // Room selector ndiyo inachagua room — si login.
+  const enterAdmin = useCallback(() => {
     setState({ status: 'success' });
-    router.replace('/admin/control-room');
+    router.replace('/admin/room-selector');
   }, [router]);
 
   const handleGitHub = useCallback(async () => {
@@ -73,7 +75,7 @@ export default function AdminLoginOP() {
         return;
       }
 
-      enterControlRoom();
+      enterAdmin();
     } catch {
       setState({
         status: 'error',
@@ -81,7 +83,7 @@ export default function AdminLoginOP() {
           'Passkey unavailable. Use GitHub or email/password instead.',
       });
     }
-  }, [enterControlRoom]);
+  }, [enterAdmin]);
 
   const handleEmailPassword = useCallback(
     async (email: string, password: string) => {
@@ -105,9 +107,9 @@ export default function AdminLoginOP() {
         return;
       }
 
-      enterControlRoom();
+      enterAdmin();
     },
-    [enterControlRoom]
+    [enterAdmin]
   );
 
   return (

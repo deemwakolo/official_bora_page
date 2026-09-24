@@ -40,24 +40,30 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getClaims();
+  const { data: session } = await supabase.auth.getClaims();
 
   // ─── BORA ROUTE PROTECTION (v1: AUTHENTICATED = ALLOWED) ───
-  const isProtected =
-    request.nextUrl.pathname.startsWith(
-      '/admin/control-room'
-    ) ||
-    request.nextUrl.pathname.startsWith('/admin/security') ||
-    request.nextUrl.pathname.startsWith('/admin/settings');
+  // Doorway (room-selector) na rooms zote zinalindwa — mtu hawezi
+  // kuandika URL ya room moja kwa moja na kuruka mlango.
+  const PROTECTED_PREFIXES = [
+    '/admin/room-selector',
+    '/admin/control-room',
+    '/admin/operations',
+    '/admin/ui',
+    '/admin/engine',
+    '/admin/updates',
+    '/admin/security',
+    '/admin/settings',
+  ];
 
-  if (isProtected) {
-    const { data } = await supabase.auth.getClaims();
+  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
+    request.nextUrl.pathname.startsWith(prefix)
+  );
 
-    if (!data?.claims) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/admin/login';
-      return NextResponse.redirect(url);
-    }
+  if (isProtected && !session?.claims) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/admin/login';
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

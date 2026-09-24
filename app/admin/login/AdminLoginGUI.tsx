@@ -48,7 +48,7 @@ export default function AdminLoginGUI({
               className="mt-2 text-[7px] font-bold uppercase tracking-[0.2em]"
               style={{ color: 'var(--bora-text-muted)' }}
             >
-              Entering Control Room...
+              Opening Room Selector...
             </p>
           </div>
         );
