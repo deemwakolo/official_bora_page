@@ -1,6 +1,6 @@
-import AdminRoomPlaceholder from '../components/AdminRoomPlaceholder';
+import OperationsOP from './OperationsOP';
 
-// BORA OPERATIONS ROOM: assets, platforms & operational data.
+// BORA OPERATIONS ROOM: song identity, artists, platform ids & assets.
 export default function Page() {
-  return <AdminRoomPlaceholder room="operations" />;
+  return <OperationsOP />;
 }

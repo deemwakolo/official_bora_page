@@ -55,10 +55,23 @@ function ToggleRow({
   );
 }
 
+// BORA GUI TOGGLE PLACEMENT
+// 'bottom-center' ni ile ya login + room selector (default).
+// 'top-left' ni ya room inayohitaji control juu-kushoto (Operations).
+type AdminLoginToggleAlign = 'bottom-center' | 'top-left';
+
+interface AdminLoginToggleProps {
+  align?: AdminLoginToggleAlign;
+}
+
 // BORA GUI TOGGLE: inacontrol EXISTING MasterGUI state
 // (theme + sound + haptics) — hakuna duplicate preferences.
-export default function AdminLoginToggle() {
+export default function AdminLoginToggle({
+  align = 'bottom-center',
+}: AdminLoginToggleProps) {
   const [open, setOpen] = useState(false);
+
+  const isTopLeft = align === 'top-left';
 
   const { theme, changeTheme, mounted } =
     useBoraTheme();
@@ -70,8 +83,21 @@ export default function AdminLoginToggle() {
     useMasterHaptics();
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-20 flex justify-center">
-      <div className="pointer-events-auto flex flex-col items-center gap-2">
+    <div
+      className={
+        isTopLeft
+          ? 'pointer-events-none fixed left-4 top-4 z-20 flex justify-start md:left-8'
+          : 'pointer-events-none fixed inset-x-0 bottom-5 z-20 flex justify-center'
+      }
+    >
+      {/* TOP-LEFT: flex-col-reverse inaweka panel CHINI ya button */}
+      <div
+        className={`pointer-events-auto flex gap-2 ${
+          isTopLeft
+            ? 'flex-col-reverse items-start'
+            : 'flex-col items-center'
+        }`}
+      >
         {open && (
           <div
             className="w-[220px] rounded-xl border p-3 backdrop-blur-xl"
