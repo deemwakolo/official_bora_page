@@ -21,7 +21,7 @@ export interface AdminRoomDefinition {
 export const ADMIN_ROOMS = [
   {
     id: 'operations',
-    route: '/admin/operations',
+    route: '/admin/control-room',
     label: 'Operations',
     description: 'Assets · Platforms · Operations',
     icon: Settings2,
