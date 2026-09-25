@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -8,7 +8,7 @@ import {
   type TrendingData,
   type TrendingEntry,
   type TrendingPlatform,
-} from '@/lib/trending';
+} from '@/lib/trending-shared';
 
 import {
   getTrendingData,
@@ -62,7 +62,7 @@ type SavePhase = 'idle' | 'saving' | 'saved' | 'error';
  * BORA CONTROL ROOM TRENDING CONTROLLER
  *
  * Maji ya kila platform yana drafts zake. Save ni ya platform
- * iliyo active pekee â€” RPC haigusei zile nyingine.
+ * iliyo active pekee — RPC haigusei zile nyingine.
  * Hakuna global draft reset kwenye reload.
  */
 export default function TrendingOP() {
@@ -130,7 +130,22 @@ export default function TrendingOP() {
     setReloadKey((key) => key + 1);
   }, []);
 
-  const baseRows = baseRef.current[activePlatform] ?? [];
+  // SLOTS ZA PLATFORM. DB inaweka 0 rows kwa platform ambayo
+  // bado haijaundwa — basi tunajaza ranks 1..N zenye blank rows
+  // ili admin aweze kujaza set ya kwanza bila kuhitaji
+  // records zilizopo. Ranks zilizo kwenye DB zinatumika.
+  const expectedCount = TRENDING_RANK_COUNT[activePlatform];
+  const persistedRows = baseRef.current[activePlatform] ?? [];
+  const baseRows: TrendingEntry[] = Array.from(
+    { length: expectedCount },
+    (_, index) => {
+      const rank = index + 1;
+      return (
+        persistedRows.find((row) => row.rank === rank) ??
+        blankRow(activePlatform, rank)
+      );
+    }
+  );
   const periodDrafts = drafts[activePlatform] ?? {};
   const rows = baseRows.map(
     (row) => periodDrafts[row.rank] ?? row
@@ -275,7 +290,7 @@ export default function TrendingOP() {
       rows={rows}
       selectedRank={selectedRank}
       dirtyRanks={dirtyRanks}
-      expectedCount={TRENDING_RANK_COUNT[activePlatform]}
+      expectedCount={expectedCount}
       saveStatus={saveStatus}
       saveMessage={saveMessage}
       onSelectPlatform={handleSelectPlatform}

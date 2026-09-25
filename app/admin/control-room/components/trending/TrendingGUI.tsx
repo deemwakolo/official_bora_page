@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import type { TrendingEntry } from '@/lib/trending';
+import type { TrendingEntry } from '@/lib/trending-shared';
 
 import TrendingRankList from './TrendingRankList';
 import TrendingRowEditor from './TrendingRowEditor';
@@ -9,7 +9,7 @@ import TrendingSaveBar, {
 } from './TrendingSaveBar';
 import TrendingStatePanel from './TrendingStatePanel';
 
-import type { TrendingPlatform } from '@/lib/trending';
+import type { TrendingPlatform } from '@/lib/trending-shared';
 
 export type TrendingDataState =
   | 'loading'
@@ -246,7 +246,7 @@ export default function TrendingGUI(props: TrendingGUIProps) {
             lines={[
               'This platform has no trending rows yet.',
               `A ${platformLabel} trending set holds ${expectedCount} rows.`,
-              'Nothing is invented here â€” rows appear once they are entered and saved.',
+              'Nothing is invented here — rows appear once they are entered and saved.',
             ]}
           />
         )}

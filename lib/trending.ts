@@ -1,63 +1,36 @@
 import { createClient } from '@/lib/supabase/server';
 
+import {
+  TRENDING_PLATFORMS,
+  emptyTrendingData,
+  type TrendingData,
+  type TrendingEntry,
+} from './trending-shared';
+
 // ============================================================
-// TRENDING — DATA LAYER (SUPABASE)
+// TRENDING — SERVER DATA LAYER (SUPABASE)
 //
 // Source: public.trending_entries
 //
 // Trending ni system yake mwenyewe. HAITEGEMEA Songs registry
 // kwa display — title/artist ni snapshots zenyewe.
+//
+// Types na constants zinaishi lib/trending-shared.ts ili
+// client components wasiweze import bila kuvuta server module
+// kwenye client bundle. Usirudushe types hapa.
 // ============================================================
 
-export type TrendingPlatform =
-  | 'youtube'
-  | 'spotify'
-  | 'artist';
+export {
+  TRENDING_PLATFORMS,
+  TRENDING_RANK_COUNT,
+  emptyTrendingData,
+} from './trending-shared';
 
-// Idhaa ya rows inazotarajiwa kwa kila platform.
-// Hii ndiyo truth ya "expected structure" — inalingana na
-// umiliki wa public Trending (10 / 10 / 8).
-export const TRENDING_RANK_COUNT: Record<
+export type {
+  TrendingData,
+  TrendingEntry,
   TrendingPlatform,
-  number
-> = {
-  youtube: 10,
-  spotify: 10,
-  artist: 8,
-};
-
-export const TRENDING_PLATFORMS: TrendingPlatform[] = [
-  'youtube',
-  'spotify',
-  'artist',
-];
-
-// DB ROW (0004_create_trending.sql)
-export interface TrendingEntry {
-  platform: TrendingPlatform;
-  rank: number;
-  song_id: string | null;
-  title: string;
-  artist: string;
-  movement: number;
-  songs_count: number | null;
-}
-
-export interface TrendingData {
-  youtube: TrendingEntry[];
-  spotify: TrendingEntry[];
-  artist: TrendingEntry[];
-}
-
-export function emptyTrendingData(): TrendingData {
-  return { youtube: [], spotify: [], artist: [] };
-}
-
-const platformKeys: TrendingPlatform[] = [
-  'youtube',
-  'spotify',
-  'artist',
-];
+} from './trending-shared';
 
 /**
  * SOMA TRENDING YOTE (CURRENT SET)
@@ -76,7 +49,7 @@ export async function getTrending(): Promise<TrendingData> {
       .select(
         'platform, rank, song_id, title, artist, movement, songs_count'
       )
-      .in('platform', platformKeys);
+      .in('platform', TRENDING_PLATFORMS);
 
     if (error) {
       console.error(
@@ -88,7 +61,7 @@ export async function getTrending(): Promise<TrendingData> {
 
     const rows = (data ?? []) as TrendingEntry[];
 
-    for (const platform of platformKeys) {
+    for (const platform of TRENDING_PLATFORMS) {
       result[platform] = rows
         .filter((row) => row.platform === platform)
         .sort((a, b) => a.rank - b.rank);
@@ -103,3 +76,4 @@ export async function getTrending(): Promise<TrendingData> {
     return result;
   }
 }
+

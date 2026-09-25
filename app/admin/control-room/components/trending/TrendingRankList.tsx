@@ -1,6 +1,6 @@
 'use client';
 
-import type { TrendingEntry } from '@/lib/trending';
+import type { TrendingEntry } from '@/lib/trending-shared';
 
 import TrendingRowEditor from './TrendingRowEditor';
 
