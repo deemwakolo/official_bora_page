@@ -6,24 +6,7 @@ import { Settings } from 'lucide-react';
 
 import type { ProfileData } from './ProfileGUI';
 
-// WATISTI ANAOWAPENDA: GRAPHICS ZAO (BAADAYE ZITATOKA DATABASE)
-const favoriteArtists = [
-  {
-    name: 'Marioo',
-    imageUrl:
-      'https://images.unsplash.com/photo-1520785643438-5bf77931f493?auto=format&fit=crop&w=200&q=80',
-  },
-  {
-    name: 'Diamond',
-    imageUrl:
-      'https://images.unsplash.com/photo-1470229722913-7ea0d7d2f0d5?auto=format&fit=crop&w=200&q=80',
-  },
-  {
-    name: 'Rayvanny',
-    imageUrl:
-      'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=200&q=80',
-  },
-];
+import { useProfileContent } from './profileData';
 
 interface ProfileHeaderProps {
   profile: ProfileData;
@@ -32,6 +15,9 @@ interface ProfileHeaderProps {
 export default function ProfileHeader({
   profile,
 }: ProfileHeaderProps) {
+  // WATISTI ANAOWAPENDA: inasoma kutoka profileData (shared mock)
+  const { favoriteArtists } = useProfileContent();
+
   return (
     <header className="relative text-center">
       {/* GEAR YA ACCOUNT SETTINGS */}

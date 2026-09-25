@@ -11,25 +11,24 @@ import ProfileArtists from './ProfileArtists';
 import ProfileAccount from './ProfileAccount';
 import ProfileCurtain from './ProfileCurtain';
 
-export interface ProfileData {
+import { useProfileContent } from './profileData';
+
+export type ProfileData = {
   displayName: string;
   username: string;
   bio: string;
   avatarUrl: string;
-}
+};
 
 export type ProfileTab = 'activity' | 'songs' | 'artists';
 
-interface ProfileGUIProps {
-  profile: ProfileData;
-}
-
 // COMPOSITION LAYER: INAOWN TAB STATE, LAYOUT NA MPANGILIO TU
-export default function ProfileGUI({
-  profile,
-}: ProfileGUIProps) {
+export default function ProfileGUI() {
   const [activeTab, setActiveTab] =
     useState<ProfileTab>('activity');
+
+  // IDENTITY inasoma kutoka profileData (shared mock)
+  const { profile } = useProfileContent();
 
   return (
     <>

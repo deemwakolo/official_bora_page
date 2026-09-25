@@ -2,36 +2,12 @@
 
 import React from 'react';
 
-interface SupportedSong {
-  id: string;
-  title: string;
-  artist: string;
-  coverUrl: string;
-}
-
-// MOCK SONGS: COLLECTION YA WIMBO ULIOFANYA VOTE
-const songs: SupportedSong[] = [
-  {
-    id: 'song-1',
-    title: 'Song A',
-    artist: 'Artist A',
-    coverUrl: '',
-  },
-  {
-    id: 'song-2',
-    title: 'Song B',
-    artist: 'Artist B',
-    coverUrl: '',
-  },
-  {
-    id: 'song-3',
-    title: 'Song C',
-    artist: 'Artist C',
-    coverUrl: '',
-  },
-];
+import { useProfileContent } from './profileData';
 
 export default function ProfileSongs() {
+  // SONGS: zinasoma kutoka profileData (shared mock)
+  const { songs } = useProfileContent();
+
   return (
     <div
       className="divide-y"

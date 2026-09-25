@@ -2,32 +2,12 @@
 
 import React from 'react';
 
-interface SupportedArtist {
-  id: string;
-  name: string;
-  imageUrl: string;
-}
-
-// MOCK ARTISTS: COLLECTION YA MSANII ULIOFANYA VOTE
-const artists: SupportedArtist[] = [
-  {
-    id: 'artist-1',
-    name: 'Artist A',
-    imageUrl: '',
-  },
-  {
-    id: 'artist-2',
-    name: 'Artist B',
-    imageUrl: '',
-  },
-  {
-    id: 'artist-3',
-    name: 'Artist C',
-    imageUrl: '',
-  },
-];
+import { useProfileContent } from './profileData';
 
 export default function ProfileArtists() {
+  // SUPPORTED ARTISTS: zinasoma kutoka profileData (shared mock)
+  const { artists } = useProfileContent();
+
   return (
     // COMPACT GRID INAFAA KWA LUGHA YA PROFILE YA TIKTOK
     <div className="grid grid-cols-3 gap-4">
