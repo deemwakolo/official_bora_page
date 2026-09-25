@@ -238,6 +238,7 @@ export default function MomentChartsOP() {
   const activeChart =
     activePeriod === 'weekly' ? charts.weekly : charts.monthly;
   const baseSongs = sortByRank(activeChart?.songs ?? []);
+  const periodDrafts = draftsByPeriod[activePeriod] ?? {};
   const songs = sortByRank(
     baseSongs.map((song) => periodDrafts[song.rank] ?? song),
   );
