@@ -1,7 +1,11 @@
 'use client';
 import React from 'react';
-import MomentChart from './MomentChart';
-import { monthlyMomentData } from './MomentOP';
-export default function MonthlyOP() {
-  return <MomentChart paneKey="monthly" data={{ title: 'TOP 10 SONGS', periodLabel: monthlyMomentData.periodLabel, date: monthlyMomentData.date, songs: monthlyMomentData.songs }} />;
+import MomentChart, { MomentChartData } from './MomentChart';
+
+interface MonthlyOPProps {
+  data: MomentChartData;
+}
+
+export default function MonthlyOP({ data }: MonthlyOPProps) {
+  return <MomentChart paneKey="monthly" data={data} />;
 }

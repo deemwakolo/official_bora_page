@@ -7,8 +7,8 @@ import ControlRoomNavbar, {
   type ControlRoomSection,
 } from './ControlRoomNavbar';
 
-import MomentGUI from '../../../components/charts/MomentGUI';
-import Profile from '../../../components/profile/Profile';
+import MomentChartsOP from './charts/MomentChartsOP';
+import ControlRoomProfile from './ControlRoomProfile';
 
 // COPY YA PublicShell — section ya UPDATES (news) imeondolewa,
 // frontend header haiko, kila kitu kinaendeshwa na ControlRoomFrame.
@@ -37,10 +37,10 @@ export default function ControlRoomShell({
         return top10;
 
       case 'profile':
-        return <Profile />;
+        return <ControlRoomProfile />;
 
       case 'charts':
-        return <MomentGUI />;
+        return <MomentChartsOP />;
 
       default:
         return top10;

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import WeeklyOP from './WeeklyOP';
 import MonthlyOP from './MonthlyOP';
 import TopPerformers from './TopPerformers';
-import { weeklyMomentData, monthlyMomentData } from './MomentOP';
+import { getLatestMomentCharts } from '@/lib/moment-charts-actions';
 import { MomentChartData, MomentChartHeader } from './MomentChart';
 
 type ChartPeriod = 'weekly' | 'monthly';
@@ -17,19 +17,67 @@ const periodLabels: Record<ChartPeriod, string> = {
   monthly: 'MONTHLY',
 };
 
-const panes: { id: ChartPeriod; Pane: React.ComponentType; data: MomentChartData }[] = [
-  { id: 'weekly', Pane: WeeklyOP, data: { title: 'TOP 10 SONGS', periodLabel: weeklyMomentData.periodLabel, date: weeklyMomentData.date, songs: weeklyMomentData.songs } },
-  { id: 'monthly', Pane: MonthlyOP, data: { title: 'TOP 10 SONGS', periodLabel: monthlyMomentData.periodLabel, date: monthlyMomentData.date, songs: monthlyMomentData.songs } },
-];
+// SUPABASE NDIO SOURCE OF TRUTH (MomentOP hardcoded data haiko hapa tena).
+// Wakati wa loading au kama DB haiko patoanalina, tunaonyesha hali tupu
+// bila kuangusha ukurasa — hakuna fallback kwenye data ya zamani.
+const emptyChart = (period: ChartPeriod): MomentChartData => ({
+  title: 'TOP 10 SONGS',
+  periodLabel: periodLabels[period],
+  date: '',
+  songs: [],
+});
 
 export default function MomentGUI() {
+  const [charts, setCharts] = useState<
+    Record<ChartPeriod, MomentChartData | null>
+  >({
+    weekly: null,
+    monthly: null,
+  });
+
   const [activePeriod, setActivePeriod] = useState<ChartPeriod>('weekly');
   const carouselRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchDeltaX = useRef(0);
   const total = periods.length;
   const activeIndex = periods.indexOf(activePeriod);
+
+  const panes: {
+    id: ChartPeriod;
+    Pane: React.ComponentType<{ data: MomentChartData }>;
+    data: MomentChartData;
+  }[] = [
+    { id: 'weekly', Pane: WeeklyOP, data: charts.weekly ?? emptyChart('weekly') },
+    { id: 'monthly', Pane: MonthlyOP, data: charts.monthly ?? emptyChart('monthly') },
+  ];
+
   const activeData = panes[activeIndex]?.data ?? panes[0].data;
+
+  // VUTA CHARTS ZOTE ZA MABAYA KUTOKA SUPABASE (server action).
+  useEffect(() => {
+    let cancelled = false;
+
+    getLatestMomentCharts()
+      .then((result) => {
+        if (cancelled) return;
+
+        setCharts({
+          weekly: result.weekly,
+          monthly: result.monthly,
+        });
+      })
+      .catch((error: any) => {
+        console.error(
+          'Moment Chart Fetch Error:',
+          error?.message ?? error
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const goToIndex = (index: number) => {
     const clamped = Math.max(0, Math.min(total - 1, index));
 
@@ -94,8 +142,8 @@ export default function MomentGUI() {
         })}
       </div>
       <div ref={carouselRef} onScroll={handleScroll} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} className="flex w-full snap-x snap-mandatory overflow-x-auto scrollbar-hide" style={{ touchAction: 'pan-y' }}>
-        <div className="w-full shrink-0 snap-center px-4"><WeeklyOP /></div>
-        <div className="w-full shrink-0 snap-center px-4"><MonthlyOP /></div>
+        <div className="w-full shrink-0 snap-center px-4"><WeeklyOP data={panes[0].data} /></div>
+        <div className="w-full shrink-0 snap-center px-4"><MonthlyOP data={panes[1].data} /></div>
       </div>
     </section>
   );
