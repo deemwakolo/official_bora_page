@@ -6,6 +6,8 @@ import { Youtube, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
 import trendsTheme from '../TrendsTheme';
 
+import TrendEmptyState from '../TrendEmptyState';
+
 interface YouTubeSong {
   rank: number;
   title: string;
@@ -13,20 +15,13 @@ interface YouTubeSong {
   movement: number;
 }
 
-export default function YouTubeSlide() {
-  // DATA YA MFANO YA YOUTUBE TOP 10 — MOCK, ITABADILISHWA NA API BAADAYE
-  const songs: YouTubeSong[] = [
-    { rank: 1, title: 'NISAMEHE', artist: 'NAVY KENZO', movement: 4 },
-    { rank: 2, title: 'MAPENZI', artist: 'ZUCHU', movement: 2 },
-    { rank: 3, title: 'SINA WEWE', artist: 'ALIKIBA', movement: -1 },
-    { rank: 4, title: 'KIMBAGA KIMBAGA', artist: 'MARIOO', movement: 3 },
-    { rank: 5, title: 'NDANI', artist: 'HARMONIZE', movement: -2 },
-    { rank: 6, title: 'RAHA', artist: 'RAYVANNY', movement: 1 },
-    { rank: 7, title: 'SIJUI', artist: 'NANDI MADIDA', movement: 0 },
-    { rank: 8, title: 'TAMU', artist: 'BARNABA', movement: -1 },
-    { rank: 9, title: 'MWEMBE', artist: 'YANKEE BOY', movement: 2 },
-    { rank: 10, title: 'HATARI', artist: 'LAVA LAVA', movement: 0 },
-  ];
+interface YouTubeSlideProps {
+  songs: YouTubeSong[];
+}
+
+export default function YouTubeSlide({
+  songs,
+}: YouTubeSlideProps) {
 
   return (
     <div
@@ -93,6 +88,12 @@ export default function YouTubeSlide() {
         </div>
 
         {/* SONG LIST */}
+        {songs.length === 0 ? (
+          <TrendEmptyState
+            platform="YOUTUBE"
+            expected={10}
+          />
+        ) : (
         <div>
           {songs.map((song) => (
             <div
@@ -175,6 +176,7 @@ export default function YouTubeSlide() {
             </div>
           ))}
         </div>
+        )}
 
         {/* FOOTER */}
         <div

@@ -9,7 +9,32 @@ import ArtistSlide from './slides/ArtistSlide';
 import trendsTheme from './TrendsTheme';
 
 type TrendSlide = 'youtube' | 'spotify' | 'artists';
-export default function TrendsGUI() {
+
+export interface TrendsYoutubeSong {
+  rank: number;
+  title: string;
+  artist: string;
+  movement: number;
+}
+
+export interface TrendsArtistTrend {
+  rank: number;
+  artist: string;
+  songs: number;
+  movement: number;
+}
+
+interface TrendsGUIProps {
+  youtubeSongs: TrendsYoutubeSong[];
+  spotifySongs: TrendsYoutubeSong[];
+  artistTrends: TrendsArtistTrend[];
+}
+
+export default function TrendsGUI({
+  youtubeSongs,
+  spotifySongs,
+  artistTrends,
+}: TrendsGUIProps) {
   // SLIDE ILIYO ACTIVE
 const [activeSlide, setActiveSlide] =
   useState<TrendSlide>('youtube');
@@ -83,7 +108,7 @@ const labels = {
             color: trendsTheme.text,
           }}
         >
-          <YouTubeSlide />
+          <YouTubeSlide songs={youtubeSongs} />
         </div>
 
         <div
@@ -93,7 +118,7 @@ const labels = {
             color: trendsTheme.text,
           }}
         >
-          <SpotifySlide />
+          <SpotifySlide songs={spotifySongs} />
         </div>
 
         <div
@@ -103,7 +128,7 @@ const labels = {
             color: trendsTheme.text,
           }}
         >
-          <ArtistSlide />
+          <ArtistSlide artists={artistTrends} />
         </div>
       </div>
 

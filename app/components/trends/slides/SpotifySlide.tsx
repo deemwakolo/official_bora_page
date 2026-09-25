@@ -6,6 +6,8 @@ import { ArrowUp, ArrowDown, Minus, Music2 } from 'lucide-react';
 
 import trendsTheme from '../TrendsTheme';
 
+import TrendEmptyState from '../TrendEmptyState';
+
 interface SpotifySong {
   rank: number;
   title: string;
@@ -13,20 +15,13 @@ interface SpotifySong {
   movement: number;
 }
 
-export default function SpotifySlide() {
-  // DATA YA MFANO YA SPOTIFY TOP 10 — MOCK, ITABADILISHWA NA API BAADAYE
-  const songs: SpotifySong[] = [
-    { rank: 1, title: 'KIMBAGA KIMBAGA', artist: 'MARIOO', movement: 2 },
-    { rank: 2, title: 'RAHA', artist: 'RAYVANNY', movement: 1 },
-    { rank: 3, title: 'NISAMEHE', artist: 'NAVY KENZO', movement: -1 },
-    { rank: 4, title: 'MAPENZI', artist: 'ZUCHU', movement: 4 },
-    { rank: 5, title: 'SINA WEWE', artist: 'ALIKIBA', movement: 0 },
-    { rank: 6, title: 'NDANI', artist: 'HARMONIZE', movement: -1 },
-    { rank: 7, title: 'HATARI', artist: 'LAVA LAVA', movement: 2 },
-    { rank: 8, title: 'TAMU', artist: 'BARNABA', movement: 0 },
-    { rank: 9, title: 'SIJUI', artist: 'NANDI MADIDA', movement: -3 },
-    { rank: 10, title: 'MWEMBE', artist: 'YANKEE BOY', movement: 1 },
-  ];
+interface SpotifySlideProps {
+  songs: SpotifySong[];
+}
+
+export default function SpotifySlide({
+  songs,
+}: SpotifySlideProps) {
 
   return (
     <div
@@ -93,6 +88,12 @@ export default function SpotifySlide() {
         </div>
 
         {/* SONG LIST */}
+        {songs.length === 0 ? (
+          <TrendEmptyState
+            platform="SPOTIFY"
+            expected={10}
+          />
+        ) : (
         <div>
           {songs.map((song) => (
             <div
@@ -175,6 +176,7 @@ export default function SpotifySlide() {
             </div>
           ))}
         </div>
+        )}
 
         {/* FOOTER */}
         <div

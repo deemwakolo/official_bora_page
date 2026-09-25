@@ -1,7 +1,5 @@
 import ChartWrapper from '../../components/ChartWrapper';
 
-import TrendsGUI from '../../components/trends/TrendsGUI';
-
 import ControlRoomShell from './components/ControlRoomShell';
 
 
@@ -9,6 +7,8 @@ import { getRegistry } from '../../../lib/admin-actions';
 
 // COPY YA BORA PAGE (GUI TU) KWA CONTROL ROOM.
 // Backend haiguswi: getRegistry() inaendelea kutumika kama asili.
+// TRENDING haipaswiwi hapa — ControlRoomShell inaroute moja kwa
+// moja kwenye TrendingOP ya admin.
 
 // NEXT.JS ISI-RENDER UPYA PAGE KWA CACHE
 
@@ -90,7 +90,6 @@ export default async function ControlRoomPage() {
               <ChartWrapper songs={rankedSongs} />
             </section>
           }
-          trends={<TrendsGUI />}
         />
 
 

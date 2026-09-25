@@ -8,18 +8,17 @@ import ControlRoomNavbar, {
 } from './ControlRoomNavbar';
 
 import MomentChartsOP from './charts/MomentChartsOP';
+import TrendingOP from './trending/TrendingOP';
 import ControlRoomProfile from './ControlRoomProfile';
 
 // COPY YA PublicShell — section ya UPDATES (news) imeondolewa,
 // frontend header haiko, kila kitu kinaendeshwa na ControlRoomFrame.
 interface ControlRoomShellProps {
   top10: React.ReactNode;
-  trends: React.ReactNode;
 }
 
 export default function ControlRoomShell({
   top10,
-  trends,
 }: ControlRoomShellProps) {
   const [activeSection, setActiveSection] =
     useState<ControlRoomSection>('vote');
@@ -31,7 +30,7 @@ export default function ControlRoomShell({
   const renderSection = () => {
     switch (activeSection) {
       case 'trending':
-        return trends;
+        return <TrendingOP />;
 
       case 'vote':
         return top10;

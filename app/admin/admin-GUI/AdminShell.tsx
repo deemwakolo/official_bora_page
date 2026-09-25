@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 
 import Top15Control from '../controls/Top15/Top15Control';
-import TrendsControl from '../controls/trends/TrendsControl';
 import DiscoverControl from '../controls/discover/DiscoverControl';
 import NewsControl from '../controls/news/NewsControl';
 import FAQControl from '../controls/faq/FAQControl';
@@ -114,10 +113,6 @@ export default function AdminShell() {
         <div className="mt-3">
           {activeSection === 'top15' && (
             <Top15Control />
-          )}
-
-          {activeSection === 'trends' && (
-            <TrendsControl />
           )}
 
           {activeSection === 'discover' && (

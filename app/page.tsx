@@ -12,6 +12,8 @@ import PublicShell from './components/workflow/PublicShell';
 
 import { getRegistry } from '../lib/admin-actions';
 
+import { getTrending } from '../lib/trending';
+
 // NEXT.JS ISI-RENDER UPYA PAGE KWA CACHE
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +48,23 @@ export default async function Home() {
   console.log(
     `BORA ENGINE: System Active. Processing ${rankedSongs.length} entries.`
   );
+
+  const trending = await getTrending();
+
+  const toSongRows = (rows: typeof trending.youtube) =>
+    rows.map((row) => ({
+      rank: row.rank,
+      title: row.title,
+      artist: row.artist,
+      movement: row.movement,
+    }));
+
+  const artistRows = trending.artist.map((row) => ({
+    rank: row.rank,
+    artist: row.artist,
+    songs: row.songs_count ?? 0,
+    movement: row.movement,
+  }));
 
   return (
     <main
@@ -92,7 +111,17 @@ export default async function Home() {
               <ChartWrapper songs={rankedSongs} />
             </section>
           }
-          trends={<TrendsGUI />}
+          trends={
+            <TrendsGUI
+              youtubeSongs={toSongRows(
+                trending.youtube
+              )}
+              spotifySongs={toSongRows(
+                trending.spotify
+              )}
+              artistTrends={artistRows}
+            />
+          }
           news={<News />}
         />
 

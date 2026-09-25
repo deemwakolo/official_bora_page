@@ -6,6 +6,8 @@ import { ArrowUp, ArrowDown, Minus, Mic2 } from 'lucide-react';
 
 import trendsTheme from '../TrendsTheme';
 
+import TrendEmptyState from '../TrendEmptyState';
+
 interface ArtistTrend {
   rank: number;
   artist: string;
@@ -13,18 +15,13 @@ interface ArtistTrend {
   movement: number;
 }
 
-export default function ArtistSlide() {
-  // DATA YA MFANO YA WASANII WANAOTRENDA — MOCK, ITABADILISHWA NA API BAADAYE
-  const artists: ArtistTrend[] = [
-    { rank: 1, artist: 'ALIKIBA', songs: 4, movement: 2 },
-    { rank: 2, artist: 'ZUCHU', songs: 3, movement: 1 },
-    { rank: 3, artist: 'MARIOO', songs: 3, movement: 3 },
-    { rank: 4, artist: 'RAYVANNY', songs: 2, movement: -1 },
-    { rank: 5, artist: 'HARMONIZE', songs: 2, movement: 2 },
-    { rank: 6, artist: 'NAVY KENZO', songs: 1, movement: 4 },
-    { rank: 7, artist: 'LAVA LAVA', songs: 2, movement: -2 },
-    { rank: 8, artist: 'BARNABA', songs: 1, movement: 1 },
-  ];
+interface ArtistSlideProps {
+  artists: ArtistTrend[];
+}
+
+export default function ArtistSlide({
+  artists,
+}: ArtistSlideProps) {
 
   return (
     <div
@@ -91,6 +88,12 @@ export default function ArtistSlide() {
         </div>
 
         {/* ARTIST LIST */}
+        {artists.length === 0 ? (
+          <TrendEmptyState
+            platform="ARTISTS"
+            expected={8}
+          />
+        ) : (
         <div>
           {artists.map((artist) => (
             <div
@@ -174,6 +177,7 @@ export default function ArtistSlide() {
             </div>
           ))}
         </div>
+        )}
 
         {/* FOOTER */}
         <div
