@@ -7,11 +7,15 @@ import type {
   MomentSong,
 } from '@/app/components/charts/MomentChart';
 
-import { getLatestMomentCharts } from '@/lib/moment-charts-actions';
+import {
+  getLatestMomentCharts,
+  saveMomentChartEdition,
+} from '@/lib/moment-charts-actions';
 
 import MomentChartsGUI, {
   type MomentChartsDataState,
   type MomentChartsPeriod,
+  type MomentChartsSaveStatus,
 } from './MomentChartsGUI';
 import type { MomentSongField } from './MomentChartsSongFields';
 
@@ -56,16 +60,6 @@ function sameSong(a: MomentSong, b: MomentSong): boolean {
   );
 }
 
-function readOnlyText(
-  activeChart: MomentChartData | null,
-  baseSongs: MomentSong[],
-): string {
-  if (!activeChart) return 'Waiting for Supabase edition.';
-  const periodWord =
-    activeChart.periodLabel === 'WEEKLY' ? 'Weekly' : 'Monthly';
-  return `${periodWord} ${activeChart.date} Â· ${baseSongs.length} entries Â· local drafts only â€” save arrives later.`;
-}
-
 function isPositiveIntText(value: string): boolean {
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) return false;
@@ -90,6 +84,10 @@ export default function MomentChartsOP() {
     Record<MomentChartsPeriod, number | null>
   >({ weekly: null, monthly: null });
 
+  // Save states
+  const [savePhase, setSavePhase] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
   const baseSongsRef = useRef<Record<MomentChartsPeriod, MomentSong[]>>({
     weekly: [],
     monthly: [],
@@ -103,7 +101,6 @@ export default function MomentChartsOP() {
       .then((result) => {
         if (cancelled) return;
         setCharts({ weekly: result.weekly, monthly: result.monthly });
-        setDraftsByPeriod({ weekly: {}, monthly: {} });
         setSelectedByPeriod({
           weekly: result.weekly?.songs[0]?.rank ?? null,
           monthly: result.monthly?.songs[0]?.rank ?? null,
@@ -228,6 +225,15 @@ export default function MomentChartsOP() {
     setReloadKey((key) => key + 1);
   }, []);
 
+  const handleDiscard = useCallback(() => {
+    setDraftsByPeriod((prev) => ({
+      ...prev,
+      [activePeriod]: {},
+    }));
+    setSavePhase('idle');
+    setSaveMessage(null);
+  }, [activePeriod]);
+
   useEffect(() => {
     baseSongsRef.current = {
       weekly: sortByRank(charts.weekly?.songs ?? []),
@@ -252,6 +258,45 @@ export default function MomentChartsOP() {
     .sort((a, b) => a - b);
   const selectedRank = selectedByPeriod[activePeriod] ?? null;
 
+  const handleSave = useCallback(async () => {
+    if (dirtyRanks.length === 0 || savePhase === 'saving') return;
+
+    setSavePhase('saving');
+    setSaveMessage(null);
+
+    const result = await saveMomentChartEdition(activePeriod, songs);
+
+    if (result.success) {
+      setSavePhase('saved');
+      setSaveMessage('Moment chart edition saved successfully.');
+
+      // Clear drafts for this period since they are now persisted
+      setDraftsByPeriod((prev) => ({
+        ...prev,
+        [activePeriod]: {},
+      }));
+
+      // Reload fresh data from Supabase
+      handleReload();
+    } else {
+      setSavePhase('error');
+      setSaveMessage(result.error ?? 'Failed to save moment chart edition.');
+    }
+  }, [activePeriod, dirtyRanks.length, handleReload, savePhase, songs]);
+
+  // Compute Save status:
+  const isDirty = dirtyRanks.length > 0;
+  const saveStatus: MomentChartsSaveStatus =
+    savePhase === 'saving'
+      ? 'saving'
+      : savePhase === 'saved' && !isDirty
+        ? 'saved'
+        : savePhase === 'error'
+          ? 'error'
+          : isDirty
+            ? 'unsaved'
+            : 'clean';
+
   return (
     <MomentChartsGUI
       activePeriod={activePeriod}
@@ -259,7 +304,8 @@ export default function MomentChartsOP() {
       dataError={dataError}
       weeklyLabel={charts.weekly?.date || 'No weekly edition'}
       monthlyLabel={charts.monthly?.date || 'No monthly edition'}
-      readOnlyLabel={readOnlyText(activeChart, baseSongs)}
+      saveStatus={saveStatus}
+      saveMessage={saveMessage}
       songs={songs}
       selectedRank={selectedRank}
       dirtyRanks={dirtyRanks}
@@ -268,6 +314,8 @@ export default function MomentChartsOP() {
       onChangeSongField={handleChangeSongField}
       onChangeMovement={handleChangeMovement}
       onRevertEntry={handleRevertEntry}
+      onSave={handleSave}
+      onDiscard={handleDiscard}
       onReload={handleReload}
     />
   );

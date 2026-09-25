@@ -7,13 +7,16 @@ import MomentChartsNav, {
   type MomentChartsPeriod,
 } from './MomentChartsNav';
 import MomentChartsRankList from './MomentChartsRankList';
+import MomentChartsSaveBar, {
+  type MomentChartsSaveStatus,
+} from './MomentChartsSaveBar';
 import MomentChartsStatePanel from './MomentChartsStatePanel';
 
 import type { MomentSongField } from './MomentChartsSongFields';
 
 export type MomentChartsDataState = 'loading' | 'ready' | 'error';
 
-export type { MomentChartsPeriod };
+export type { MomentChartsPeriod, MomentChartsSaveStatus };
 
 interface MomentChartsGUIProps {
   activePeriod: MomentChartsPeriod;
@@ -21,7 +24,8 @@ interface MomentChartsGUIProps {
   dataError: string | null;
   weeklyLabel: string;
   monthlyLabel: string;
-  readOnlyLabel: string;
+  saveStatus: MomentChartsSaveStatus;
+  saveMessage: string | null;
   songs: MomentSong[];
   selectedRank: number | null;
   dirtyRanks: number[];
@@ -38,6 +42,8 @@ interface MomentChartsGUIProps {
     value: string,
   ) => void;
   onRevertEntry: (rank: number) => void;
+  onSave: () => void;
+  onDiscard: () => void;
   onReload: () => void;
 }
 
@@ -48,7 +54,8 @@ export default function MomentChartsGUI(props: MomentChartsGUIProps) {
     dataError,
     weeklyLabel,
     monthlyLabel,
-    readOnlyLabel,
+    saveStatus,
+    saveMessage,
     songs,
     selectedRank,
     dirtyRanks,
@@ -57,6 +64,8 @@ export default function MomentChartsGUI(props: MomentChartsGUIProps) {
     onChangeSongField,
     onChangeMovement,
     onRevertEntry,
+    onSave,
+    onDiscard,
     onReload,
   } = props;
   const dataColor =
@@ -129,28 +138,17 @@ export default function MomentChartsGUI(props: MomentChartsGUIProps) {
         monthlyLabel={monthlyLabel}
         onSelect={onSelectPeriod}
       />
-      <div
-        className="mt-3 flex w-full flex-col gap-3 border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
-        style={{
-          borderColor: 'var(--bora-border)',
-          backgroundColor: 'var(--bora-surface)',
-        }}
-      >
-        <div className="min-w-0" role="status" aria-live="polite">
-          <p
-            className="text-[7px] font-black uppercase tracking-[0.2em]"
-            style={{ color: 'var(--bora-text-muted)' }}
-          >
-            Read Only
-          </p>
-          <p
-            className="mt-1 text-[6px] uppercase tracking-[0.14em]"
-            style={{ color: 'var(--bora-text-subtle)' }}
-          >
-            {readOnlyLabel}
-          </p>
-        </div>
-      </div>
+
+      {/* DEDICATED MOMENT CHARTS SAVE BAR */}
+      <MomentChartsSaveBar
+        status={saveStatus}
+        message={saveMessage}
+        dirtyCount={dirtyRanks.length}
+        periodLabel={activePeriod === 'weekly' ? 'Weekly' : 'Monthly'}
+        onSave={onSave}
+        onDiscard={onDiscard}
+      />
+
       <div className="mt-3">
         {showLoading && (
           <MomentChartsStatePanel

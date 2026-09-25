@@ -7,14 +7,9 @@ import type {
 } from '@/app/components/charts/MomentChart';
 
 // ============================================================
-// MOMENT CHARTS — READ-ONLY DATA LAYER (SUPABASE)
+// MOMENT CHARTS — DATA LAYER (SUPABASE)
 //
 // Source: moment_chart_editions -> moment_chart_entries
-// Hii hapa haitoi kwa screenshot — inasoma DB moja kwa moja.
-// HAKUNA writes, HAKUNA admin, HAKUNA caching hapa.
-//
-// Matokeo yanafuata mtindo wa `lib/admin-actions.ts`
-// (getRegistry): try/catch + console.error + safe null result.
 // ============================================================
 
 export type MomentChartPeriod = 'weekly' | 'monthly';
@@ -71,20 +66,67 @@ const releaseMonths = [
 // DB: release_date_snapshot = 'YYYY-MM-DD'
 // UI (MomentOP): releaseDate = '12 Sep 2026'
 // Tunatumia string parsing (si Date) ili kuepuka timezone shifts.
-function formatReleaseDate(
+export function formatReleaseDate(
   isoDate: string | null
 ): string {
   if (!isoDate) return '';
 
   const [year, month, day] = isoDate.split('-');
-  const monthLabel =
-    releaseMonths[Number(month) - 1];
+  const monthIndex = Number(month) - 1;
+  const monthLabel = releaseMonths[monthIndex];
 
   if (!year || !monthLabel || !day) {
     return isoDate;
   }
 
   return `${day} ${monthLabel} ${year}`;
+}
+
+const monthMap: Record<string, string> = {
+  jan: '01',
+  feb: '02',
+  mar: '03',
+  apr: '04',
+  may: '05',
+  jun: '06',
+  jul: '07',
+  aug: '08',
+  sep: '09',
+  oct: '10',
+  nov: '11',
+  dec: '12',
+};
+
+// UI (releaseDate) -> DB (YYYY-MM-DD)
+// Supports: "12 Sep 2026" or "2026-09-12"
+// Returns null if empty, or throws Error if invalid.
+export function parseReleaseDateToISO(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '-') return null;
+
+  // Pattern 1: ISO YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Pattern 2: DD Mon YYYY (e.g. 12 Sep 2026 or 1 Sep 2026)
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const monthKey = parts[1].toLowerCase().slice(0, 3);
+    const month = monthMap[monthKey];
+    const year = parts[2];
+
+    if (month && /^\d{4}$/.test(year) && /^\d{2}$/.test(day)) {
+      const dayNum = Number(day);
+      if (dayNum >= 1 && dayNum <= 31) {
+        return `${year}-${month}-${day}`;
+      }
+    }
+  }
+
+  throw new Error(`Invalid release date format: "${trimmed}". Expected DD Mon YYYY (e.g. 12 Sep 2026) or YYYY-MM-DD.`);
 }
 
 // DB ROW -> MomentSong (UI shape)
