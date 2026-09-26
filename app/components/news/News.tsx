@@ -1,20 +1,26 @@
-'use client';
-
 import React from 'react';
 
 import NewsGUI from './NewsGUI';
+import {
+  getNewsHub,
+} from '@/lib/news-hub';
 import {
   featuredNews,
   newsData,
 } from './newsData';
 
-export default function News() {
-  // NEWS NDIO WIRING LAYER: INAPATA DATA KISHA INAPELEKA KWA GUI
-  // BAADAYE HAPA NDIO ITAKAINGIA SUPABASE (getNews()) BILA KUGUSA GUI
+// NEWS NDIO WIRING LAYER: data inatoka kwenye news_hub (Supabase).
+// Ikiwa DB haina rows, tunarudi kwenye mock ili public UI isielewe.
+export default async function News() {
+  const hub = await getNewsHub();
+
+  const hasDbNews =
+    hub.featured.title.length > 0 || hub.feed.length > 0;
+
   return (
     <NewsGUI
-      featured={featuredNews}
-      feed={newsData}
+      featured={hasDbNews ? hub.featured : featuredNews}
+      feed={hasDbNews ? hub.feed : newsData}
     />
   );
 }
