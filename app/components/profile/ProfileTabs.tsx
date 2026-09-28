@@ -21,6 +21,7 @@ export default function ProfileTabs({
 }: ProfileTabsProps) {
   return (
     <div
+      data-bora-ui="public-profile-tabs"
       className="mt-5 flex items-center justify-center gap-8 border-b"
       style={{ borderColor: 'var(--bora-border)' }}
     >
@@ -30,6 +31,7 @@ export default function ProfileTabs({
         return (
           <button
             key={tab.id}
+            data-bora-ui="public-profile-tab"
             type="button"
             onClick={() => onTabChange(tab.id)}
             className="relative pb-3 font-cinzel text-sm font-black uppercase tracking-[0.12em] transition-colors duration-300"

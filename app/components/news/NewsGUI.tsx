@@ -23,6 +23,7 @@ export default function NewsGUI({
 
   return (
     <section
+      data-bora-ui="public-updates"
       className="w-full"
       style={{
         backgroundColor: newsTheme.background,
@@ -35,6 +36,7 @@ export default function NewsGUI({
     >
       {/* NEWS HEADER */}
       <div
+        data-bora-ui="public-updates-header"
         className="flex items-end justify-between border-b"
         style={{
           marginBottom: newsTheme.layout.headerMarginBottom,
@@ -58,6 +60,7 @@ export default function NewsGUI({
 
           {/* KICHWA KIKUU */}
           <h2
+            data-bora-ui="public-updates-title"
             className="uppercase tracking-tight"
             style={{
               color: newsTheme.text,
@@ -105,6 +108,7 @@ export default function NewsGUI({
 
       {/* NEWS CONTENT */}
       <div
+        data-bora-ui="public-updates-grid"
         className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr]"
         style={{
           gap: newsTheme.layout.contentGap,

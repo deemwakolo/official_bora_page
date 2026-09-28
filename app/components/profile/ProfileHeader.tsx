@@ -19,7 +19,10 @@ export default function ProfileHeader({
   const { favoriteArtists } = useProfileContent();
 
   return (
-    <header className="relative text-center">
+    <header
+      data-bora-ui="public-profile-header"
+      className="relative text-center"
+    >
       {/* GEAR YA ACCOUNT SETTINGS */}
       <div className="absolute right-0 top-0">
         <button
@@ -36,6 +39,7 @@ export default function ProfileHeader({
 
       {/* AVATAR + FALLBACK INITIAL */}
       <div
+        data-bora-ui="public-profile-avatar"
         className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-[var(--bora-gold)]/40"
         style={{
           backgroundColor: 'var(--bora-background-deep)',
@@ -55,12 +59,16 @@ export default function ProfileHeader({
       </div>
 
       {/* JINA (KUU) */}
-      <h1 className="mt-3 font-cinzel text-2xl font-semibold">
+      <h1
+        data-bora-ui="public-profile-name"
+        className="mt-3 font-cinzel text-2xl font-semibold"
+      >
         {profile.displayName}
       </h1>
 
       {/* USERNAME */}
       <p
+        data-bora-ui="public-profile-handle"
         className="mt-1 text-sm"
         style={{ color: 'var(--bora-text-muted)' }}
       >
@@ -68,10 +76,14 @@ export default function ProfileHeader({
       </p>
 
       {/* WATISTI ANAOWAPENDA */}
-      <div className="mt-3 flex items-start justify-center gap-6">
+      <div
+        data-bora-ui="public-profile-favorites"
+        className="mt-3 flex items-start justify-center gap-6"
+      >
         {favoriteArtists.map((artist) => (
           <div
             key={artist.name}
+            data-bora-ui="public-profile-favorite"
             className="flex flex-col items-center"
           >
             <div className="h-12 w-12 overflow-hidden rounded-full border border-white/10">

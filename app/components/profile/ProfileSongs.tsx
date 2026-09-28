@@ -10,16 +10,19 @@ export default function ProfileSongs() {
 
   return (
     <div
+      data-bora-ui="public-profile-songs"
       className="divide-y"
       style={{ borderColor: 'var(--bora-border)' }}
     >
       {songs.map((song) => (
         <div
           key={song.id}
+          data-bora-ui="public-profile-song-row"
           className="flex items-center gap-3 py-3"
         >
           {/* COVER + FALLBACK */}
           <div
+            data-bora-ui="public-profile-song-artwork"
             className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full"
             style={{
               backgroundColor:
@@ -40,12 +43,19 @@ export default function ProfileSongs() {
           </div>
 
           {/* TITLE + ARTIST */}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
+          <div
+            data-bora-ui="public-profile-song-identity"
+            className="min-w-0 flex-1"
+          >
+            <p
+              data-bora-ui="public-profile-song-title"
+              className="truncate text-sm font-semibold"
+            >
               {song.title}
             </p>
 
             <p
+              data-bora-ui="public-profile-song-artist"
               className="truncate text-xs"
               style={{ color: 'var(--bora-text-muted)' }}
             >

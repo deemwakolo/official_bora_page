@@ -2,8 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 
-import blackTheme from './themes/black';
-import whiteTheme from './themes/white';
+import type { BoraPaletteId } from './tokens/boraTokenSpec';
+import {
+  applyBoraTokensToElement,
+  boraTokensForPalette,
+} from './tokens/applyBoraTokens';
 
 import ThemeToggle from './ThemeToggle';
 
@@ -62,112 +65,35 @@ export default function MasterGUI({
     setMounted(true);
   }, []);
 
-  // WEKA THEME TOKENS KWENYE CSS VARIABLES
+  // WEKA BORA TOKENS KWENYE CSS VARIABLES
   useEffect(() => {
     if (!mounted) return;
 
-    const activeTheme =
-      theme === 'black'
-        ? blackTheme
-        : whiteTheme;
+    // THEME NI PREFS YA MTUMIAJI — si chanzo cha thamani.
+    // Thamani zote zinapatikana kwenye boraTokenSpec (single source
+    // of truth); hapa tunachagua palette tu.
+    const activePalette: BoraPaletteId =
+      theme === 'black' ? 'bora-default' : 'bora-light';
 
     const root = document.documentElement;
 
     root.dataset.theme = theme;
 
-    root.style.setProperty(
-      '--bora-background',
-      activeTheme.background
+    applyBoraTokensToElement(
+      root,
+      boraTokensForPalette(activePalette)
     );
 
-    root.style.setProperty(
-      '--bora-background-deep',
-      activeTheme.backgroundDeep
-    );
-
-    root.style.setProperty(
-      '--bora-surface',
-      activeTheme.surface
-    );
-
-    root.style.setProperty(
-      '--bora-surface-elevated',
-      activeTheme.surfaceElevated
-    );
-
-    root.style.setProperty(
-      '--bora-text',
-      activeTheme.text
-    );
-
-    root.style.setProperty(
-      '--bora-text-muted',
-      activeTheme.textMuted
-    );
-
-    root.style.setProperty(
-      '--bora-text-subtle',
-      activeTheme.textSubtle
-    );
-
-    root.style.setProperty(
-      '--bora-border',
-      activeTheme.border
-    );
-
-    root.style.setProperty(
-      '--bora-border-strong',
-      activeTheme.borderStrong
-    );
-
-    root.style.setProperty(
-      '--bora-gold',
-      activeTheme.gold
-    );
-
-    root.style.setProperty(
-      '--bora-red',
-      activeTheme.red
-    );
-
-    root.style.setProperty(
-      '--bora-green',
-      activeTheme.green
-    );
-
-    root.style.setProperty(
-      '--bora-selection-background',
-      activeTheme.selectionBackground
-    );
-
-    root.style.setProperty(
-      '--bora-selection-text',
-      activeTheme.selectionText
-    );
-
-    root.style.setProperty(
-      '--bora-gold-glow',
-      activeTheme.goldGlow
-    );
-
-    root.style.setProperty(
-      '--bora-red-glow',
-      activeTheme.redGlow
-    );
-
-    // UPDATE GLOBAL TOKENS ZILIZOKUWEPO
+    // UPDATE GLOBAL TOKENS ZILIZOKUWEPO (Tailwind legacy pair —
+    // NOT part of the BORA token family, kept as-is)
     root.style.setProperty(
       '--foreground',
-      activeTheme.text === '#ffffff'
-        ? '255 255 255'
-        : '5 5 5'
+      activePalette === 'bora-light' ? '5 5 5' : '255 255 255'
     );
 
     root.style.setProperty(
       '--bg',
-      activeTheme.background === '#ffffff'
-        ? '255 255 255'
-        : '5 5 5'
+      activePalette === 'bora-light' ? '255 255 255' : '5 5 5'
     );
 
     localStorage.setItem(

@@ -13,10 +13,15 @@ const metrics = [
 export default function FanMetrics() {
   return (
     <div
+      data-bora-ui="public-profile-metrics"
       className="mx-auto mt-6 flex max-w-sm items-center justify-between"
     >
       {metrics.map((metric) => (
-        <div key={metric.label} className="text-center">
+        <div
+          key={metric.label}
+          data-bora-ui="public-profile-metric"
+          className="text-center"
+        >
           {/* VALUE */}
           <p className="font-cinzel text-xl font-black text-[var(--bora-gold)]">
             {metric.value}

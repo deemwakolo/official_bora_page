@@ -49,7 +49,7 @@ export default function VoteAlert({
           animate-vote-glow
           ${
             isUp
-              ? 'bg-[#D4AF37]/20'
+              ? 'bg-[var(--bora-gold)]/20'
               : 'bg-red-600/20'
           }
         `}
@@ -99,7 +99,7 @@ export default function VoteAlert({
               md:text-[9px]
               ${
                 isUp
-                  ? 'text-[#D4AF37]/60'
+                  ? 'text-[var(--bora-gold)]/60'
                   : 'text-red-500/60'
               }
             `}
@@ -119,7 +119,7 @@ export default function VoteAlert({
               md:text-6xl
               ${
                 isUp
-                  ? 'text-[#D4AF37]'
+                  ? 'text-[var(--bora-gold)]'
                   : 'text-red-500'
               }
             `}
@@ -168,7 +168,7 @@ export default function VoteAlert({
                 fill="none"
                 stroke={
                   isUp
-                    ? '#D4AF37'
+                    ? 'var(--bora-gold)'
                     : '#ef4444'
                 }
                 strokeWidth="2"

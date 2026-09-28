@@ -47,10 +47,12 @@ export default function TopBarHeader() {
         <Link
           href="/"
           aria-label="BORA home"
+          data-bora-ui="public-header-brand"
           className="pointer-events-auto flex flex-col items-center justify-center"
           style={{ color: 'var(--bora-text)' }}
         >
           <h1
+            data-bora-ui="public-header-brand-text"
             className="
               bora-hdr-brand
               font-cinzel
@@ -69,6 +71,7 @@ export default function TopBarHeader() {
           </h1>
 
           <p
+            data-bora-ui="public-header-tagline"
             className="
               bora-hdr-tagline
               whitespace-nowrap

@@ -46,10 +46,10 @@ export default function ChartAnimation({
         <Zap
           size={11}
           strokeWidth={2}
-          className="text-[#D4AF37]"
+          className="text-[var(--bora-gold)]"
         />
 
-        <span className="text-[8px] font-black uppercase tracking-[0.18em] text-[#D4AF37]">
+        <span className="text-[8px] font-black uppercase tracking-[0.18em] text-[var(--bora-gold)]">
           NEW
         </span>
       </div>
@@ -69,10 +69,10 @@ export default function ChartAnimation({
         <ArrowUp
           size={12}
           strokeWidth={2.5}
-          className="text-[#D4AF37]"
+          className="text-[var(--bora-gold)]"
         />
 
-        <span className="text-[8px] font-black uppercase tracking-[0.12em] text-[#D4AF37]">
+        <span className="text-[8px] font-black uppercase tracking-[0.12em] text-[var(--bora-gold)]">
           +{movementAmount}
         </span>
       </div>

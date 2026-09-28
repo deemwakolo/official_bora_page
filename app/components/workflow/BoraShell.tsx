@@ -17,6 +17,7 @@ export default function BoraShell({
 }: BoraShellProps) {
   return (
     <div
+      data-bora-ui="public-page-shell"
       className="w-full pb-[76px] md:pb-[86px]"
       style={{
         backgroundColor: 'var(--bora-background)',

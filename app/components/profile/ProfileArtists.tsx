@@ -10,14 +10,19 @@ export default function ProfileArtists() {
 
   return (
     // COMPACT GRID INAFAA KWA LUGHA YA PROFILE YA TIKTOK
-    <div className="grid grid-cols-3 gap-4">
+    <div
+      data-bora-ui="public-profile-artists"
+      className="grid grid-cols-3 gap-4"
+    >
       {artists.map((artist) => (
         <div
           key={artist.id}
+          data-bora-ui="public-profile-artist-card"
           className="flex flex-col items-center text-center"
         >
           {/* PHOTO + FALLBACK */}
           <div
+            data-bora-ui="public-profile-artist-artwork"
             className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/10"
             style={{
               backgroundColor:

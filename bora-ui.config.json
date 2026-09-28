@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 2,
+  "paletteId": null,
+  "tokens": {},
+  "targets": {},
+  "responsive": {},
+  "_note": "BORA UI Room baseline config. This FILE is the committed default: it is versioned, reviewable and revertable in git. A Supabase row (public.ui_room_config, id = 'committed') acts as the RUNTIME OVERRIDE on top of this file. If the override is missing, invalid or unreachable, the public site renders exactly what this file says. Every entry is validated against the UI Room registry on load: unknown targets, properties, tokens or breakpoints are dropped, never applied."
+}

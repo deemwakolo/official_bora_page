@@ -14,11 +14,46 @@ import { getRegistry } from '../lib/admin-actions';
 
 import { getTrending } from '../lib/trending';
 
+import { resolveBoraUIConfig } from '../lib/ui-config';
+
+import { resolvePublicNavigation } from './components/workflow/publicSectionIds';
+
 // NEXT.JS ISI-RENDER UPYA PAGE KWA CACHE
 
 export const dynamic = 'force-dynamic';
 
 export const revalidate = 0;
+
+/*
+ * PUBLIC NAVIGATION — SERVER-SIDE RESOLUTION
+ *
+ *   bora-ui.config.json  +  public.ui_room_config
+ *            ↓
+ *   resolveBoraUIConfig()        (existing fail-safe resolver)
+ *            ↓
+ *   resolvePublicNavigation()     (structural: id / label / hidden)
+ *
+ * Only the SERVER-SAFE module is imported here. The lucide-bearing
+ * publicSections.ts stays on the client side, so no icon ever reaches
+ * the server bundle.
+ *
+ * This never fails the page: a missing, invalid or unreachable config
+ * resolves to the canonical navigation.
+ */
+async function resolveNavigation() {
+  try {
+    const config = await resolveBoraUIConfig();
+
+    return resolvePublicNavigation(config.navigation);
+  } catch (error) {
+    console.error(
+      '[navigation] structural config unavailable, using canonical:',
+      error instanceof Error ? error.message : error
+    );
+
+    return resolvePublicNavigation(null);
+  }
+}
 
 // PAGE KUU YA BORA
 
@@ -50,6 +85,10 @@ export default async function Home() {
   );
 
   const trending = await getTrending();
+
+  // STRUCTURAL NAVIGATION — resolved before render so the navbar order,
+  // labels and visibility are correct on the very first paint.
+  const navigation = await resolveNavigation();
 
   const toSongRows = (rows: typeof trending.youtube) =>
     rows.map((row) => ({
@@ -106,6 +145,7 @@ export default async function Home() {
         {/* BORASHELL INASIMAMIA TICKER, HEADER, NAV NA CONTENT */}
 
         <PublicShell
+          navigation={navigation}
           top10={
             <section className="w-full pt-8 md:pt-12">
               <ChartWrapper songs={rankedSongs} />

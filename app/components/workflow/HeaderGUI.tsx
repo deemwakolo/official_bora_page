@@ -127,6 +127,7 @@ export default function HeaderGUI({
       >
         {/* VISUAL HEADER — SURFACE MOJA INAYOBADILIKA */}
         <div
+          data-bora-ui="public-header"
           className={`bora-hdr-surface relative w-full overflow-hidden ${
             forceCompact ? 'bora-hdr-profile' : ''
           }`}
@@ -150,7 +151,10 @@ export default function HeaderGUI({
           }
         >
           {/* MAST VISUAL */}
-          <div className="absolute inset-0">
+          <div
+            data-bora-ui="public-header-visual"
+            className="absolute inset-0"
+          >
             <TopBarHeader />
           </div>
 
@@ -162,6 +166,7 @@ export default function HeaderGUI({
 
           {/* RED LIVE FLICKER */}
           <div
+            data-bora-ui="public-header-live"
             className="
               pointer-events-none
               absolute right-4 top-1/2 z-[150]

@@ -121,7 +121,7 @@ export default function MomentGUI() {
     if (delta > threshold) { goToIndex(activeIndex - 1); }
   };
   return (
-    <section className="w-full pb-4 pt-5" style={{ backgroundColor: 'var(--bora-background)', color: 'var(--bora-text)' }}>
+    <section data-bora-ui="public-charts" className="w-full pb-4 pt-5" style={{ backgroundColor: 'var(--bora-background)', color: 'var(--bora-text)' }}>
       <div className="mb-5">
         <MomentChartHeader data={activeData} />
       </div>

@@ -85,6 +85,7 @@ const labels = {
 
   return (
     <section
+      data-bora-ui="public-trending"
       className="w-full"
       style={{
         backgroundColor: trendsTheme.background,
@@ -93,6 +94,7 @@ const labels = {
     >
       {/* CAROUSEL YA TRENDS */}
       <div
+        data-bora-ui="public-trending-carousel"
         ref={carouselRef}
         onScroll={handleScroll}
         className="flex w-full snap-x snap-mandatory overflow-x-auto scrollbar-hide"
@@ -102,6 +104,7 @@ const labels = {
         }}
       >
         <div
+          data-bora-ui="public-trending-slide"
           className="w-full shrink-0 snap-center"
           style={{
             backgroundColor: trendsTheme.background,
@@ -112,6 +115,7 @@ const labels = {
         </div>
 
         <div
+          data-bora-ui="public-trending-slide"
           className="w-full shrink-0 snap-center"
           style={{
             backgroundColor: trendsTheme.background,
@@ -122,6 +126,7 @@ const labels = {
         </div>
 
         <div
+          data-bora-ui="public-trending-slide"
           className="w-full shrink-0 snap-center"
           style={{
             backgroundColor: trendsTheme.background,
@@ -134,6 +139,7 @@ const labels = {
 
       {/* NAVIGATION YA TRENDS */}
       <div
+        data-bora-ui="public-trending-nav"
         className="flex items-center justify-center gap-5 border-t px-4 py-5"
         style={{
           backgroundColor: trendsTheme.background,
@@ -143,6 +149,7 @@ const labels = {
         {slides.map((slide) => (
           <button
             key={slide}
+            data-bora-ui="public-trending-nav-item"
             type="button"
             onClick={() => goToSlide(slide)}
             className="text-[8px] font-black uppercase tracking-[0.18em] transition-all duration-300"

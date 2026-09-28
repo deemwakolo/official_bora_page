@@ -33,8 +33,11 @@ export default function ProfileGUI() {
   return (
     <>
       {/* PROFILE CONTENT: HAIGUSWI NDANI */}
-      <div className="relative">
-        <section className="w-full px-4 pb-24 pt-6 md:px-6 md:pt-8">
+      <div data-bora-ui="public-profile" className="relative">
+        <section
+        data-bora-ui="public-profile-section"
+        className="w-full px-4 pb-24 pt-6 md:px-6 md:pt-8"
+      >
           <div className="mx-auto w-full max-w-2xl">
             {/* IDENTITY */}
             <ProfileHeader profile={profile} />

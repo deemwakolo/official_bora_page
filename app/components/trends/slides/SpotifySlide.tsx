@@ -68,6 +68,7 @@ export default function SpotifySlide({
             </div>
 
             <h2
+              data-bora-ui="public-trending-title"
               className="font-cinzel text-2xl font-black uppercase tracking-tight md:text-3xl"
               style={{
                 color: trendsTheme.text,

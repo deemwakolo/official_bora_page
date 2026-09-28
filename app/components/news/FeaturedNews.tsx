@@ -17,6 +17,7 @@ export default function FeaturedNews({
 }: FeaturedNewsProps) {
   return (
     <article
+      data-bora-ui="public-update-featured"
       className="group relative overflow-hidden border"
       style={{
         backgroundColor: newsTheme.card.background,
@@ -25,7 +26,10 @@ export default function FeaturedNews({
       }}
     >
       {/* FEATURED IMAGE */}
-      <div className="relative aspect-[16/10] overflow-hidden">
+      <div
+        data-bora-ui="public-update-featured-image"
+        className="relative aspect-[16/10] overflow-hidden"
+      >
         <img
           src={story.image}
           alt=""
@@ -38,6 +42,7 @@ export default function FeaturedNews({
         {/* HOT SIGNAL */}
         {story.isHot && (
           <div
+            data-bora-ui="public-update-featured-hot"
             className="absolute left-4 top-4 flex items-center gap-2 px-3 py-2"
             style={{
               backgroundColor: newsTheme.live,
@@ -63,6 +68,7 @@ export default function FeaturedNews({
 
         {/* STORY NUMBER */}
         <div
+          data-bora-ui="public-update-featured-index"
           className="absolute right-4 top-4 font-mono tracking-widest"
           style={{
             color: newsTheme.textMuted,
@@ -81,12 +87,14 @@ export default function FeaturedNews({
       >
         {/* CATEGORY + TIME */}
         <div
+          data-bora-ui="public-update-featured-meta"
           className="flex items-center gap-3"
           style={{
             marginBottom: newsTheme.featured.metaMarginBottom,
           }}
         >
           <span
+            data-bora-ui="public-update-featured-category"
             className="font-mono font-black uppercase"
             style={{
               color: newsTheme.gold,
@@ -119,6 +127,7 @@ export default function FeaturedNews({
 
         {/* HEADLINE */}
         <h3
+          data-bora-ui="public-update-featured-headline"
           className="max-w-2xl uppercase leading-[1.05] tracking-tight"
           style={{
             color: newsTheme.title,
@@ -132,6 +141,7 @@ export default function FeaturedNews({
 
         {/* EXCERPT */}
         <p
+          data-bora-ui="public-update-featured-excerpt"
           className="max-w-xl"
           style={{
             marginTop: newsTheme.featured.excerptMarginTop,
@@ -145,6 +155,7 @@ export default function FeaturedNews({
 
         {/* ACTION */}
         <button
+          data-bora-ui="public-update-featured-action"
           type="button"
           className="flex items-center gap-3 border px-4 py-3 transition-all duration-300"
           style={{

@@ -7,53 +7,21 @@
 @tailwind utilities;
 
 
-/* DESIGN TOKENS */
+/* DESIGN TOKENS
+   ────────────────────────────────────────────────────────────
+   BORA design tokens are NO LONGER declared here.
+   They live in ONE place:
+     app/components/components-themes/tokens/boraTokenSpec.ts
+   and are injected server-side by app/layout.tsx as
+   `#bora-tokens` so the first paint needs no JavaScript.
+
+   This file keeps only the Tailwind legacy pair. */
 
 :root {
 
   --foreground: 255 255 255;
 
   --bg: 5 5 5;
-
-  --bora-background: #050505;
-
-  --bora-background-deep: #040404;
-
-  --bora-surface: #090909;
-
-  --bora-surface-elevated: #0c0c0c;
-
-  --bora-text: #ffffff;
-
-  --bora-text-muted: rgba(255,255,255,0.70);
-
-  --bora-text-subtle: rgba(255,255,255,0.30);
-
-  --bora-border: rgba(255,255,255,0.06);
-
-  --bora-border-strong: rgba(255,255,255,0.14);
-
-  --bora-gold: #D4AF37;
-
-  --bora-red: #b91c1c;
-
-  --bora-green: #22c55e;
-
-  --bora-selection-background: #D4AF37;
-
-  --bora-selection-text: #050505;
-
-  --bora-gold-glow: rgba(212,175,55,0.05);
-
-  --bora-red-glow: rgba(185,28,28,0.05);
-
-  --bora-motion-fast: 180ms;
-
-  --bora-motion-ui: 250ms;
-
-  --bora-motion-section: 350ms;
-
-  --bora-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
 }
 
@@ -68,7 +36,9 @@
 
     background: var(--bora-background);
 
-    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    /* FONT ROLE: the UI Room controls BORA's global typography, so
+       the body reads the role token, not the loader variable. */
+    font-family: var(--bora-font-body);
 
     overflow-x: hidden;
 
@@ -87,13 +57,15 @@
 
   .font-cinzel {
 
-    font-family: var(--font-cinzel), serif;
+    /* FONT ROLE: display face is a design-system control. */
+
+    font-family: var(--bora-font-display);
 
   }
 
   .font-mono {
 
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+    font-family: var(--bora-font-mono);
 
   }
 

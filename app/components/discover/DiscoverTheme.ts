@@ -4,6 +4,10 @@
 // MasterGUI owns the global palette.
 // DiscoverGUI owns how those global tokens are used inside Discover.
 
+import type { BoraTypeScaleStep } from '../components-themes/tokens/boraTokenSpec';
+
+const t = (step: BoraTypeScaleStep) => `var(${step})`;
+
 const discoverTheme = {
   // COLORS
 
@@ -60,27 +64,27 @@ const discoverTheme = {
 
     // RANK
     rankWidth: '1.25rem',
-    rankSize: '9px',
+    rankSize: t('--bora-text-label'),
     rankWeight: '500',
 
     // TITLE
-    titleSize: '0.875rem',
+    titleSize: t('--bora-text-body'),
     titleWeight: '900',
     titleTracking: '0.05em',
     titleLineHeight: '1.1',
 
     // ARTIST
-    artistSize: '0.75rem',
+    artistSize: t('--bora-text-rank'),
     artistWeight: '500',
     artistTracking: '0.02em',
 
     // METADATA
-    metadataSize: '8px',
+    metadataSize: t('--bora-text-meta'),
     metadataWeight: '500',
     metadataTracking: '0.08em',
 
     // MOVEMENT
-    movementSize: '8px',
+    movementSize: t('--bora-text-meta'),
     movementWeight: '700',
     movementTracking: '0.12em',
 

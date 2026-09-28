@@ -30,6 +30,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local MCP config (may contain a Supabase PAT - never commit)
+.mcp.json
+.mcp.json.bak
+.playwright-mcp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

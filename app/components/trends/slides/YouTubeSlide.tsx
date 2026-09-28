@@ -68,6 +68,7 @@ export default function YouTubeSlide({
             </div>
 
             <h2
+              data-bora-ui="public-trending-title"
               className="font-cinzel text-2xl font-black uppercase tracking-tight md:text-3xl"
               style={{
                 color: trendsTheme.text,
@@ -78,6 +79,7 @@ export default function YouTubeSlide({
           </div>
 
           <span
+            data-bora-ui="public-trending-signal"
             className="font-mono text-[8px] uppercase tracking-[0.15em]"
             style={{
               color: trendsTheme.signal,
@@ -98,6 +100,7 @@ export default function YouTubeSlide({
           {songs.map((song) => (
             <div
               key={song.rank}
+              data-bora-ui="public-trend-row"
               className="flex items-center gap-3 border-b py-3.5"
               style={{
                 borderColor: trendsTheme.border,
@@ -105,6 +108,7 @@ export default function YouTubeSlide({
             >
               {/* RANK */}
               <div
+                data-bora-ui="public-trend-rank"
                 className="w-7 shrink-0 text-right font-cinzel text-sm font-black"
                 style={{
                   color: trendsTheme.rank,
@@ -140,8 +144,12 @@ export default function YouTubeSlide({
               </div>
 
               {/* SONG */}
-              <div className="min-w-0 flex-1">
+              <div
+                data-bora-ui="public-trend-identity"
+                className="min-w-0 flex-1"
+              >
                 <p
+                  data-bora-ui="public-trend-title"
                   className="truncate text-[10px] font-black uppercase tracking-[0.08em]"
                   style={{
                     color: trendsTheme.text,
@@ -151,6 +159,7 @@ export default function YouTubeSlide({
                 </p>
 
                 <p
+                  data-bora-ui="public-trend-artist"
                   className="mt-1 truncate text-[8px] font-bold uppercase tracking-[0.15em]"
                   style={{
                     color: trendsTheme.artist,
@@ -162,6 +171,7 @@ export default function YouTubeSlide({
 
               {/* MOVEMENT NUMBER */}
               <div
+                data-bora-ui="public-trend-movement"
                 className="w-8 shrink-0 text-right font-mono text-[8px]"
                 style={{
                   color: trendsTheme.movement,

@@ -2,60 +2,26 @@
 
 import React from 'react';
 
-import {
-  BarChart3,
-  TrendingUp,
-  Crown,
-  Bell,
-  User,
-} from 'lucide-react';
+import type {
+  PublicSectionDefinition,
+  Section,
+} from './publicSections';
 
-export type Section =
-  | 'charts'
-  | 'trending'
-  | 'vote'
-  | 'updates'
-  | 'profile';
+export type { Section };
 
 interface NavbarProps {
+  /**
+   * The sections to render, in order, already filtered and enriched
+   * by PublicShell. The Navbar owns no navigation policy: it never
+   * imports the canonical list and never decides what is visible.
+   */
+  sections: readonly PublicSectionDefinition[];
   activeSection: Section;
   onSectionChange: (section: Section) => void;
 }
 
-const sections = [
-  {
-    id: 'charts' as Section,
-    label: 'Charts',
-    ariaLabel: 'Charts',
-    Icon: BarChart3,
-  },
-  {
-    id: 'trending' as Section,
-    label: 'Trending',
-    ariaLabel: 'Trending',
-    Icon: TrendingUp,
-  },
-  {
-    id: 'vote' as Section,
-    label: 'Vote',
-    ariaLabel: 'Vote',
-    Icon: Crown,
-  },
-  {
-    id: 'updates' as Section,
-    label: 'Updates',
-    ariaLabel: 'Updates',
-    Icon: Bell,
-  },
-  {
-    id: 'profile' as Section,
-    label: 'Profile',
-    ariaLabel: 'Profile',
-    Icon: User,
-  },
-];
-
 export default function Navbar({
+  sections,
   activeSection,
   onSectionChange,
 }: NavbarProps) {
@@ -65,6 +31,7 @@ export default function Navbar({
 
   return (
     <nav
+      data-bora-ui="public-navbar"
       className="
         pointer-events-none
         fixed bottom-0 left-0 right-0
@@ -84,6 +51,7 @@ export default function Navbar({
 
       {/* NAVIGATION SURFACE */}
       <div
+        data-bora-ui="public-navbar-surface"
         className="
           pointer-events-auto
           relative mx-auto w-full max-w-[540px]
@@ -95,19 +63,34 @@ export default function Navbar({
             'linear-gradient(to bottom, color-mix(in srgb, var(--bora-background-deep) 30%, transparent) 0%, color-mix(in srgb, var(--bora-background-deep) 65%, transparent) 55%, color-mix(in srgb, var(--bora-background-deep) 92%, transparent) 100%)',
         }}
       >
-        {/* FIVE DESTINATIONS */}
+        {/* DESTINATIONS — order and membership come from the shell */}
         <div className="relative mx-auto flex h-[56px] w-full items-stretch px-1 md:h-[60px]">
           {sections.map((section) => {
             const active = activeSection === section.id;
-            const isVote = section.id === 'vote';
+            const isVote = section.prominent;
             const Icon = section.Icon;
 
             return (
               <button
                 key={section.id}
+                data-bora-ui="public-navbar-item"
                 type="button"
                 onClick={() => handlePress(section.id)}
-                aria-label={section.ariaLabel}
+                aria-label={section.label}
+                /*
+                 * STABLE IDENTITY — deliberately separate from the
+                 * accessible name above.
+                 *
+                 * `aria-label` is the user-facing accessible name and
+                 * may be renamed by the UI Room; this attribute is the
+                 * internal section id and never changes. The UI Room
+                 * bridge detects the active section from THIS, so a
+                 * renamed label can never break section tracking.
+                 *
+                 * Not editable, not a design token, never derived
+                 * from visible text.
+                 */
+                data-bora-section={section.id}
                 aria-current={active ? 'page' : undefined}
                 className="
                   group relative flex flex-1
@@ -161,6 +144,7 @@ export default function Navbar({
                     />
 
                     <span
+                      data-bora-ui="public-navbar-vote"
                       className={`
                         relative z-10 flex items-center justify-center
                         rounded-full
@@ -193,6 +177,7 @@ export default function Navbar({
                 ) : (
                   /* NORMAL ICON */
                   <span
+                    data-bora-ui="public-navbar-icon"
                     className={`
                       relative z-10 flex h-[25px] w-[25px]
                       items-center justify-center
@@ -213,6 +198,7 @@ export default function Navbar({
 
                 {/* ACTIVE LABEL ONLY */}
                 <span
+                  data-bora-ui="public-navbar-label"
                   className={`
                     relative z-10 overflow-hidden whitespace-nowrap
                     font-bold tracking-[0.02em]

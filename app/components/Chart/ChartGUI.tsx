@@ -44,6 +44,7 @@ export default function ChartGUI({
   return (
     // SECTION NZIMA YA CHART
     <section
+      data-bora-ui="public-vote-hero"
       className="relative min-h-screen overflow-hidden selection:bg-[var(--bora-selection-background)] selection:text-[var(--bora-selection-text)]"
       style={{
         backgroundColor: 'var(--bora-background)',
@@ -77,10 +78,16 @@ export default function ChartGUI({
       </div>
 
       {/* CONTAINER KUU YA CHART */}
-      <div className="relative mx-auto max-w-6xl px-1 py-8 md:px-10 md:py-16">
+      <div
+        data-bora-ui="public-vote-hero-content"
+        className="relative mx-auto max-w-6xl px-1 py-8 md:px-10 md:py-16"
+      >
 
         {/* LIST YA NYIMBO */}
-        <div className="flex flex-col gap-5 md:gap-7">
+        <div
+          data-bora-ui="public-vote-hero-list"
+          className="flex flex-col gap-5 md:gap-7"
+        >
 
           {/* KUPITIA KILA WIMBO NA KUTENGENEZA CARD YAKE */}
           {songs.map((item, i) => {
@@ -127,6 +134,7 @@ export default function ChartGUI({
               // CARD NZIMA YA WIMBO MMOJA
               <article
                 key={item.id}
+                data-bora-ui="public-vote-hero-row"
                 className={`group relative overflow-visible rounded-[2px] border px-1 py-1 transition-all duration-500 hover:-translate-y-1 md:px-8 md:py-10 ${
                   rank === 1
                     ? 'shadow-[0_20px_80px_rgba(212,175,55,0.045)]'
@@ -158,6 +166,7 @@ export default function ChartGUI({
 
                     {/* SIZE NA CONTAINER YA COVER */}
                     <div
+                      data-bora-ui="public-vote-hero-artwork"
                       className={`relative z-10 overflow-hidden rounded-full shadow-2xl transition-all duration-500 ease-out group-hover:scale-[1.045] group-hover:shadow-[0_20px_45px_rgba(0,0,0,0.65)] ${
                         rank === 1
                           ? 'h-[120px] w-[120px] md:h-[152px] md:w-[152px]'
@@ -192,6 +201,7 @@ export default function ChartGUI({
 
                     {/* NUMBER YA RANK INAYOKAA JUU YA COVER */}
                     <div
+                      data-bora-ui="public-vote-hero-rank"
                       className={`absolute -left-4 -top-6 z-20 font-cinzel font-black italic leading-none tracking-[-0.1em] transition-all duration-500 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:scale-110 ${
                         rank === 1
                           ? 'text-6xl md:text-7xl'
@@ -234,10 +244,14 @@ export default function ChartGUI({
                   </div>
 
                   {/* TITLE NA ARTIST */}
-                  <div className="min-w-0 flex-1 py-1 md:py-3">
+                  <div
+                    data-bora-ui="public-vote-hero-identity"
+                    className="min-w-0 flex-1 py-1 md:py-3"
+                  >
 
                     {/* JINA LA WIMBO — HERO */}
                     <h3
+                      data-bora-ui="public-vote-hero-title"
                       className={`break-words font-cinzel font-black uppercase leading-[0.92] tracking-[-0.05em] transition-transform duration-500 group-hover:translate-x-1 ${
                         rank === 1
                           ? 'text-2xl md:text-5xl'
@@ -252,6 +266,7 @@ export default function ChartGUI({
 
                       {/* JINA LA MSANII */}
                       <span
+                        data-bora-ui="public-vote-hero-artist"
                         className="break-words font-cinzel text-[9px] font-bold uppercase tracking-[0.24em] md:text-[10px] md:tracking-[0.35em]"
                         style={{
                           color: 'var(--bora-text-muted)',
@@ -341,6 +356,7 @@ export default function ChartGUI({
 
                       {/* POWER SCORE KUBWA */}
                       <div
+                        data-bora-ui="public-vote-hero-score"
                         className={`relative mt-1 -translate-x-1 overflow-visible text-right text-5xl font-black italic leading-none tracking-[-0.08em] tabular-nums transition-all duration-500 group-hover:-translate-x-2 group-hover:scale-105 ${scoreTheme}`}
                       >
                         {score}
@@ -416,6 +432,7 @@ export default function ChartGUI({
 
                     {/* POWER SCORE YA MOBILE */}
                     <span
+                      data-bora-ui="public-vote-hero-score-compact"
                       className={`mt-1 text-4xl font-black italic leading-none tracking-[-0.07em] tabular-nums transition-all duration-500 group-hover:scale-110 ${scoreTheme}`}
                     >
                       {score}

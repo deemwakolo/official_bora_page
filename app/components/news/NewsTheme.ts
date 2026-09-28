@@ -1,3 +1,7 @@
+import type { BoraTypeScaleStep } from '../components-themes/tokens/boraTokenSpec';
+
+const t = (step: BoraTypeScaleStep) => `var(${step})`;
+
 const newsTheme = {
   // COLORS
   background: 'var(--bora-background)',
@@ -41,18 +45,18 @@ const newsTheme = {
 
   // HEADER
   header: {
-    labelSize: '9px',
+    labelSize: t('--bora-text-label'),
     labelWeight: '900',
     labelTracking: '0.3em',
 
-    titleSize: '1.875rem',
-    titleSizeDesktop: '2.25rem',
+    titleSize: t('--bora-text-title'),
+    titleSizeDesktop: t('--bora-text-title-lg'),
     titleWeight: '900',
 
-    identifierSize: '9px',
+    identifierSize: t('--bora-text-label'),
     identifierTracking: '0.18em',
 
-    liveSize: '8px',
+    liveSize: t('--bora-text-meta'),
     liveTracking: '0.1em',
   },
 
@@ -65,19 +69,19 @@ const newsTheme = {
     excerptMarginTop: '1rem',
     actionMarginTop: '1.5rem',
 
-    categorySize: '9px',
+    categorySize: t('--bora-text-label'),
     categoryWeight: '900',
     categoryTracking: '0.2em',
 
-    timestampSize: '8px',
+    timestampSize: t('--bora-text-meta'),
     timestampTracking: '0.1em',
 
-    headlineSize: '1.5rem',
-    headlineSizeDesktop: '2.25rem',
+    headlineSize: t('--bora-text-headline'),
+    headlineSizeDesktop: t('--bora-text-title-lg'),
     headlineWeight: '900',
     headlineLineHeight: '1.05',
 
-    excerptSize: '0.875rem',
+    excerptSize: t('--bora-text-body'),
     excerptLineHeight: '1.625',
 
     actionSize: '8px',
@@ -90,18 +94,18 @@ const newsTheme = {
     headerMarginBottom: '1rem',
     headerPaddingBottom: '0.75rem',
 
-    headerLabelSize: '9px',
+    headerLabelSize: t('--bora-text-label'),
     headerLabelWeight: '900',
     headerLabelTracking: '0.25em',
 
-    headerIdSize: '8px',
+    headerIdSize: t('--bora-text-meta'),
     headerIdTracking: '0.1em',
 
     rowGap: '1rem',
     rowPaddingY: '1.25rem',
 
     numberWidth: '1.25rem',
-    numberSize: '9px',
+    numberSize: t('--bora-text-label'),
 
     imageWidth: '6rem',
     imageWidthDesktop: '8rem',
@@ -110,21 +114,21 @@ const newsTheme = {
 
     metaMarginBottom: '0.5rem',
 
-    categorySize: '8px',
+    categorySize: t('--bora-text-meta'),
     categoryWeight: '900',
     categoryTracking: '0.15em',
 
-    hotSize: '7px',
+    hotSize: t('--bora-text-eyebrow'),
     hotWeight: '900',
     hotTracking: '0.1em',
 
-    titleSize: '0.875rem',
+    titleSize: t('--bora-text-body'),
     titleWeight: '900',
     titleTracking: '0.04em',
     titleLineHeight: '1.25',
 
     timestampMarginTop: '0.5rem',
-    timestampSize: '8px',
+    timestampSize: t('--bora-text-meta'),
     timestampTracking: '0.1em',
 
     transition: '300ms',

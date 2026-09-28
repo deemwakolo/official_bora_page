@@ -151,10 +151,12 @@ export default function TopPerformers({
 
   return (
     <section
+      data-bora-ui="public-charts-performers"
       className="mx-auto w-full max-w-5xl px-3 sm:px-4"
       aria-label="Top performers"
     >
       <div
+        data-bora-ui="public-charts-performers-grid"
         className="grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0"
         style={
           {

@@ -19,6 +19,7 @@ export default function NewsFeed({
     <div className="flex flex-col">
       {/* NEWS FEED HEADER */}
       <div
+        data-bora-ui="public-update-feed-header"
         className="flex items-center justify-between border-b"
         style={{
           marginBottom: newsTheme.feed.headerMarginBottom,
@@ -53,6 +54,7 @@ export default function NewsFeed({
 
       {/* NEWS ITEMS */}
       <div
+        data-bora-ui="public-update-feed"
         className="divide-y"
         style={{
           borderColor: newsTheme.border,
@@ -61,6 +63,7 @@ export default function NewsFeed({
         {items.map((item, index) => (
           <article
             key={item.id}
+            data-bora-ui="public-update-row"
             className="group relative flex"
             style={{
               gap: newsTheme.feed.rowGap,
@@ -71,6 +74,7 @@ export default function NewsFeed({
           >
             {/* NUMBER */}
             <div
+              data-bora-ui="public-update-row-number"
               className="shrink-0 pt-1 font-mono"
               style={{
                 width: newsTheme.feed.numberWidth,
@@ -83,6 +87,7 @@ export default function NewsFeed({
 
             {/* IMAGE */}
             <div
+              data-bora-ui="public-update-row-image"
               className="relative shrink-0 overflow-hidden md:h-[6rem] md:w-[8rem]"
               style={{
                 width: newsTheme.feed.imageWidth,
@@ -104,12 +109,14 @@ export default function NewsFeed({
             <div className="min-w-0 flex-1">
               {/* META */}
               <div
+                data-bora-ui="public-update-row-meta"
                 className="flex items-center gap-2"
                 style={{
                   marginBottom: newsTheme.feed.metaMarginBottom,
                 }}
               >
                 <span
+                  data-bora-ui="public-update-row-category"
                   className="font-mono font-black uppercase"
                   style={{
                     color: newsTheme.gold,
@@ -123,6 +130,7 @@ export default function NewsFeed({
 
                 {item.isHot && (
                   <span
+                    data-bora-ui="public-update-row-hot"
                     className="font-mono font-black uppercase"
                     style={{
                       color: newsTheme.live,
@@ -138,6 +146,7 @@ export default function NewsFeed({
 
               {/* TITLE */}
               <h3
+                data-bora-ui="public-update-row-title"
                 className="uppercase transition-colors duration-300"
                 style={{
                   color: newsTheme.title,
