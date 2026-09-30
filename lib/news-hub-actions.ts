@@ -5,15 +5,29 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from './supabase/server';
 import { getNewsHub } from './news-hub';
 
+import { boraParse } from './validation/boraValidation';
+import { newsHubRecordShape } from './validation/newsHubSchema';
+
 import type { NewsItem } from '@/app/components/news/newsData';
 
-// ============================================================
-// NEWS HUB — SERVER ACTIONS
-//
-// Write path is save_news_hub_item(...) (SECURITY DEFINER RPC
-// from 0006). No direct table writes, no INSERT/UPDATE/DELETE
-// policies exist on news_hub.
-// ============================================================
+/*
+ * ============================================================
+ * NEWS HUB — SERVER ACTIONS
+ *
+ * Write path is save_news_hub_item(...) (SECURITY DEFINER RPC
+ * from 0006). No direct table writes, no INSERT/UPDATE/DELETE
+ * policies exist on news_hub.
+ *
+ * BOUNDARY ORDER (unchanged — validation only ADDED in front):
+ *   shape validation (Zod)
+ *     -> authorization (supabase.auth.getUser())
+ *     -> BORA required-field rules
+ *     -> SECURITY DEFINER RPC
+ *
+ * Zod proves the payload is the right shape. It does NOT decide
+ * authorization, required fields, or whether the write succeeded.
+ * ============================================================
+ */
 
 export interface NewsHubRecord {
   id: string;
@@ -68,6 +82,23 @@ export interface SaveNewsHubResult {
 export async function saveNewsHubItem(
   payload: NewsHubRecord
 ): Promise<SaveNewsHubResult> {
+  // SHAPE GATE (Zod). Runs FIRST, before any auth check or write.
+  //
+  // A Server Action argument crosses a network boundary, so it can be
+  // anything. This only proves the payload is the right SHAPE — it
+  // enforces no BORA rule. Authorization below is untouched, and every
+  // required-field rule further down keeps its original BORA copy.
+  const shape = boraParse(newsHubRecordShape, payload);
+
+  if (!shape.ok) {
+    return {
+      success: false,
+      error: `Malformed news payload: ${shape.error}`,
+    };
+  }
+
+  const input = shape.data;
+
   try {
     const supabase = await createClient();
 
@@ -84,10 +115,10 @@ export async function saveNewsHubItem(
       };
     }
 
-    const title = payload.title?.trim() ?? '';
-    const category = payload.category?.trim() ?? '';
-    const excerpt = payload.excerpt?.trim() ?? '';
-    const image = payload.image?.trim() ?? '';
+    const title = input.title?.trim() ?? '';
+    const category = input.category?.trim() ?? '';
+    const excerpt = input.excerpt?.trim() ?? '';
+    const image = input.image?.trim() ?? '';
 
     if (!title) {
       return { success: false, error: 'Title is required.' };
@@ -106,11 +137,11 @@ export async function saveNewsHubItem(
     }
 
     const id =
-      payload.id &&
+      input.id &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        payload.id
+        input.id
       )
-        ? payload.id
+        ? input.id
         : null;
 
     const { data, error } = await supabase.rpc(
@@ -120,11 +151,11 @@ export async function saveNewsHubItem(
         p_title: title,
         p_category: category,
         p_excerpt: excerpt,
-        p_source: payload.source?.trim() || null,
-        p_is_hot: payload.isHot ?? false,
+        p_source: input.source?.trim() || null,
+        p_is_hot: input.isHot ?? false,
         p_published_at:
-          payload.publishedAt || new Date().toISOString(),
-        p_content: payload.content?.trim() || null,
+          input.publishedAt || new Date().toISOString(),
+        p_content: input.content?.trim() || null,
         p_media_url: image,
       }
     );

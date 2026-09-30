@@ -2,11 +2,18 @@
 
 import { useCallback, useState } from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+
+import { useQueryState } from 'nuqs';
 
 import { createClient } from '@/lib/supabase/client';
 
 import AdminLoginGUI from './AdminLoginGUI';
+
+import {
+  loginErrorMessage,
+  loginErrorParam,
+} from './boraLoginUrlState';
 
 export type AdminLoginState =
   | { status: 'idle' }
@@ -18,16 +25,22 @@ export type AdminLoginState =
 // UI (AdminLoginGUI) haijui Supabase ipo.
 export default function AdminLoginOP() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const [state, setState] = useState<AdminLoginState>(
-    searchParams.get('error') === 'oauth'
-      ? {
-          status: 'error',
-          message: 'GitHub authentication failed. Try again.',
-        }
-      : { status: 'idle' }
-  );
+  // TYPED URL STATE. Replaces the raw `useSearchParams().get('error')`
+  // read: the 'oauth' literal is now validated by the BORA URL-state
+  // boundary instead of compared inline. Behaviour is identical — an
+  // unrecognised value still resolves to the idle state.
+  const [oauthError] = useQueryState('error', loginErrorParam);
+
+  const [state, setState] = useState<AdminLoginState>(() => {
+    // BORA still decides what the message says and when it appears.
+    // nuqs only reports WHICH error is in the URL.
+    const message = loginErrorMessage(oauthError);
+
+    return message
+      ? { status: 'error', message }
+      : { status: 'idle' };
+  });
 
   // AUTHENTICATION IMEKAMILIKA → BORA DOORWAY (room selector).
   // Room selector ndiyo inachagua room — si login.
