@@ -11,6 +11,12 @@ import {
 } from './boraUIProtocol';
 
 import {
+  boraUIEditorBroadcastOrigins,
+  isBoraUIEditorOriginAllowed,
+  normalizeBoraUIEditorOrigin,
+} from './boraUIEditorOrigins';
+
+import {
   BORA_UI_ALL_TARGETS,
   BORA_UI_ATTRIBUTE,
 } from './boraUITarget';
@@ -75,6 +81,12 @@ interface BridgeState {
   styleEl: HTMLStyleElement | null;
   responsiveStyleEl: HTMLStyleElement | null;
   section: string | null;
+  /**
+   * Origin of the editor that actually spoke to us, learned from an
+   * allowlisted message. Null until then, so the handshake can never
+   * post state to an unverified parent.
+   */
+  editorOrigin: string | null;
 }
 
 const bridge: BridgeState = {
@@ -91,6 +103,7 @@ const bridge: BridgeState = {
   styleEl: null,
   responsiveStyleEl: null,
   section: null,
+  editorOrigin: null,
 };
 
 /* ── COMMUNICATION ────────────────────────────────────────── */
@@ -98,7 +111,38 @@ const bridge: BridgeState = {
 function post(message: unknown) {
   if (window.parent === window) return;
 
-  window.parent.postMessage(message, window.location.origin);
+  // TARGETED MODE: once an allowlisted editor has spoken, every
+  // message goes to that editor and nowhere else. The origin is
+  // learned from a validated inbound message, never from the URL, so
+  // it is always a real, serialisable origin.
+  if (bridge.editorOrigin) {
+    try {
+      window.parent.postMessage(message, bridge.editorOrigin);
+    } catch {
+      /* an origin that came from a real event is always targetable */
+    }
+    return;
+  }
+
+  // DISCOVERY MODE: before any editor has identified itself, the
+  // bridge can only announce itself, and only to origins that are
+  // already on the allowlist. No state is ever sent in this mode.
+  //
+  // Each target is attempted independently and failures are swallowed.
+  // This is required, not defensive padding: an allowlisted origin can
+  // still be UNTARGETABLE in the current embedding context. `app://`
+  // is only a valid targetOrigin inside Electron, where it is a
+  // registered privileged scheme; in an ordinary browser postMessage
+  // throws SyntaxError on it. The correct response is to skip that
+  // target — there is no Designer in this context to hear it — rather
+  // than let one bad target throw out of the bridge's mount effect.
+  for (const target of boraUIEditorBroadcastOrigins()) {
+    try {
+      window.parent.postMessage(message, target);
+    } catch {
+      /* origin not targetable here; skip it */
+    }
+  }
 }
 
 /**
@@ -914,13 +958,25 @@ function activate() {
 }
 
 function handleMessage(event: MessageEvent) {
-  // Only the parent window (the UI Room) may drive the bridge, AND
-  // only from this same origin. Without the origin check, ANY page
-  // that iframes the public BORA app could post editor messages and
-  // rewrite its styles.
+  // Only the parent window may drive the bridge, AND only from an
+  // origin on the explicit allowlist. Without the origin check, ANY
+  // page that iframes the public BORA app could post editor messages
+  // and rewrite its styles.
+  //
+  // The check is NOT relaxed to "any origin": it is narrowed to a
+  // fixed set of registered editor origins (same-origin Admin UI,
+  // `app://designer`, and explicitly configured origins). `file://`
+  // and the opaque `null` origin are always rejected, and every other
+  // origin — in every build, production included — stays untrusted.
   if (event.source !== window.parent) return;
-  if (event.origin !== window.location.origin) return;
+  if (!isBoraUIEditorOriginAllowed(event.origin)) return;
   if (!isBoraUIEditorMessage(event.data)) return;
+
+  // Only a message that passed BOTH the origin allowlist and the
+  // protocol shape check may claim the editor slot, so a malformed or
+  // hostile message can never redirect the bridge's replies.
+  bridge.editorOrigin =
+    normalizeBoraUIEditorOrigin(event.origin) ?? bridge.editorOrigin;
 
   const message = event.data;
 
