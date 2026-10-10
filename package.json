@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "engine:typecheck": "tsc -p engine/tsconfig.engine-test.json --noEmit",
+    "engine:test": "cd engine && set \"NODE_PATH=F:/coding/bora-engine/node_modules\" && node F:/coding/bora-engine/node_modules/vitest/vitest.mjs run --config vitest.engine.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

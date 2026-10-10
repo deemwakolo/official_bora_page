@@ -5,6 +5,13 @@ const nextConfig = {
   typescript: {
     // Ensuring strict type checking for production reliability
     ignoreBuildErrors: false,
+
+    // Type-check the production application only. The isolated BORA
+    // Engine (engine/) is deliberately kept out of the production
+    // compilation graph: its test helpers import `vitest`, which is
+    // owned by the engine's frozen external toolchain, not by this
+    // repository (see tsconfig.build.json).
+    tsconfigPath: './tsconfig.build.json',
   },
 
   eslint: {

@@ -1,0 +1,34 @@
+{
+  // Production type-check configuration, wired into `next build` via
+  // `typescript.tsconfigPath` in next.config.js.
+  //
+  // It extends the root tsconfig, so every strict setting, the `@/*`
+  // path alias, and the include list are preserved unchanged. The only
+  // difference from tsconfig.json is the additional `engine` exclusion.
+  //
+  // Why `engine` is excluded: the BORA Engine is an isolated, frozen
+  // mathematical authority that is not yet integrated - nothing in
+  // app/, lib/, hooks/, types/, or middleware.ts imports it. Its test
+  // helpers (engine/src/testing/*.ts) and test files import `vitest`,
+  // which is deliberately NOT a dependency of this repository: the
+  // engine suite runs from its own frozen external toolchain (see the
+  // header of engine/vitest.engine.config.ts). Because Next.js
+  // type-checks everything matched by the tsconfig, sweeping engine/
+  // into the production compilation fails with
+  // "Cannot find module 'vitest'". The engine is instead type-checked
+  // by its own engine/tsconfig.engine-test.json (`npm run
+  // engine:typecheck`) and tested via `npm run engine:test`.
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "app/admin/controls"
+  ],
+  "exclude": [
+    "node_modules",
+    "GUI backup",
+    "engine"
+  ]
+}

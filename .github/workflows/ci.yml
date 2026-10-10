@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Validate required Supabase configuration
+        shell: bash
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          missing=()
+          if [[ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]]; then
+            missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          fi
+          if [[ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ]]; then
+            missing+=("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+          fi
+          if ((${#missing[@]})); then
+            printf '::error::Required GitHub Actions secret(s) are missing or empty: %s. Add them in repository Settings > Secrets and variables > Actions.\n' "$(IFS=', '; echo "${missing[*]}")"
+            exit 1
+          fi
+
+      - name: Install dependencies (reproducible from lockfile)
+        run: npm ci
+
+      - name: Production type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+        env:
+          # Public (NEXT_PUBLIC_*) Supabase values are required by the
+          # app at runtime and validated above. Never inline values here.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # NOTE: the BORA Engine test suite (engine/) is deliberately NOT
+      # part of this workflow. It runs from the local frozen toolchain
+      # at F:/coding/bora-engine (see engine/vitest.engine.config.ts),
+      # which is not available on a hosted runner. Run it locally with
+      # `npm run engine:test` before deploying.
