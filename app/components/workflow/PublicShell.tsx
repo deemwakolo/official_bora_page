@@ -13,6 +13,7 @@ import {
 } from './publicSections';
 import type { ResolvedPublicNavigationItem } from './publicSectionIds';
 import MomentGUI from './../charts/MomentGUI';
+import { preloadMomentCharts } from './../charts/momentChartsCache';
 import Profile from './../profile/Profile';
 
 /*
@@ -35,6 +36,16 @@ const HEADER_RULES: Record<
   updates: { compact: false, lockAtFullRetraction: false },
   profile: { compact: true, lockAtFullRetraction: false },
 };
+
+/*
+ * FEATURE SWITCH — ACTIVITY-AWARE COMPACT HEADER.
+ *
+ * When enabled, the active section's visible label is threaded into
+ * the masthead so it can surface as a small caption once the header
+ * has retracted. Set to false to restore the original masthead
+ * exactly; the label then resolves to `undefined` and is never used.
+ */
+const ENABLE_CONTEXTUAL_HEADER = true;
 
 interface PublicShellProps {
   top10: React.ReactNode;
@@ -76,6 +87,13 @@ export default function PublicShell({
     );
   }, [sections]);
 
+  // Preload chart data on entry so Charts feels ready immediately,
+  // regardless of which section is first selected. Deduped + cached,
+  // so returning to Charts never re-fetches while data is fresh.
+  useEffect(() => {
+    preloadMomentCharts();
+  }, []);
+
   const changeSection = (section: Section) => {
     setActiveSection(section);
   };
@@ -104,12 +122,24 @@ export default function PublicShell({
 
   const headerRules = HEADER_RULES[activeSection];
 
+  // The visible label of the ACTIVE section, resolved from the same
+  // visible set the navbar renders. Falls back to the raw id so the
+  // value is never an empty string while the feature is enabled.
+  const activeSectionLabel =
+    sections.find((section) => section.id === activeSection)?.label ??
+    activeSection;
+
   return (
     <>
       <BoraShell
         forceCompactHeader={headerRules.compact}
         lockHeaderAtFullRetraction={
           headerRules.lockAtFullRetraction
+        }
+        sectionLabel={
+          ENABLE_CONTEXTUAL_HEADER
+            ? activeSectionLabel
+            : undefined
         }
       >
         <div

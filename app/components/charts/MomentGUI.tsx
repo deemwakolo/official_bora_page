@@ -5,7 +5,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import WeeklyOP from './WeeklyOP';
 import MonthlyOP from './MonthlyOP';
 import TopPerformers from './TopPerformers';
-import { getLatestMomentCharts } from '@/lib/moment-charts-actions';
+import {
+  useMomentCharts,
+  preloadMomentCharts,
+  refreshMomentCharts,
+} from './momentChartsCache';
 import { MomentChartData, MomentChartHeader } from './MomentChart';
 
 type ChartPeriod = 'weekly' | 'monthly';
@@ -28,12 +32,16 @@ const emptyChart = (period: ChartPeriod): MomentChartData => ({
 });
 
 export default function MomentGUI() {
-  const [charts, setCharts] = useState<
-    Record<ChartPeriod, MomentChartData | null>
-  >({
-    weekly: null,
-    monthly: null,
-  });
+  // Charts come from the shared preload + cache store so the first
+  // Charts visit and every return to it reuse data instead of refetching.
+  const { weekly, monthly, status } = useMomentCharts();
+
+  // Safety net: if the shell's preload has not produced data yet (e.g.
+  // Charts mounted before the shell effect ran), kick the same deduped
+  // loader. Fresh data short-circuits, so this never double-fetches.
+  useEffect(() => {
+    preloadMomentCharts();
+  }, []);
 
   const [activePeriod, setActivePeriod] = useState<ChartPeriod>('weekly');
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -42,41 +50,19 @@ export default function MomentGUI() {
   const total = periods.length;
   const activeIndex = periods.indexOf(activePeriod);
 
+  const hasData = status === 'ready' && (weekly !== null || monthly !== null);
+  const hasError = status === 'error' && !hasData;
+
   const panes: {
     id: ChartPeriod;
     Pane: React.ComponentType<{ data: MomentChartData }>;
     data: MomentChartData;
   }[] = [
-    { id: 'weekly', Pane: WeeklyOP, data: charts.weekly ?? emptyChart('weekly') },
-    { id: 'monthly', Pane: MonthlyOP, data: charts.monthly ?? emptyChart('monthly') },
+    { id: 'weekly', Pane: WeeklyOP, data: weekly ?? emptyChart('weekly') },
+    { id: 'monthly', Pane: MonthlyOP, data: monthly ?? emptyChart('monthly') },
   ];
 
   const activeData = panes[activeIndex]?.data ?? panes[0].data;
-
-  // VUTA CHARTS ZOTE ZA MABAYA KUTOKA SUPABASE (server action).
-  useEffect(() => {
-    let cancelled = false;
-
-    getLatestMomentCharts()
-      .then((result) => {
-        if (cancelled) return;
-
-        setCharts({
-          weekly: result.weekly,
-          monthly: result.monthly,
-        });
-      })
-      .catch((error: any) => {
-        console.error(
-          'Moment Chart Fetch Error:',
-          error?.message ?? error
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const goToIndex = (index: number) => {
     const clamped = Math.max(0, Math.min(total - 1, index));
@@ -120,26 +106,112 @@ export default function MomentGUI() {
     if (delta < -threshold) { goToIndex(activeIndex + 1); return; }
     if (delta > threshold) { goToIndex(activeIndex - 1); }
   };
+
+  // LOADING — shown only when there is no data to display yet (first
+  // visit before the preload resolves). Cached data skips this entirely,
+  // so a returning visitor never sees a spinner over real content.
+  if (status === 'loading') {
+    return (
+      <section
+        data-bora-ui="public-charts"
+        className="w-full pb-4 pt-5"
+        style={{ backgroundColor: 'var(--bora-background)', color: 'var(--bora-text)' }}
+      >
+        <div className="mx-auto w-full max-w-3xl px-4">
+          <div className="mb-5">
+            <MomentChartHeader data={emptyChart('weekly')} />
+          </div>
+          <div
+            role="status"
+            aria-live="polite"
+            className="mx-auto w-full max-w-3xl py-16 text-center"
+          >
+            <span
+              className="text-[10px] font-black uppercase tracking-[0.3em]"
+              style={{ color: 'var(--bora-text-subtle)' }}
+            >
+              LOADING CHART…
+            </span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ERROR — the first request failed and there is no prior good data to
+  // show. Offer an explicit retry; the last good data (if any) would have
+  // taken the ready branch above instead.
+  if (hasError) {
+    return (
+      <section
+        data-bora-ui="public-charts"
+        className="w-full pb-4 pt-5"
+        style={{ backgroundColor: 'var(--bora-background)', color: 'var(--bora-text)' }}
+      >
+        <div className="mx-auto w-full max-w-3xl px-4">
+          <div className="mb-5">
+            <MomentChartHeader data={emptyChart('weekly')} />
+          </div>
+          <div
+            role="status"
+            aria-live="polite"
+            className="mx-auto w-full max-w-3xl py-16 text-center"
+          >
+            <span
+              className="block text-[12px] font-bold"
+              style={{ color: 'var(--bora-text-muted)' }}
+            >
+              Chart data is unavailable right now.
+            </span>
+            <button
+              type="button"
+              onClick={() => refreshMomentCharts()}
+              className="mt-4 border px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-200 hover:text-[color:var(--bora-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--bora-gold)]"
+              style={{ borderColor: 'var(--bora-border)', color: 'var(--bora-text-muted)' }}
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section data-bora-ui="public-charts" className="w-full pb-4 pt-5" style={{ backgroundColor: 'var(--bora-background)', color: 'var(--bora-text)' }}>
       <div className="mb-5">
         <MomentChartHeader data={activeData} />
       </div>
+
+      {/* SUBCATEGORY CHOOSER — TikTok-style in-screen tab row, directly beneath the heading */}
+      <div
+        data-bora-ui="public-charts-period-nav"
+        className="mx-auto mb-6 w-full max-w-5xl overflow-x-auto scrollbar-hide"
+        style={{ touchAction: 'pan-y' }}
+      >
+        <div className="flex w-max min-w-full items-center justify-center gap-8 px-4">
+          {panes.map((pane, index) => {
+            const active = activePeriod === pane.id;
+            return (
+              <button
+                key={pane.id}
+                type="button"
+                onClick={() => goToIndex(index)}
+                className="relative flex min-h-[36px] shrink-0 items-center whitespace-nowrap px-2 text-[10px] font-black uppercase tracking-[0.24em] transition-colors duration-200"
+                style={{ color: active ? 'var(--bora-gold)' : 'var(--bora-text-subtle)' }}
+              >
+                <span className="relative z-10">{periodLabels[pane.id]}</span>
+                {active && (
+                  <span className="absolute inset-x-0 bottom-0 h-[2px]" style={{ backgroundColor: 'var(--bora-gold)' }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="mb-6">
         <TopPerformers songs={activeData.songs} />
-      </div>
-      <div className="mx-auto mb-6 flex w-full max-w-5xl items-center justify-center gap-10 px-4">
-        {panes.map((pane, index) => {
-          const active = activePeriod === pane.id;
-          return (
-            <button key={pane.id} type="button" onClick={() => goToIndex(index)} className="relative px-2 py-3 text-[9px] font-black uppercase tracking-[0.24em] transition-all duration-300" style={{ color: active ? 'var(--bora-text)' : 'var(--bora-text-subtle)' }}>
-              <span className="relative z-10">{periodLabels[pane.id]}</span>
-              {active && (
-                <span className="absolute bottom-0 left-1/2 h-[2px] w-full -translate-x-1/2" style={{ backgroundColor: 'var(--bora-gold)' }} />
-              )}
-            </button>
-          );
-        })}
       </div>
       <div ref={carouselRef} onScroll={handleScroll} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} className="flex w-full snap-x snap-mandatory overflow-x-auto scrollbar-hide" style={{ touchAction: 'pan-y' }}>
         <div className="w-full shrink-0 snap-center px-4"><WeeklyOP data={panes[0].data} /></div>

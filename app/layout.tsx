@@ -77,7 +77,7 @@ export default async function RootLayout({
   const boraCommittedConfigCss = await resolveCommittedUIConfig();
 
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className={`${inter.variable} ${cinzel.variable} scroll-smooth`}>
       <body
         className={`${inter.variable} ${cinzel.variable} antialiased font-sans`}
         style={{

@@ -12,6 +12,7 @@ interface HeaderGUIProps {
   onOpenMenu: () => void;
   onCloseMenu: () => void;
   forceCompact: boolean;
+  sectionLabel?: string;
 }
 
 // Continuous transformation: --bora-hp (0 = expanded, 1 = retracted)
@@ -67,6 +68,29 @@ const HEADER_CSS = `
   margin-top: calc(8px - 8px * var(--bora-hp));
 }
 
+/*
+ * ACTIVE SECTION LABEL — the compact counterpart of the tagline.
+ * It is collapsed to nothing while the header is expanded
+ * (--bora-hp = 0) and slides in as the masthead retracts
+ * (--bora-hp -> 1), so it never overlaps the expanded tagline.
+ */
+.bora-hdr-section-label {
+  overflow: hidden;
+  max-height: calc(16px * var(--bora-hp));
+  margin-top: calc(2px * var(--bora-hp));
+  opacity: var(--bora-hp);
+  transform: translateY(
+    calc(3px - 3px * var(--bora-hp))
+  );
+  transition: opacity 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bora-hdr-section-label {
+    transition: none;
+  }
+}
+
 @supports (animation-timeline: scroll()) {
   .bora-hdr-surface {
     animation: bora-hdr-sweep linear both;
@@ -97,6 +121,7 @@ export default function HeaderGUI({
   onOpenMenu,
   onCloseMenu,
   forceCompact,
+  sectionLabel,
 }: HeaderGUIProps) {
   const p = forceCompact
     ? 1
@@ -155,7 +180,7 @@ export default function HeaderGUI({
             data-bora-ui="public-header-visual"
             className="absolute inset-0"
           >
-            <TopBarHeader />
+            <TopBarHeader sectionLabel={sectionLabel} />
           </div>
 
           {/* HAMBURGER */}

@@ -2,7 +2,13 @@
 
 import Link from 'next/link';
 
-export default function TopBarHeader() {
+interface TopBarHeaderProps {
+  sectionLabel?: string;
+}
+
+export default function TopBarHeader({
+  sectionLabel,
+}: TopBarHeaderProps) {
   return (
     <div className="absolute inset-0 overflow-hidden">
       {/* TINGA TEXTURE — FULL-SIZE BACKGROUND INAYOMEZWA NDANI YA MAST */}
@@ -92,6 +98,23 @@ export default function TopBarHeader() {
           >
             TANZANIA MUSIC CHART
           </p>
+
+          {/* ACTIVE SECTION LABEL — revealed only as the header retracts. */}
+          {sectionLabel ? (
+            <p
+              className="
+                bora-hdr-section-label
+                whitespace-nowrap
+                text-[7px]
+                font-bold
+                uppercase
+                tracking-[0.22em]
+              "
+              style={{ color: 'var(--bora-gold)' }}
+            >
+              {sectionLabel}
+            </p>
+          ) : null}
         </Link>
       </div>
     </div>

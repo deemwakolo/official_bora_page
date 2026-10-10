@@ -6,11 +6,13 @@ import HeaderGUI from './HeaderGUI';
 interface HeaderProps {
   forceCompact?: boolean;
   lockHeaderAtFullRetraction?: boolean;
+  sectionLabel?: string;
 }
 
 export default function Header({
   forceCompact = false,
   lockHeaderAtFullRetraction = false,
+  sectionLabel,
 }: HeaderProps) {
   const {
     progress,
@@ -26,6 +28,7 @@ export default function Header({
       onOpenMenu={openMenu}
       onCloseMenu={closeMenu}
       forceCompact={forceCompact}
+      sectionLabel={sectionLabel}
     />
   );
 }

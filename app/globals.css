@@ -37,7 +37,7 @@
     background: var(--bora-background);
 
     /* FONT ROLE: the UI Room controls BORA's global typography, so
-       the body reads the role token, not the loader variable. */
+       the body reads the role token (which resolves to --font-inter). */
     font-family: var(--bora-font-body);
 
     overflow-x: hidden;

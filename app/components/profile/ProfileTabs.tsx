@@ -22,10 +22,11 @@ export default function ProfileTabs({
   return (
     <div
       data-bora-ui="public-profile-tabs"
-      className="mt-5 flex items-center justify-center gap-8 border-b"
+      className="mt-5 w-full overflow-x-auto scrollbar-hide border-b"
       style={{ borderColor: 'var(--bora-border)' }}
     >
-      {tabs.map((tab) => {
+      <div className="flex w-max min-w-full items-center justify-center gap-8">
+        {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
 
         return (
@@ -53,7 +54,8 @@ export default function ProfileTabs({
             />
           </button>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 }

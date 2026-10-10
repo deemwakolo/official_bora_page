@@ -8,12 +8,14 @@ interface BoraShellProps {
   children: React.ReactNode;
   forceCompactHeader?: boolean;
   lockHeaderAtFullRetraction?: boolean;
+  sectionLabel?: string;
 }
 
 export default function BoraShell({
   children,
   forceCompactHeader = false,
   lockHeaderAtFullRetraction = false,
+  sectionLabel,
 }: BoraShellProps) {
   return (
     <div
@@ -30,6 +32,7 @@ export default function BoraShell({
         lockHeaderAtFullRetraction={
           lockHeaderAtFullRetraction
         }
+        sectionLabel={sectionLabel}
       />
 
       {/* ACTIVE SECTION CONTENT */}

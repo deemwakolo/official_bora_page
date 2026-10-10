@@ -249,12 +249,10 @@ export const BORA_TOKEN_SPEC: readonly BoraTokenDefinition[] = [
 
 export const BORA_FONT_STACKS = {
   cinzel: 'var(--font-cinzel), serif',
-  inter:
-    'var(--font-inter), system-ui, -apple-system, sans-serif',
+  inter: 'var(--font-inter), system-ui, -apple-system, sans-serif',
   systemUi: 'system-ui, -apple-system, sans-serif',
   systemSerif: 'serif',
-  systemMono:
-    'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace',
+  systemMono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace',
 } as const;
 
 export type BoraFontStackId = keyof typeof BORA_FONT_STACKS;
