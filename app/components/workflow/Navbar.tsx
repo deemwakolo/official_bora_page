@@ -2,10 +2,13 @@
 
 import React from 'react';
 
+import { motion, useReducedMotion } from 'framer-motion';
+
 import type {
   PublicSectionDefinition,
   Section,
 } from './publicSections';
+import { useMasterHaptics } from '../components-themes/haptics/MasterHaptics';
 
 export type { Section };
 
@@ -25,7 +28,18 @@ export default function Navbar({
   activeSection,
   onSectionChange,
 }: NavbarProps) {
+  /*
+   * ADDITIVE PRESS FEEDBACK — the Navbar owns no navigation policy;
+   * this only adds a press feel + a soft haptic on the user's own
+   * gesture. Navbar always mounts inside MasterHapticsProvider
+   * (RootLayout -> MasterGUI -> PublicShell -> Navbar), and the
+   * provider itself no-ops where vibration is unsupported.
+   */
+  const { toggleHaptic } = useMasterHaptics();
+  const reduceMotion = useReducedMotion();
+
   const handlePress = (id: Section) => {
+    toggleHaptic();
     onSectionChange(id);
   };
 
@@ -168,10 +182,27 @@ export default function Navbar({
                           : 'var(--bora-text)',
                       }}
                     >
-                      <Icon
-                        strokeWidth={active ? 2.4 : 2.2}
-                        className="h-[30px] w-[30px]"
-                      />
+                      {/*
+                       * PRESS LAYER — transform-only wrapper around the
+                       * glyph. The bubble above keeps its active scale /
+                       * glow classes; this only compresses the icon in
+                       * place (~200ms, no layout shift). Vote gets a tiny
+                       * restrained tilt on top of the compression.
+                       */}
+                      <motion.span
+                        className="flex items-center justify-center"
+                        whileTap={
+                          reduceMotion
+                            ? undefined
+                            : { scale: 0.84, rotate: -7 }
+                        }
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                      >
+                        <Icon
+                          strokeWidth={active ? 2.4 : 2.2}
+                          className="h-[30px] w-[30px]"
+                        />
+                      </motion.span>
                     </span>
                   </span>
                 ) : (
@@ -189,10 +220,23 @@ export default function Navbar({
                       }
                     `}
                   >
-                    <Icon
-                      strokeWidth={active ? 2.2 : 1.9}
-                      className="h-full w-full"
-                    />
+                    {/*
+                     * PRESS LAYER — same idea as the Vote bubble:
+                     * compression only (no tilt), transform-only, no
+                     * layout shift.
+                     */}
+                    <motion.span
+                      className="flex h-full w-full items-center justify-center"
+                      whileTap={
+                        reduceMotion ? undefined : { scale: 0.8 }
+                      }
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                    >
+                      <Icon
+                        strokeWidth={active ? 2.2 : 1.9}
+                        className="h-full w-full"
+                      />
+                    </motion.span>
                   </span>
                 )}
 

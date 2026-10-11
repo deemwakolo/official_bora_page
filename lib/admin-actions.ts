@@ -1,13 +1,28 @@
 import { revalidatePath } from 'next/cache';
 
 import { createClient } from './supabase/server';
+import { createPublicServerClient } from './supabase/public-server';
 
 /**
  * FETCH REGISTRY (SAFE + STABLE)
  */
 export async function getRegistry() {
+  const getDiagnosticField = (source: unknown, field: string) => {
+    if (typeof source !== 'object' || source === null) {
+      return undefined;
+    }
+
+    const value = (source as Record<string, unknown>)[field];
+
+    return typeof value === 'string' ||
+      typeof value === 'number' ||
+      value === null
+      ? value
+      : undefined;
+  };
+
   try {
-    const supabase = await createClient();
+    const supabase = createPublicServerClient();
 
     const { data, error } = await supabase
       .from('songs')
@@ -17,16 +32,26 @@ export async function getRegistry() {
     if (error) {
       console.error(
         'Supabase Error:',
-        error.message
+        {
+          name: getDiagnosticField(error, 'name'),
+          message: getDiagnosticField(error, 'message'),
+          code: getDiagnosticField(error, 'code'),
+          details: getDiagnosticField(error, 'details'),
+          hint: getDiagnosticField(error, 'hint'),
+          status: getDiagnosticField(error, 'status'),
+        }
       );
       return [];
     }
 
     return data ?? [];
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(
       'Registry Fetch Error:',
-      error.message
+      {
+        name: getDiagnosticField(error, 'name'),
+        message: getDiagnosticField(error, 'message'),
+      }
     );
     return [];
   }

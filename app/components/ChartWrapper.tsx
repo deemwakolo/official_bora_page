@@ -47,7 +47,7 @@ export default function ChartWrapper({
   } = useMasterHaptics();
 
   // STATE YA NYIMBO INAYOTUMIKA KWENYE CHART
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<Song[]>(initialSongs);
 
   /**
    * DATA MPYA IKIFIKA KUTOKA SERVER
