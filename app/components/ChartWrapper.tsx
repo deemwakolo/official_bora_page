@@ -6,9 +6,25 @@ import Chart from './Chart/Chart';
 
 import { createClient } from '@/lib/supabase/client';
 
+import {
+  castSecureVote,
+  newIdempotencyKey,
+} from '@/lib/supabase/secure-vote';
+
+
 import { useMasterSound } from './components-themes/haptics/MasterSound';
 
 import { useMasterHaptics } from './components-themes/haptics/MasterHaptics';
+
+/**
+ * SECURE VOTING SWITCH (default OFF).
+ *
+ * Legacy `handle_song_vote` remains the default path. The hardened
+ * `cast_vote_secure` path activates ONLY when NEXT_PUBLIC_BORA_SECURE_VOTING
+ * is exactly 'true'. Missing, empty, or any other value keeps the existing
+ * legacy behavior unchanged.
+ */
+const SECURE_VOTING = process.env.NEXT_PUBLIC_BORA_SECURE_VOTING === 'true';
 
 /**
  * BORA REGISTRY INTERFACE
@@ -151,16 +167,44 @@ export default function ChartWrapper({
      * TUMA KURA KWENYE DATABASE.
      */
     try {
-      const { error } = await supabase.rpc(
-        'handle_song_vote',
-        {
-          song_id: id,
-          vote_type: type,
-        }
-      );
+      if (SECURE_VOTING) {
+        /**
+         * HARDENED PATH (default OFF; enabled only via
+         * NEXT_PUBLIC_BORA_SECURE_VOTING === 'true').
+         *
+         * One idempotency key per user vote action; a guest Auth session is
+         * ensured inside the helper. Accepted AND duplicate both count as
+         * success. On ANY failure we throw and take the existing error path —
+         * we NEVER fall back to handle_song_vote, which could double-count.
+         */
+        const result = await castSecureVote({
+          songId: id,
+          voteType: type,
+          idempotencyKey: newIdempotencyKey(),
+        });
 
-      if (error) {
-        throw error;
+        if (!result.ok) {
+          throw new Error(
+            `SECURE_VOTE_FAILED: ${result.reason}${
+              result.code ? ` (${result.code})` : ''
+            }`
+          );
+        }
+      } else {
+        /**
+         * LEGACY PATH (default, unchanged).
+         */
+        const { error } = await supabase.rpc(
+          'handle_song_vote',
+          {
+            song_id: id,
+            vote_type: type,
+          }
+        );
+
+        if (error) {
+          throw error;
+        }
       }
 
       /**

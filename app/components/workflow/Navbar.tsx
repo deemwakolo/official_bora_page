@@ -30,16 +30,17 @@ export default function Navbar({
 }: NavbarProps) {
   /*
    * ADDITIVE PRESS FEEDBACK — the Navbar owns no navigation policy;
-   * this only adds a press feel + a soft haptic on the user's own
-   * gesture. Navbar always mounts inside MasterHapticsProvider
-   * (RootLayout -> MasterGUI -> PublicShell -> Navbar), and the
-   * provider itself no-ops where vibration is unsupported.
+   * this only adds a press feel + a soft single-pulse haptic on the
+   * user's own gesture. Navbar always mounts inside
+   * MasterHapticsProvider (RootLayout -> MasterGUI -> PublicShell ->
+   * Navbar), and the provider itself no-ops where vibration is
+   * unsupported.
    */
-  const { toggleHaptic } = useMasterHaptics();
+  const { voteHaptic } = useMasterHaptics();
   const reduceMotion = useReducedMotion();
 
   const handlePress = (id: Section) => {
-    toggleHaptic();
+    voteHaptic();
     onSectionChange(id);
   };
 

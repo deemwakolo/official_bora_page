@@ -1,132 +1,239 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import VoteAlert from './VoteAlert';
-
 import ChartGUI from './ChartGUI';
-
-// STRUCTURE YA TAARIFA ZA KILA WIMBO KWENYE CHART
 
 interface Song {
   id?: string | number;
-
   slot_number?: number;
-
   title: string;
-
   artist?: string;
-
   cover_url: string;
-
   youtube_id?: string;
-
   momentum_score?: number;
-
   yt_rank?: number;
-
   sp_rank?: number;
-
-  // NAFASI YA WIMBO KWENYE CHART YA AWALI
   previous_rank?: number | null;
 }
 
-// TAARIFA AMBAZO KURA INAPOKEA
-
 interface KuraProps {
   songs: Song[];
-
   onVote: (
     id: string,
     type: 'up' | 'down'
   ) => boolean | Promise<boolean>;
 }
 
-// COMPONENT KUU INAYOSIMAMIA CHART NA KURA
+type VoteType = 'up' | 'down';
+type VotePhase = 'counting' | 'waiting' | 'success' | 'failed';
+
+interface VoteAlertState {
+  token: number;
+  title: string;
+  type: VoteType;
+  phase: VotePhase;
+  msg: string;
+}
+
+interface VoteTransaction {
+  token: number;
+  songId: string;
+  originalSongs: Song[];
+  countdownFinished: boolean;
+  result: boolean | null;
+}
+
+const COUNTDOWN_MS = 2000;
+const RESULT_HOLD_MS = 1600;
+const FAIL_HOLD_MS = 2600;
 
 export default function Kura({
   songs: initialSongs = [],
   onVote,
 }: KuraProps) {
-  // HII NDIO LIST INAYOONYESHWA KWENYE UI
-  const [localSongs, setLocalSongs] =
-    useState<Song[]>(initialSongs);
+  const [localSongs, setLocalSongs] = useState<Song[]>(initialSongs);
+  const [alert, setAlert] = useState<VoteAlertState | null>(null);
 
-  // STATE YA POPUP YA KURA
-  const [alert, setAlert] = useState<{
-    id: string;
-    type: 'up' | 'down';
-    msg: string;
-  } | null>(null);
+  const tokenRef = useRef(0);
+  const activeVoteRef = useRef<VoteTransaction | null>(null);
 
-  // KUBADILISHA DATA MPYA YA CHART
+  const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCountdownTimer = () => {
+    if (countdownTimerRef.current !== null) {
+      clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+  };
+
+  const clearDismissTimer = () => {
+    if (dismissTimerRef.current !== null) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+  };
+
+  const clearTimers = () => {
+    clearCountdownTimer();
+    clearDismissTimer();
+  };
+
+  const dismissVoteAlert = (token: number) => {
+    if (activeVoteRef.current?.token !== token) return;
+
+    setAlert((current) =>
+      current?.token === token ? null : current
+    );
+
+    activeVoteRef.current = null;
+    clearTimers();
+  };
+
+  const showFinalResult = (transaction: VoteTransaction) => {
+    if (activeVoteRef.current?.token !== transaction.token) return;
+    if (transaction.result === null) return;
+
+    clearDismissTimer();
+
+    const success = transaction.result;
+
+    setAlert((current) => {
+      if (current?.token !== transaction.token) return current;
+
+      return {
+        ...current,
+        phase: success ? 'success' : 'failed',
+        msg: success
+          ? 'VOTE REGISTERED'
+          : 'VOTE NOT REGISTERED',
+      };
+    });
+
+    dismissTimerRef.current = setTimeout(() => {
+      dismissVoteAlert(transaction.token);
+    }, success ? RESULT_HOLD_MS : FAIL_HOLD_MS);
+  };
+
+  const resolveVote = (
+    transaction: VoteTransaction,
+    success: boolean
+  ) => {
+    // An older vote must never overwrite a newer popup.
+    if (activeVoteRef.current?.token !== transaction.token) return;
+
+    transaction.result = success;
+
+    if (transaction.countdownFinished) {
+      showFinalResult(transaction);
+    }
+  };
+
+  // Keep the chart data synchronized with updated props.
   useEffect(() => {
     setLocalSongs(initialSongs);
   }, [initialSongs]);
 
-  // FUNCTION YA KUSHUGHULIKIA KURA
+  // Clear timers when this component unmounts.
+  useEffect(() => {
+    return () => {
+      clearTimers();
+      activeVoteRef.current = null;
+    };
+  }, []);
+
   const handleVote = async (
     id: string | number | undefined,
     title: string,
-    type: 'up' | 'down'
+    type: VoteType
   ) => {
-    // KAMA HAKUNA ID HATUENDELEI
-    if (!id) return;
+    if (id === undefined || id === null || id === '') return;
 
-    // KUBADILISHA POWER SCORE MARA MOJA KWENYE UI
+    const songId = String(id);
+    const token = ++tokenRef.current;
+
+    // Cancel timers from the previous popup, but do not allow
+    // its delayed response to overwrite this new vote.
+    clearTimers();
+
+    const transaction: VoteTransaction = {
+      token,
+      songId,
+      originalSongs: localSongs,
+      countdownFinished: false,
+      result: null,
+    };
+
+    activeVoteRef.current = transaction;
+
+    // Immediate optimistic UI update.
     setLocalSongs((currentSongs) =>
       currentSongs.map((song) => {
-        // KUTAFUTA WIMBO ULIOPIGIWA KURA
-        if (song.id === id) {
-          // KUPATA SCORE YA SASA
-          const currentScore =
-            Number(song.momentum_score) || 0;
+        if (String(song.id) !== songId) return song;
 
-          // KUONGEZA AU KUPUNZA SCORE
-          return {
-            ...song,
-            momentum_score:
-              type === 'up'
-                ? currentScore + 1
-                : currentScore - 1,
-          };
-        }
+        const currentScore = Number(song.momentum_score) || 0;
 
-        return song;
+        return {
+          ...song,
+          momentum_score:
+            type === 'up'
+              ? currentScore + 1
+              : currentScore - 1,
+        };
       })
     );
 
-    // POPUP INAJIBU TOUCH MARA MOJA — HAISUBIRI onVote KUKAMILIKA
+    // Create the single popup immediately.
     setAlert({
-      id: title,
+      token,
+      title,
       type,
-      msg:
-        type === 'up'
-          ? 'SIGNAL BOOSTED'
-          : 'SIGNAL DROPPED',
+      phase: 'counting',
+      msg: type === 'up' ? 'SIGNAL BOOSTING' : 'SIGNAL DROPPING',
     });
 
-    // POPUP/GATE INABAKI SEKUNDE 2
-    setTimeout(() => {
-      setAlert(null);
-    }, 2000);
+    // Start the countdown immediately. The database request
+    // runs independently and must not restart this timer.
+    countdownTimerRef.current = setTimeout(() => {
+      if (activeVoteRef.current?.token !== token) return;
 
-    // KUTUMA KURA KWENYE COMPONENT YA JUU
-    // KURA INAENDLEA NYUMA KWA DATABASE
-    if (typeof onVote === 'function') {
-      await onVote(
-        id.toString(),
-        type
-      );
+      transaction.countdownFinished = true;
+      countdownTimerRef.current = null;
+
+      if (transaction.result !== null) {
+        showFinalResult(transaction);
+      } else {
+        setAlert((current) =>
+          current?.token === token
+            ? {
+                ...current,
+                phase: 'waiting',
+                msg: 'WAITING FOR VOTE RESULT',
+              }
+            : current
+        );
+      }
+    }, COUNTDOWN_MS);
+
+    // Register the vote in the parent/backend.
+    try {
+      const success =
+        typeof onVote === 'function'
+          ? await onVote(songId, type)
+          : false;
+
+      resolveVote(transaction, success === true);
+    } catch {
+      resolveVote(transaction, false);
     }
   };
 
   return (
     <>
-      {/* POPUP YA KURA */}
       <VoteAlert alert={alert} />
 
-      {/* CHART GUI */}
       <ChartGUI
         songs={localSongs.slice(0, 10)}
         onVote={handleVote}
