@@ -53,22 +53,33 @@ export const PLATFORM_WINDOW_HOURS = PLATFORM_WINDOW_DAYS * 24;
  *
  * ── PHASE 23 ORPHAN FINDING ───────────────────────────────────────────────────
  *
- * Neither constant has any consumer anywhere in the repository: no production
- * module, no simulation module, and no test reads them. Contract 5 governs
- * EVENT ROUTING, which is the layer that will eventually decide whether a late
- * event arrived before or after a commitment boundary. That layer is the
- * SIMULATION/APPLICATION layer (`src/sim`), and it has not yet adopted it —
- * `src/sim/s1-late-data.test.ts` states the boundary as an explicit contract
- * rather than deriving it from this constant.
+ * FREEZE-ERA RECORD: at the frozen-engine baseline these constants had no
+ * behavioural consumers anywhere in the engine repository — no production
+ * module, no simulation module, and no test read them — and `src/sim` stated
+ * the boundary as an explicit contract (`s1-late-data.test.ts`) rather than
+ * deriving it from this constant. The constant encodes no mathematics, so its
+ * unconsumed state could not contradict the mathematical contract, and
+ * deleting a Contract 5 constant during a reconciliation phase would have
+ * been a design decision rather than a reconciliation one. Contract 5 is
+ * therefore traced as DEFERRED, not as missing. See PHASE-23-RECONCILIATION.md,
+ * requirement R-41.
  *
- * This is UNDOCUMENTED-BUT-UNCONSUMED, not orphan behaviour: it encodes no
- * behaviour at all, so it cannot contradict the mathematical contract. It is
- * retained because it is a named contract constant that production integration
- * will need, and deleting a Contract 5 constant during a reconciliation phase
- * would be a design decision rather than a reconciliation one.
+ * BORA REPOSITORY NOTE: TRANSITION_MS now has three application consumers,
+ * all in `lib/bora-engine/`, each computing the earliest eligible instant
+ * after an hour boundary as `(hour + 1) * HOUR_MS + TRANSITION_MS`:
  *
- * Contract 5 is therefore traced as DEFERRED, not as missing. See
- * PHASE-23-RECONCILIATION.md, requirement R-41.
+ *   · hour-entry.ts       — request eligibility gate
+ *   · hourly-runner.ts    — early UX eligibility guard (the atomic database
+ *                           claim independently enforces eligibility)
+ *   · source-readiness.ts — readiness requirement for the same boundary
+ *
+ * They consume it as the BORA application-policy constant for Contract 5
+ * event routing, documented in PHASE-TRANSITION-CONSTANT-API-AUDIT.md.
+ * Transition timing remains EVENT ROUTING ONLY — outside the mathematical
+ * engine contract, never a scoring coefficient — and R-41 remains DEFERRED;
+ * these consumers do not broaden engine semantics. TRANSITION_MINUTES is
+ * consumed only as the derivation source of TRANSITION_MS, and by the
+ * acceptance tests pinning both values.
  */
 export const TRANSITION_MINUTES = 10;
 
