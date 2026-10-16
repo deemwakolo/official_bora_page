@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 import VoteAlert from './VoteAlert';
 import ChartGUI from './ChartGUI';
@@ -40,7 +40,6 @@ interface VoteAlertState {
 interface VoteTransaction {
   token: number;
   songId: string;
-  originalSongs: Song[];
   countdownFinished: boolean;
   result: boolean | null;
 }
@@ -53,14 +52,16 @@ export default function Kura({
   songs: initialSongs = [],
   onVote,
 }: KuraProps) {
-  const [localSongs, setLocalSongs] = useState<Song[]>(initialSongs);
   const [alert, setAlert] = useState<VoteAlertState | null>(null);
 
   const tokenRef = useRef(0);
   const activeVoteRef = useRef<VoteTransaction | null>(null);
 
-  const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissTimerRef =
+    useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearCountdownTimer = () => {
     if (countdownTimerRef.current !== null) {
@@ -121,7 +122,7 @@ export default function Kura({
     transaction: VoteTransaction,
     success: boolean
   ) => {
-    // An older vote must never overwrite a newer popup.
+    // An older request must never overwrite a newer vote popup.
     if (activeVoteRef.current?.token !== transaction.token) return;
 
     transaction.result = success;
@@ -130,11 +131,6 @@ export default function Kura({
       showFinalResult(transaction);
     }
   };
-
-  // Keep the chart data synchronized with updated props.
-  useEffect(() => {
-    setLocalSongs(initialSongs);
-  }, [initialSongs]);
 
   // Clear timers when this component unmounts.
   useEffect(() => {
@@ -154,38 +150,21 @@ export default function Kura({
     const songId = String(id);
     const token = ++tokenRef.current;
 
-    // Cancel timers from the previous popup, but do not allow
-    // its delayed response to overwrite this new vote.
+    // Cancel the previous popup's timers.
     clearTimers();
 
     const transaction: VoteTransaction = {
       token,
       songId,
-      originalSongs: localSongs,
       countdownFinished: false,
       result: null,
     };
 
     activeVoteRef.current = transaction;
 
-    // Immediate optimistic UI update.
-    setLocalSongs((currentSongs) =>
-      currentSongs.map((song) => {
-        if (String(song.id) !== songId) return song;
+    // Do not change the displayed score optimistically.
+    // The chart continues to use the supplied song data.
 
-        const currentScore = Number(song.momentum_score) || 0;
-
-        return {
-          ...song,
-          momentum_score:
-            type === 'up'
-              ? currentScore + 1
-              : currentScore - 1,
-        };
-      })
-    );
-
-    // Create the single popup immediately.
     setAlert({
       token,
       title,
@@ -194,8 +173,7 @@ export default function Kura({
       msg: type === 'up' ? 'SIGNAL BOOSTING' : 'SIGNAL DROPPING',
     });
 
-    // Start the countdown immediately. The database request
-    // runs independently and must not restart this timer.
+    // Start the countdown independently of the backend request.
     countdownTimerRef.current = setTimeout(() => {
       if (activeVoteRef.current?.token !== token) return;
 
@@ -217,7 +195,7 @@ export default function Kura({
       }
     }, COUNTDOWN_MS);
 
-    // Register the vote in the parent/backend.
+    // Register the vote through the parent/backend.
     try {
       const success =
         typeof onVote === 'function'
@@ -235,7 +213,7 @@ export default function Kura({
       <VoteAlert alert={alert} />
 
       <ChartGUI
-        songs={localSongs.slice(0, 10)}
+        songs={initialSongs.slice(0, 10)}
         onVote={handleVote}
       />
     </>
