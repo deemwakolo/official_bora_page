@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from './supabase/server';
+import { authorizeBoraAdministrator } from './administrator-authorization';
 
 import {
   isBoraUIConfigEmpty,
@@ -48,16 +49,16 @@ export async function saveUIConfig(
   try {
     const supabase = await createClient();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // ADMINISTRATOR AUTHORIZATION (server-side write boundary).
+    // Committing the UI Room runtime override is a privileged write.
+    // Require a verified site administrator, not merely any
+    // authenticated account.
+    const authorization = await authorizeBoraAdministrator();
+    if (authorization.status !== 'authorized') {
       return {
         success: false,
         error:
-          'Unauthorized: you must be signed in as an administrator to commit UI config.',
+          'Unauthorized: administrator access is required to commit UI config.',
       };
     }
 

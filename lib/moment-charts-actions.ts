@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { createClient } from './supabase/server';
+import { authorizeBoraAdministrator } from './administrator-authorization';
 import {
   getLatestMomentChart,
   parseReleaseDateToISO,
@@ -62,15 +63,16 @@ export async function saveMomentChartEdition(
   try {
     const supabase = await createClient();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // ADMINISTRATOR AUTHORIZATION (server-side write boundary).
+    // Saving a moment-chart edition is a privileged editorial write.
+    // Require a verified site administrator, not merely any
+    // authenticated account.
+    const authorization = await authorizeBoraAdministrator();
+    if (authorization.status !== 'authorized') {
       return {
         success: false,
-        error: 'Unauthorized: you must be signed in as an administrator to save charts.',
+        error:
+          'Unauthorized: administrator access is required to save charts.',
       };
     }
 

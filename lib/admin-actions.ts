@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 
 import { createClient } from './supabase/server';
 import { createPublicServerClient } from './supabase/public-server';
+import { authorizeBoraAdministrator } from './administrator-authorization';
 
 /**
  * FETCH REGISTRY (SAFE + STABLE)
@@ -65,6 +66,22 @@ export async function updateSlot(
 ) {
   try {
     const supabase = await createClient();
+
+    // ADMINISTRATOR AUTHORIZATION (server-side write boundary).
+    // updateSlot performs an administrative upsert on the `songs`
+    // chart registry. Only a verified site administrator may do this.
+    // The identity is server-verified (auth.getUser) and matched
+    // against the server-only BORA_ADMIN_USER_IDS allowlist; this
+    // fails closed for unauthenticated and ordinary authenticated
+    // callers.
+    const authorization = await authorizeBoraAdministrator();
+    if (authorization.status !== 'authorized') {
+      return {
+        success: false,
+        error:
+          'Unauthorized: administrator access is required to update a chart slot.',
+      };
+    }
 
     const rawSlot =
       formData.get('slot_number');
@@ -186,31 +203,26 @@ export async function updateSlot(
         urlData.publicUrl;
     }
 
-    // DB WRITE
+    // DB WRITE (privileged RPC). Migration 0019 revokes direct table
+    // writes on `songs` from anon/authenticated, so the administrative
+    // upsert goes through the SECURITY DEFINER `admin_upsert_song`, which
+    // enforces the administrator claim itself and preserves the
+    // ON CONFLICT (slot_number) upsert semantics.
     const {
       data,
       error,
-    } = await supabase
-      .from('songs')
-      .upsert(
-        {
-          slot_number,
-          title,
-          artist,
-          yt_views,
-          sp_plays,
-          momentum_score,
-          cover_url,
-          updated_at:
-            new Date().toISOString(),
-        },
-        {
-          onConflict:
-            'slot_number',
-        }
-      )
-      .select()
-      .single();
+    } = await supabase.rpc(
+      'admin_upsert_song',
+      {
+        p_slot_number: slot_number,
+        p_title: title,
+        p_artist: artist,
+        p_yt_views: yt_views,
+        p_sp_plays: sp_plays,
+        p_momentum_score: momentum_score,
+        p_cover_url: cover_url,
+      }
+    );
 
     if (error) {
       throw error;

@@ -339,9 +339,9 @@ create table public.bora_engine_publication_entries (
       and persistent_kura_before is not null
         and persistent_kura_before >= 0
         and persistent_kura_before < 'Infinity'::numeric
-      and (persistent_kura_next is null
-        or (persistent_kura_next >= 0
-          and persistent_kura_next < 'Infinity'::numeric))
+      and persistent_kura_next is not null
+      and persistent_kura_next >= 0
+      and persistent_kura_next < 'Infinity'::numeric
       and platform_youtube is not null and platform_youtube >= 0
         and platform_youtube <= 30
       and platform_spotify is not null and platform_spotify >= 0

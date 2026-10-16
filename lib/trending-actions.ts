@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { createClient } from './supabase/server';
+import { authorizeBoraAdministrator } from './administrator-authorization';
 import {
   getTrending,
   TRENDING_RANK_COUNT,
@@ -51,16 +52,16 @@ export async function saveTrendingPlatform(
   try {
     const supabase = await createClient();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // ADMINISTRATOR AUTHORIZATION (server-side write boundary).
+    // Trending platform rows are privileged editorial content.
+    // Require a verified site administrator, not merely any
+    // authenticated account.
+    const authorization = await authorizeBoraAdministrator();
+    if (authorization.status !== 'authorized') {
       return {
         success: false,
         error:
-          'Unauthorized: you must be signed in as an administrator to save trending.',
+          'Unauthorized: administrator access is required to save trending.',
       };
     }
 

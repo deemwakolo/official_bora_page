@@ -1,4 +1,4 @@
-{
+﻿{
   // Production type-check configuration, wired into `next build` via
   // `typescript.tsconfigPath` in next.config.js.
   //
@@ -27,6 +27,7 @@
     "app/admin/controls"
   ],
   "exclude": [
+    "lib/supabase/secure-vote.test.ts",
     "node_modules",
     "GUI backup",
     "engine"

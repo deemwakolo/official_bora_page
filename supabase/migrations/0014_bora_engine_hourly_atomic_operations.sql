@@ -51,6 +51,8 @@ declare
   v_reference_hour bigint;
   v_revision bigint;
   v_snapshot jsonb;
+  v_active_count bigint;
+  v_complete_count bigint;
 begin
   select reference_hour, revision
     into v_reference_hour, v_revision
@@ -73,6 +75,55 @@ begin
       'gaps', jsonb_build_array(jsonb_build_object(
         'hourIndex', p_closed_hour,
         'reason', 'state-hour-mismatch'
+      ))
+    );
+  end if;
+
+  -- Coverage readiness gate: require complete input coverage before reporting ready.
+  -- COMPLETE coverage with zero value rows means a verified empty hour; missing,
+  -- UNAVAILABLE, or FAILED rows must not be reinterpreted as zero.
+  -- Zero active songs is a degenerate state: bootstrap explicitly rejects it
+  -- (BORA_ENGINE_BOOTSTRAP_STATE_INCOMPLETE), and readiness reports it as
+  -- incomplete/missing. The 0 = 0 * 506 coverage comparison would otherwise
+  -- pass trivially, so reject zero active songs explicitly.
+  select count(*)
+    into v_active_count
+  from public.bora_engine_song_state
+  where lifecycle = 'ACTIVE';
+
+  if v_active_count = 0 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'gaps', jsonb_build_array(jsonb_build_object(
+        'hourIndex', p_closed_hour,
+        'reason', 'no-active-songs'
+      ))
+    );
+  end if;
+
+  select count(*)
+    into v_complete_count
+  from public.bora_engine_hourly_input_coverage c
+  join public.bora_engine_song_state s on s.song_id = c.song_id
+  where s.lifecycle = 'ACTIVE'
+    and c.status = 'COMPLETE'
+    and (
+      (c.input_type in ('VOTES', 'SEED')
+        and c.hour_index = p_closed_hour)
+      or
+      (c.input_type in ('YOUTUBE', 'SPOTIFY', 'BOOMPLAY')
+        and c.hour_index between p_closed_hour - 167 and p_closed_hour)
+    );
+
+  if v_complete_count <> v_active_count * 506 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'gaps', jsonb_build_array(jsonb_build_object(
+        'hourIndex', p_closed_hour,
+        'reason', 'coverage-incomplete',
+        'expected', v_active_count * 506,
+        'complete', v_complete_count,
+        'missing', greatest(v_active_count * 506 - v_complete_count, 0)
       ))
     );
   end if;
@@ -203,7 +254,7 @@ declare
   v_eligible_at timestamptz;
   v_now timestamptz := clock_timestamp();
 begin
-  if auth.role() <> 'service_role' then
+  if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'BORA_ENGINE_WORKER_REQUIRED';
   end if;
   if p_closed_hour is null
@@ -303,8 +354,10 @@ set search_path = public, pg_temp
 as $$
 declare
   v_run public.bora_engine_hourly_runs%rowtype;
+  v_active_count bigint;
+  v_complete_count bigint;
 begin
-  if auth.role() <> 'service_role' then
+  if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'BORA_ENGINE_WORKER_REQUIRED';
   end if;
 
@@ -319,6 +372,54 @@ begin
     or v_run.lease_token <> p_lease_token
     or v_run.lease_expires_at <= clock_timestamp() then
     raise exception 'BORA_ENGINE_STALE_LEASE';
+  end if;
+
+  -- Readiness gate: require complete input coverage before providing a usable snapshot.
+  -- Only COMPLETE coverage establishes that an empty hour was checked; missing rows
+  -- are not reinterpreted as zero values.
+  -- Zero active songs is a degenerate state: bootstrap explicitly rejects it
+  -- (BORA_ENGINE_BOOTSTRAP_STATE_INCOMPLETE), and readiness reports it as
+  -- incomplete/missing. The 0 = 0 * 506 coverage comparison would otherwise
+  -- pass trivially, so reject zero active songs explicitly.
+  select count(*)
+    into v_active_count
+  from public.bora_engine_song_state
+  where lifecycle = 'ACTIVE';
+
+  if v_active_count = 0 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'no-active-songs',
+      'closedHour', p_closed_hour,
+      'expected', 0,
+      'complete', 0,
+      'missing', 0
+    );
+  end if;
+
+  select count(*)
+    into v_complete_count
+  from public.bora_engine_hourly_input_coverage c
+  join public.bora_engine_song_state s on s.song_id = c.song_id
+  where s.lifecycle = 'ACTIVE'
+    and c.status = 'COMPLETE'
+    and (
+      (c.input_type in ('VOTES', 'SEED')
+        and c.hour_index = p_closed_hour)
+      or
+      (c.input_type in ('YOUTUBE', 'SPOTIFY', 'BOOMPLAY')
+        and c.hour_index between p_closed_hour - 167 and p_closed_hour)
+    );
+
+  if v_complete_count <> v_active_count * 506 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'coverage-incomplete',
+      'closedHour', p_closed_hour,
+      'expected', v_active_count * 506,
+      'complete', v_complete_count,
+      'missing', greatest(v_active_count * 506 - v_complete_count, 0)
+    );
   end if;
 
   return public.bora_engine_hourly_snapshot(p_closed_hour);
@@ -339,7 +440,7 @@ as $$
 declare
   v_updated integer;
 begin
-  if auth.role() <> 'service_role' then
+  if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'BORA_ENGINE_WORKER_REQUIRED';
   end if;
 
@@ -382,9 +483,10 @@ declare
   v_step_count integer;
   v_song_count integer;
   v_active_count integer;
+  v_complete_count integer;
   v_updated integer;
 begin
-  if auth.role() <> 'service_role' then
+  if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'BORA_ENGINE_WORKER_REQUIRED';
   end if;
   if jsonb_typeof(p_expected_state) is distinct from 'object'
@@ -440,6 +542,56 @@ begin
   lock table public.bora_engine_platform_observations in share mode;
   lock table public.bora_engine_hourly_input_coverage in share mode;
   lock table public.bora_engine_hourly_closures in share mode;
+
+  -- Independent readiness enforcement inside the transaction: coverage must be
+  -- complete before commit. Do not rely on the worker having called readiness
+  -- beforehand. Tables are locked in share mode above so ingestion cannot change
+  -- validated coverage before commit; lock order matches existing convention
+  -- (state head first, then data tables) to avoid deadlocks.
+  -- Zero active songs is a degenerate state: bootstrap explicitly rejects it
+  -- (BORA_ENGINE_BOOTSTRAP_STATE_INCOMPLETE), and readiness reports it as
+  -- incomplete/missing. The 0 = 0 * 506 coverage comparison would otherwise
+  -- pass trivially, so reject zero active songs explicitly.
+  select count(*)
+    into v_active_count
+  from public.bora_engine_song_state
+  where lifecycle = 'ACTIVE';
+
+  if v_active_count = 0 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'no-active-songs',
+      'closedHour', p_closed_hour,
+      'expected', 0,
+      'complete', 0,
+      'missing', 0
+    );
+  end if;
+
+  select count(*)
+    into v_complete_count
+  from public.bora_engine_hourly_input_coverage c
+  join public.bora_engine_song_state s on s.song_id = c.song_id
+  where s.lifecycle = 'ACTIVE'
+    and c.status = 'COMPLETE'
+    and (
+      (c.input_type in ('VOTES', 'SEED')
+        and c.hour_index = p_closed_hour)
+      or
+      (c.input_type in ('YOUTUBE', 'SPOTIFY', 'BOOMPLAY')
+        and c.hour_index between p_closed_hour - 167 and p_closed_hour)
+    );
+
+  if v_complete_count <> v_active_count * 506 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'coverage-incomplete',
+      'closedHour', p_closed_hour,
+      'expected', v_active_count * 506,
+      'complete', v_complete_count,
+      'missing', greatest(v_active_count * 506 - v_complete_count, 0)
+    );
+  end if;
 
   v_snapshot := public.bora_engine_hourly_snapshot(p_closed_hour);
   if v_snapshot ->> 'status' <> 'ready'

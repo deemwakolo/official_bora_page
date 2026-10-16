@@ -106,16 +106,6 @@ export default function ChartWrapper({
     }
 
     /**
-     * HATUA YA KWANZA:
-     * HIFADHI NAFASI YA KILA WIMBO KABLA YA KURA.
-     */
-    const previousRanks = new Map<string, number>();
-
-    songs.forEach((song, index) => {
-      previousRanks.set(song.id, index + 1);
-    });
-
-    /**
      * HATUA YA PILI:
      * BADILISHA MOMENTUM INSTANTLY KWENYE UI.
      */
@@ -216,52 +206,15 @@ export default function ChartWrapper({
        * FEEDBACK YA CLICK ILIKWISHA MWANZO.
        */
 
-      /**
-       * HATUA YA SABA:
-       * HIFADHI RANK MPYA NA RANK YA ZAMANI.
-       */
-      const rankUpdates = rankedSongs
-        .filter((song) => {
-          const oldRank = previousRanks.get(song.id);
-
-          return (
-            oldRank !== undefined &&
-            oldRank !== song.slot_number
-          );
-        })
-        .map((song) => ({
-          id: song.id,
-          slot_number: song.slot_number,
-          previous_rank:
-            previousRanks.get(song.id) ?? null,
-        }));
-
-      /**
-       * UPDATE KILA WIMBO ULIOBADILISHA NAFASI.
-       */
-      for (const update of rankUpdates) {
-        const { error: rankError } = await supabase
-          .from('songs')
-          .update({
-            slot_number: update.slot_number,
-            previous_rank: update.previous_rank,
-          })
-          .eq('id', update.id);
-
-        if (rankError) {
-          console.error(
-            'BORA_RANK_SYNC_FAILURE:',
-            rankError
-          );
-        }
-      }
+      // Canonical ranks (slot_number / previous_rank) are no longer
+      // persisted from the browser. Display order is derived client-side
+      // from momentum_score (see reRanked/rankedSongs above). Persisting
+      // ranks is an administrator-only concern (updateSlot) — see
+      // migration 0019. The previous_rank movement indicator may show a
+      // stale value until reload or an administrator updates ranks.
 
       console.log(
         `BORA_SIGNAL: ${type.toUpperCase()} registered for ID: ${id}`
-      );
-
-      console.log(
-        `BORA_RANK_SYNC: ${rankUpdates.length} chart positions updated.`
       );
 
       /**

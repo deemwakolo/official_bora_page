@@ -24,6 +24,26 @@ alter table public.bora_engine_bootstrap_approvals
 revoke all on table public.bora_engine_bootstrap_approvals
   from anon, authenticated;
 
+create function public.bora_engine_reject_bootstrap_approval_mutation()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  raise exception
+    'BORA_BOOTSTRAP_APPROVAL_IMMUTABLE: approvals are append-only';
+end;
+$$;
+
+create trigger bora_engine_bootstrap_approvals_immutable
+before update or delete
+on public.bora_engine_bootstrap_approvals
+for each row
+execute function public.bora_engine_reject_bootstrap_approval_mutation();
+
+revoke execute on function public.bora_engine_reject_bootstrap_approval_mutation()
+from public, anon, authenticated;
+
 create function public.bora_engine_check_hour(
   p_closed_hour bigint
 )
@@ -35,6 +55,7 @@ as $$
 declare
   v_status text;
   v_reference_hour bigint;
+  v_active_count bigint;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'BORA_ENGINE_WORKER_REQUIRED';
@@ -46,8 +67,22 @@ begin
   where closed_hour = p_closed_hour
   for share;
 
+  if not found then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'missing-hourly-run'
+    );
+  end if;
+
   if v_status = 'completed' then
     return jsonb_build_object('status', 'already-completed');
+  end if;
+
+  if v_status not in ('pending', 'processing', 'failed') then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'ineligible-run-status'
+    );
   end if;
 
   select reference_hour
@@ -60,6 +95,23 @@ begin
   end if;
   if v_reference_hour <> p_closed_hour then
     return jsonb_build_object('status', 'reference-hour-mismatch');
+  end if;
+
+  -- Zero active songs is a degenerate state: bootstrap explicitly rejects it
+  -- (BORA_ENGINE_BOOTSTRAP_STATE_INCOMPLETE), readiness reports it as
+  -- incomplete/missing, and snapshot/load/commit reject it with 'no-active-songs'.
+  -- The pre-claim check must use the same gate so a worker cannot claim an hour
+  -- that the atomic operations will refuse.
+  select count(*)
+    into v_active_count
+  from public.bora_engine_song_state
+  where lifecycle = 'ACTIVE';
+
+  if v_active_count = 0 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'no-active-songs'
+    );
   end if;
 
   return jsonb_build_object('status', 'ready');

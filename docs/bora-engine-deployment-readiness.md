@@ -31,6 +31,7 @@ credentials, or user IDs.
 | --- | --- |
 | `BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY` | Private credential used by `lib/bora-engine/persistence.ts` for privileged Engine RPCs. It must remain server-only and must never be included in a client bundle. |
 | `BORA_ENGINE_OPERATOR_USER_IDS` | Server-only comma-separated allowlist of explicitly approved Supabase user IDs. `lib/bora-engine/operator-authorization.ts` matches the verified `auth.getUser()` identity against this list. Missing or malformed configuration fails closed. |
+| `BORA_ADMIN_USER_IDS` | Server-only comma-separated allowlist of Supabase user UUIDs authorized as **site administrators**. `lib/administrator-authorization.ts` matches the verified `auth.getUser()` identity against this list. This is a **distinct scope** from `BORA_ENGINE_OPERATOR_USER_IDS` (Engine operators and site administrators are not automatically equated) and must contain the same administrator identities that carry the database `app_metadata.role = 'bora_administrator'` claim (see section 6). Missing or malformed configuration fails closed. |
 | `BORA_YOUTUBE_API_KEY` | Private key used by the server-only YouTube Data API v3 client. It is required for provider requests and must never be exposed to browser code, responses, or logs. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Existing Supabase project URL used to construct both the trusted Engine client and the existing authenticated server client. It is public configuration, not a credential. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Existing publishable/anon credential used by the cookie-backed Supabase auth client to verify the current operator session. It is not the privileged Engine credential. |
@@ -170,3 +171,108 @@ All gates are **pending** based on repository evidence:
 
 Do not activate the public chart integration until all preceding gates have
 evidence and the Engine output/publication contract has been reviewed.
+
+## 6. Administrator authorization contract (site-admin writes)
+
+Phase 2 introduced an explicit administrator authorization policy for
+privileged application writes. This section documents that contract from
+repository source. It is **documentation only**; it is not authorization to
+execute any step, and it does not establish any deployed state.
+
+### 6.1 Protected write surfaces
+
+The following server actions require administrator authorization before they
+touch the database. `getRegistry()` is intentionally a **public read** and is
+not gated.
+
+| Server action | File | Privileged write |
+| --- | --- | --- |
+| `updateSlot` | `lib/admin-actions.ts` | Administrative upsert on `public.songs` |
+| `saveMomentChartEdition` | `lib/moment-charts-actions.ts` | RPC `save_moment_chart_edition` |
+| `saveNewsHubItem` | `lib/news-hub-actions.ts` | RPC `save_news_hub_item` |
+| `saveTrendingPlatform` | `lib/trending-actions.ts` | RPC `save_trending_platform` |
+| `saveUIConfig` | `lib/ui-config-actions.ts` | RPC `save_ui_room_config` |
+
+### 6.2 Two required, independent authorization sources
+
+Administrator access requires **both** of the following. They are independent
+sources and must contain matching administrator identities:
+
+1. **Server-only allowlist — `BORA_ADMIN_USER_IDS`.**
+   `lib/administrator-authorization.ts` (`authorizeBoraAdministrator`) verifies
+   the session with `supabase.auth.getUser()` and matches the verified user id
+   against the comma-separated UUID allowlist in this server-only environment
+   variable (no `NEXT_PUBLIC_` prefix, so it is never shipped to the browser).
+   The pure decision lives in `lib/administrator-allowlist.ts`.
+
+2. **Trusted database role claim — `app_metadata.role = 'bora_administrator'`.**
+   Migration `0018_bora_engine_administrator_authorization.sql` adds
+   `public.bora_author_is_administrator()`, which reads the caller's verified
+   JWT (`auth.jwt() -> 'app_metadata' ->> 'role'`). The four privileged RPCs
+   call it and raise `SQLSTATE 42501` (`BORA_ADMIN_REQUIRED`) for
+   non-administrators. `app_metadata` is server-controlled and is **not**
+   editable by a user through ordinary client APIs (unlike `user_metadata`,
+   which the helper does not read).
+
+`BORA_ADMIN_USER_IDS` is **not** the same as `BORA_ENGINE_OPERATOR_USER_IDS`.
+Engine operator access (`lib/bora-engine/operator-authorization.ts`) and site
+administrator access are separate scopes and are not automatically equated.
+
+### 6.3 Fail-closed behavior
+
+Expected outcomes, from source:
+
+- Missing or malformed `BORA_ADMIN_USER_IDS`: server authorization returns
+  `authorization-unavailable` and the write is denied (fail closed).
+- Authenticated user absent from the allowlist: `forbidden`, denied.
+- No verified session: `unauthenticated`, denied.
+- Missing or incorrect `app_metadata.role` claim: the privileged RPC raises
+  `BORA_ADMIN_REQUIRED` and is denied.
+- Mismatched identity configuration (present in one source but not the other):
+  the operation may be denied by one of the two layers even if the other layer
+  would allow it.
+- A **removed** role claim may remain effective in already-issued JWTs until
+  those tokens are refreshed or expire.
+
+`scripts/verify-bora-administrator-authorization.mjs` exercises the pure
+decision core (allowlist parsing and the authorization decision) with **no
+database access**. Those checks prove the decision logic only; they do **not**
+prove deployed database grants, RLS, or JWT claim contents.
+
+### 6.4 Safe deployment sequence (documentation, not authorization)
+
+1. Identify the approved administrator identities through the project's
+   authorized administrative process.
+2. Read-only inspect the target project's migration history and prerequisite
+   functions; confirm the prerequisites for migration `0018` (tables and the
+   original functions from `0002`–`0008`) are present.
+3. Confirm the target project's issued JWTs expose the expected `app_metadata`
+   claim. Do not modify user accounts to perform this check.
+4. Establish an approved, secure procedure to provision matching identities in
+   both authorization sources.
+5. Configure the server-only `BORA_ADMIN_USER_IDS` variable through the
+   approved secret-management workflow.
+6. Review and approve migration `0018` separately.
+7. Apply the migration only through the approved database change workflow.
+8. Run the authorization integration harness
+   (`scripts/verify-bora-administrator-authorization.mjs`, live section) against
+   an isolated, non-production Supabase project.
+9. Confirm ordinary authenticated users are denied, an authorized administrator
+   succeeds, and existing public reads remain functional before considering
+   production rollout.
+
+These steps document intent only. They are **not** authorization to execute any
+of them.
+
+### 6.5 Unresolved risk: direct `songs` writes
+
+The deployed `public.songs` table's grants and RLS policies remain
+**unverified** from repository source (no tracked migration defines the `songs`
+table). The `updateSlot` server-action gate protects only that server action;
+it does **not** protect direct browser writes to `songs` performed by the
+legacy voting path in `app/components/ChartWrapper.tsx`. If `songs` has a
+permissive `UPDATE` policy for `authenticated`/`anon`, an ordinary user may
+still write `songs` directly. This requires a read-only inspection of the
+deployed `songs` policies and, if needed, a separate approved change. This
+phase does not change the legacy voting implementation and does not enable
+secure voting.

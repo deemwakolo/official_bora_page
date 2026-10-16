@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { createClient } from './supabase/server';
+import { authorizeBoraAdministrator } from './administrator-authorization';
 import { getNewsHub } from './news-hub';
 
 import { boraParse } from './validation/boraValidation';
@@ -102,16 +103,15 @@ export async function saveNewsHubItem(
   try {
     const supabase = await createClient();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // ADMINISTRATOR AUTHORIZATION (server-side write boundary).
+    // News Hub editorial writes are privileged. Require a verified
+    // site administrator, not merely any authenticated account.
+    const authorization = await authorizeBoraAdministrator();
+    if (authorization.status !== 'authorized') {
       return {
         success: false,
         error:
-          'Unauthorized: you must be signed in as an administrator to save news.',
+          'Unauthorized: administrator access is required to save news.',
       };
     }
 
