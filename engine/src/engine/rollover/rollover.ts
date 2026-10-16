@@ -70,7 +70,7 @@
 import { getActiveWindow } from '../window/hours';
 import { calculateHourlyC } from '../votes/threshold';
 import { seedHourlyRunway, validateSeededHourlyC } from '../seed/seed';
-import { updatePersistentKura } from '../kura/persistent';
+import { updatePersistentKuraWithTrace } from '../kura/persistent';
 import { evaluateChart } from '../evaluation/chart';
 import type { EngineSong, ChartEvaluationResult } from '../evaluation/chart';
 import type {
@@ -527,8 +527,10 @@ export function rolloverHour(
       };
     }
 
-    // 4. Phase 9 owns the recurrence. Injection precedes decay.
-    const updated = updatePersistentKura(
+    // 4. Phase 9 owns the recurrence. Injection precedes decay. The trace
+    //    carries D_h itself, so the step records the coefficient exactly as
+    //    Phase 9 computed it — never the amount removed.
+    const updated = updatePersistentKuraWithTrace(
       song.persistentKura,
       entry.kuraFresh,
       closedC.value,
@@ -538,18 +540,18 @@ export function rolloverHour(
     }
 
     // 5. COMMIT into a NEW song object. The input song is never touched.
-    nextSongs.push({ ...song, persistentKura: updated.value });
+    nextSongs.push({ ...song, persistentKura: updated.value.persistentAfter });
 
     steps.push({
       songId: song.songId,
       hourClosed: closedHour,
       closedHourC: closedC.value,
       freshInjected: entry.kuraFresh,
-      // The amount decay removed this cycle, derived from the two committed
-      // figures rather than recomputing D_h here.
-      decayRate: song.persistentKura + entry.kuraFresh - updated.value,
+      // The D_h coefficient documented on the interface — not the amount
+      // removed, which is `before + fresh − persistentAfter`.
+      decayRate: updated.value.decayRate,
       persistentBefore: song.persistentKura,
-      persistentAfter: updated.value,
+      persistentAfter: updated.value.persistentAfter,
     });
   }
 

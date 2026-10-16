@@ -16,7 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import { rolloverHour, createSeedRunway } from './rollover';
 import { emptyBucket } from '../bucket';
-import { updatePersistentKura } from '../kura/persistent';
+import { updatePersistentKura, updatePersistentKuraWithTrace } from '../kura/persistent';
 import { C_WINDOW_HOURS, SEED_RUNWAY_HOURS, C_MAX } from '../constants';
 import type { EngineState, RolloverSong, RolloverOutcome } from './rollover';
 import type { HourIndex, HourlyCRecord, VoteBucket, PlatformSeries } from '../types';
@@ -186,7 +186,7 @@ describe('R-K: persistent Kura commitment and decay', () => {
 
     expect(committed).toBe(step.persistentAfter);
     expect(committed).toBeCloseTo(
-      step.persistentBefore + step.freshInjected - step.decayRate,
+      (step.persistentBefore + step.freshInjected) * (1 - step.decayRate),
       12,
     );
   });
@@ -243,10 +243,19 @@ describe('R-K: persistent Kura commitment and decay', () => {
       H,
     );
     const step = stepFor(out, 'a');
-    const direct = updatePersistentKura(12, step.freshInjected, 1);
-    if (!direct.ok) throw new Error(direct.error.message);
-    expect(step.decayRate).toBeCloseTo(12 + step.freshInjected - direct.value, 12);
-    expect(step.persistentAfter).toBeCloseTo(direct.value, 12);
+    const trace = updatePersistentKuraWithTrace(12, step.freshInjected, 1);
+    if (!trace.ok) throw new Error(trace.error.message);
+    // decayRate is the D_h coefficient, exactly as Phase 9 computed it —
+    // within [0, 0.0025], never the amount removed.
+    expect(step.decayRate).toBeCloseTo(trace.value.decayRate, 12);
+    expect(step.decayRate).toBeGreaterThan(0);
+    expect(step.decayRate).toBeLessThanOrEqual(0.0025);
+    // The amount removed is a separate quantity, derived from the balances.
+    expect(12 + step.freshInjected - step.persistentAfter).toBeCloseTo(
+      trace.value.decayed,
+      12,
+    );
+    expect(step.persistentAfter).toBeCloseTo(trace.value.persistentAfter, 12);
   });
 
   it('matches Phase 9 exactly for the committed value', () => {
@@ -611,6 +620,7 @@ describe('R-D: determinism, immutability, purity', () => {
 
       for (const step of out.steps) {
         expect(step.decayRate).toBeGreaterThanOrEqual(0);
+        expect(step.decayRate).toBeLessThanOrEqual(0.0025);
         expect(step.persistentAfter).toBeGreaterThanOrEqual(0);
         expect(step.hourClosed).toBe(H);
         expect(step.closedHourC).toBeLessThanOrEqual(C_MAX);
@@ -638,7 +648,7 @@ describe('R-X: structural — composition, not duplicated mathematics', () => {
     const body = await bodyOf('./rollover.ts');
     for (const fn of [
       'evaluateChart(',
-      'updatePersistentKura(',
+      'updatePersistentKuraWithTrace(',
       'seedHourlyRunway(',
       'calculateHourlyC(',
       'getActiveWindow(',

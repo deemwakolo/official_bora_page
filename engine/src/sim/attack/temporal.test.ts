@@ -463,9 +463,10 @@ describe('A-17.10: persistent Kura attacks', () => {
 
       const step = rolled.steps[0];
       // The step's own before/after pair must be self-consistent with exactly
-      // one injection and one decay: after = (before + fresh) - decay.
+      // one injection and one decay: after = (before + fresh) × (1 - D_h),
+      // where decayRate is the dimensionless D_h coefficient.
       expect(step.persistentAfter).toBeCloseTo(
-        step.persistentBefore + step.freshInjected - step.decayRate,
+        (step.persistentBefore + step.freshInjected) * (1 - step.decayRate),
         9,
       );
       // And the committed state equals what the step reported.

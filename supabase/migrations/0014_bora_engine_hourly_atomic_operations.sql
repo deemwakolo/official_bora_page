@@ -700,6 +700,93 @@ begin
     raise exception 'BORA_ENGINE_INVALID_ROLLOVER_TRACE';
   end if;
 
+  -- Reconcile every rollover step with the authoritative persisted input for
+  -- the closed hour. Engine contract (resolveHourC, rollover.ts):
+  --   * an ACTUAL bucket at (song, closed hour) takes precedence, even when it
+  --     resolves to C 0 — bucket existence decides, never bucket value;
+  --   * otherwise a persisted SEED record stands in; an ARCHIVED seed resolves
+  --     to 0 (expiry is selection, never deletion);
+  --   * otherwise the hour has no input and C is exactly 0.
+  -- ACTUAL C is calculateHourlyC from the Engine's vote-threshold module
+  -- (Contract 9): C_U = 0/1/2 and C_D = 0/0.5/1 at the 0/5-vote boundaries,
+  -- C = max(0, C_U - C_D). The caller-supplied closedHourC must equal that
+  -- resolution; it is never trusted on its own. The vote/seed tables are
+  -- already locked in share mode above, so the versions recorded in the
+  -- closure rows describe exactly the input validated here.
+  if exists (
+    select 1
+    from jsonb_to_recordset(p_steps) as x(
+      "songId" text,
+      "hourClosed" bigint,
+      "closedHourC" numeric,
+      "freshInjected" numeric,
+      "decayRate" numeric,
+      "persistentBefore" numeric,
+      "persistentAfter" numeric
+    )
+    join public.bora_engine_song_state s
+      on s.song_id::text = x."songId" and s.lifecycle = 'ACTIVE'
+    where x."hourClosed" = p_closed_hour
+      and (
+        x."closedHourC" is null
+        or x."closedHourC" < 0
+        or x."closedHourC" > 2
+        or x."freshInjected" is null
+        or x."freshInjected" < 0
+        or x."decayRate" is null
+        or x."decayRate" < 0
+        or x."decayRate" > 0.0025
+        or x."persistentBefore" is null
+        or x."persistentBefore" < 0
+        or x."persistentAfter" is null
+        or x."persistentAfter" < 0
+      )
+  ) then
+    raise exception 'BORA_ENGINE_INVALID_ROLLOVER_STEP';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_to_recordset(p_steps) as x(
+      "songId" text,
+      "hourClosed" bigint,
+      "closedHourC" numeric,
+      "freshInjected" numeric,
+      "decayRate" numeric,
+      "persistentBefore" numeric,
+      "persistentAfter" numeric
+    )
+    join public.bora_engine_song_state s
+      on s.song_id::text = x."songId" and s.lifecycle = 'ACTIVE'
+    left join public.bora_engine_vote_buckets b
+      on b.song_id = s.song_id and b.hour_index = p_closed_hour
+    left join public.bora_engine_seed_hours sh
+      on sh.song_id = s.song_id and sh.hour_index = p_closed_hour
+    where x."hourClosed" = p_closed_hour
+      and x."closedHourC" is distinct from case
+        when b.song_id is not null then greatest(
+          (case
+            when b.upvotes = 0 then 0
+            when b.upvotes < 5 then 1
+            else 2
+          end)
+          - (case
+            when b.downvotes = 0 then 0
+            when b.downvotes < 5 then 0.5
+            else 1
+          end),
+          0
+        )
+        when sh.song_id is not null then case
+          when sh.lifecycle = 'ARCHIVED' then 0
+          else sh.c
+        end
+        else 0
+      end
+  ) then
+    raise exception 'BORA_ENGINE_ROLLOVER_INPUT_MISMATCH';
+  end if;
+
   insert into public.bora_engine_hourly_closures (
     closed_hour,
     song_id,
