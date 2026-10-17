@@ -5,7 +5,7 @@
 This is a source-contract review, not a database or provider check. No
 connection was made to Supabase or a provider, and no migration status was
 queried. Repository deployment-readiness documentation describes migrations
-`0012`–`0017` as unapplied drafts. Separate secure-voting documentation records
+`0012`â€“`0017` as unapplied drafts. Separate secure-voting documentation records
 historical production observations about `0010`/`0011`; those notes were not
 independently verified during this phase and must not be treated as current
 deployment evidence.
@@ -20,9 +20,9 @@ any caller.
 | Required input / capability | Exact Engine requirement | Best established source and semantics | Authorization / readiness | Persisted today vs. draft | Smallest missing step |
 | --- | --- | --- | --- | --- | --- |
 | Canonical accepted votes | Per-song, per-hour `upvotes`/`downvotes` buckets, with an hour identity and phase; the evaluation derives hourly C from bucket counts. Ingestion must count each accepted event once. The mapper's canonical source event also carries event-row ID, server time, voter reference, identity method/version, and the original idempotency key. | `public.vote_events` written by `cast_vote_secure` is the only established per-action source in the repository. `created_at` is the database acceptance timestamp; `id` is the stable row identity. The legacy vote RPC only changes aggregate counters and has no durable event ID, per-event time, voter identity, or retry key. | The secure RPC's logic is transactionally idempotent and updates the same song counters in the same transaction, but the client enables it only behind `NEXT_PUBLIC_BORA_SECURE_VOTING`; the flag is documented off by default. Do not assume all votes are present in its ledger. | Secure-vote schema/function are source files `0010`/`0011`; no Engine event importer exists. Draft `0012` has a `bora_engine_vote_events` table but stores only song, source identity, vote type, hour, and timestamp. No event-to-bucket transactional ingestion exists. | Add a future ingestion boundary keyed by `(secure_vote_events, vote_events.id)` that preserves voter/idempotency provenance and derives buckets exactly once. Include `voter_ref`, `identity_method`, `identity_version`, and `idempotency_key` in the Engine ledger or an equivalent immutable provenance record. Do not synthesize rows from legacy totals. |
-| Vote-hour coverage | Explicit evidence per active song/input/hour that votes were completely collected, including verified empty hours; missing coverage must not imply zero. For chart scoring the required C interval is `H-71 … H` inclusive. | `vote_events.created_at` can assign accepted secure events to UTC epoch hours. A complete ingest/checkpoint process can establish event coverage; the legacy aggregate-only path cannot prove individual historical hourly distribution. | Secure votes are first-party accepted events, but only the secure path produces them; its operational cutover/population must be explicit. Legacy vote history cannot be reconstructed into events. | `0012` has a primary-keyed `hourly_input_coverage` row per song/type/hour. `0014` snapshot, `0015` bootstrap, and `0016` readiness only require/check vote coverage at the one closed/reference hour, not the whole 72-hour C window. No event ingest or coverage writer exists. | Establish an immutable ingestion checkpoint and coverage writer; require complete vote coverage for every hour used for C, or define an equivalent auditable history-completeness proof before the evaluator can safely distinguish checked-empty from missing. |
-| Seed-hour coverage and values | Explicit hour-indexed C seed values (0–2) with provenance; the Engine uses a seed for an hour without actual votes. Missing seed records are not evidence of zero seed. For safe evaluation, each hour in the C window needs complete vote/seed resolution. | No authoritative seed provider or governed seed-generation/approval process is established in the inspected source. The Engine adapter accepts explicitly supplied seed-hour records; the evaluation consumes supplied seed values. | Authorization is not the question for a BORA-generated seed, but the authority, policy, and approval to create/replace it are unresolved. | Draft `0012` has `bora_engine_seed_hours` and `SEED` coverage. Bootstrap/readiness check only the reference hour for seed coverage. No seed writer or coverage production path exists. | Approve a deterministic seed policy and trusted, auditable writer. Extend resolution coverage across the 72-hour C window; never auto-fill missing seed hours with a generated zero. |
-| YouTube | A non-negative `video_views` value in `views_per_hour` for each song and hour, within the platform window `H-167 … H`, with source identity, exact interval semantics, and corrections. | `videos.list(part=statistics)` returns cumulative `viewCount`, not an hourly count. The current snapshot contract records exact cumulative totals and retrieval time. A pair can calculate a difference, but only as a delta between reported counters. | API access is not chart-use authorization. Existing source strategy rates YouTube `not-configured`; there is no trusted server-side song/video mapping, activated collector, or defensible accepted Engine conversion. | API client, collector, snapshot validator, and derivation are application contracts/code. Draft `0017` stores cumulative snapshots separately; it explicitly says they are not Engine observations. No snapshot persistence adapter or projection writer exists. | Obtain and operate a trusted mapping/source process; obtain applicable authorization; then decide whether a separately named counter-delta metric is acceptable. Do not relabel cumulative totals or their delta as exact hourly views without validated provider semantics. |
+| Vote-hour coverage | Explicit evidence per active song/input/hour that votes were completely collected, including verified empty hours; missing coverage must not imply zero. For chart scoring the required C interval is `H-71 â€¦ H` inclusive. | `vote_events.created_at` can assign accepted secure events to UTC epoch hours. A complete ingest/checkpoint process can establish event coverage; the legacy aggregate-only path cannot prove individual historical hourly distribution. | Secure votes are first-party accepted events, but only the secure path produces them; its operational cutover/population must be explicit. Legacy vote history cannot be reconstructed into events. | `0012` has a primary-keyed `hourly_input_coverage` row per song/type/hour. `0014` snapshot, `0015` bootstrap, and `0016` readiness only require/check vote coverage at the one closed/reference hour, not the whole 72-hour C window. No event ingest or coverage writer exists. | Establish an immutable ingestion checkpoint and coverage writer; require complete vote coverage for every hour used for C, or define an equivalent auditable history-completeness proof before the evaluator can safely distinguish checked-empty from missing. |
+| Seed-hour coverage and values | Explicit hour-indexed C seed values (0â€“2) with provenance; the Engine uses a seed for an hour without actual votes. Missing seed records are not evidence of zero seed. For safe evaluation, each hour in the C window needs complete vote/seed resolution. | No authoritative seed provider or governed seed-generation/approval process is established in the inspected source. The Engine adapter accepts explicitly supplied seed-hour records; the evaluation consumes supplied seed values. | Authorization is not the question for a BORA-generated seed, but the authority, policy, and approval to create/replace it are unresolved. | Draft `0012` has `bora_engine_seed_hours` and `SEED` coverage. Bootstrap/readiness check only the reference hour for seed coverage. No seed writer or coverage production path exists. | Approve a deterministic seed policy and trusted, auditable writer. Extend resolution coverage across the 72-hour C window; never auto-fill missing seed hours with a generated zero. |
+| YouTube | A non-negative `video_views` value in `views_per_hour` for each song and hour, within the platform window `H-167 â€¦ H`, with source identity, exact interval semantics, and corrections. | `videos.list(part=statistics)` returns cumulative `viewCount`, not an hourly count. The current snapshot contract records exact cumulative totals and retrieval time. A pair can calculate a difference, but only as a delta between reported counters. | API access is not chart-use authorization. Existing source strategy rates YouTube `not-configured`; there is no trusted server-side song/video mapping, activated collector, or defensible accepted Engine conversion. | API client, collector, snapshot validator, and derivation are application contracts/code. Draft `0017` stores cumulative snapshots separately; it explicitly says they are not Engine observations. No snapshot persistence adapter or projection writer exists. | Obtain and operate a trusted mapping/source process; obtain applicable authorization; then decide whether a separately named counter-delta metric is acceptable. Do not relabel cumulative totals or their delta as exact hourly views without validated provider semantics. |
 | Spotify | A non-negative `track_streams` value in `streams_per_hour` per song/hour, with source identity and exact interval coverage. | No platform-wide per-track hourly stream-count source is established by the referenced Web API. Popularity and user playback history do not meet the metric. A rights-holder, artist, label, or licensed report is only a lead unless it provides the measure and interval. | Existing feasibility decision: no-go for standard Spotify Web API-derived ranking absent applicable written permission or exception. Existing assessment is `not-authorized`. | No Spotify collector or authorized reporting adapter is implemented; only storage/validation contracts and draft migration support exist. | Obtain written authorization for the intended derived ranking use and identify an accessible source with auditable hourly semantics and coverage; otherwise Spotify remains blocking. |
 | Boomplay | A non-negative `track_streams` value in `streams_per_hour` per song/hour, with exact interval coverage and provenance. | No public/authorized track-level measurement interface is established. An artist/distributor report is an unverified lead; sales units/reporting days cannot be called hourly plays. | Existing feasibility decision: no-go pending a suitable authorized interface and explicit rights for comparative ranking/publication. Assessment is `unsupported`. | Generic platform observation and coverage schemas exist only as drafts; no Boomplay collector, source mapping, or provider integration exists. | Obtain written source and chart-use authorization and establish actual metric/unit/interval, report delays, coverage, corrections, and stable record identity. |
 | Initial Engine state and history | Explicit state reference hour, lifecycle, K, persistent Kura, vote buckets, seed timeline, and platform observations sufficient for evaluation; the persisted state revision must be known. | No repository-backed authoritative reconciliation source for a complete initial Engine state is established. Public ranks, `momentum_score`, aggregate counters, and legacy history are not acceptable substitutes for reconstructed hourly history. | Requires explicit operator approval and source-by-source reconciliation. No automatic/default initialization is valid. | Persistence code can call the bootstrap RPC. Draft `0015` accepts only a payload matching persisted rows and initializes revision `0`; it refuses incomplete coverage and existing rollover history. No bootstrap data is provided. | Prepare and approve the exact initial state and complete history/coverage; do not infer absent state, K, or hourly history. |
@@ -90,7 +90,7 @@ the Phase 20 publication gate's reused single-hour vote/seed check is
 insufficient to prove safe C evaluation over 72 hours.
 
 For a 72-hour chart evaluation, the minimum explicit coverage set is 72 vote
-and 72 seed outcomes per active song, in addition to `3 × 168 = 504` platform
+and 72 seed outcomes per active song, in addition to `3 Ã— 168 = 504` platform
 outcomes: **648 input-coverage slots per active song**, before any extra
 source-version metadata. The existing 0015 bootstrap check expects 506
 (`2 + 504`) per active song because it covers vote and seed only at its one
@@ -120,7 +120,7 @@ when available, but is not substituted for the stable source event identity.
 Optional voter reference and idempotency key may be absent/null. Identity
 method and version must either both be present and valid or both be
 unavailable. A malformed supplied optional value is invalid input, not
-“unavailable.” The pure validator checks shape and syntax only: it cannot prove
+â€œunavailable.â€ The pure validator checks shape and syntax only: it cannot prove
 that a voter reference was verified or that the row was committed. A future
 trusted server loader must supply the source row; no endpoint, worker, live
 vote wiring, or persistence operation was added.
@@ -134,9 +134,10 @@ vote wiring, or persistence operation was added.
 - A different key returned for the lookup is an `identity-mismatch`; the same
   key with any core or available provenance field changed is a
   `payload-mismatch`. Both are `conflicting-identity`, never an update.
-- Missing optional provenance is normalized to null; a later retry that adds
-  or changes that provenance is therefore not silently merged. Reconciliation
-  or an explicitly authorized enrichment/correction procedure would be needed.
+- Canonical provenance is required before an event can be accepted. A retry
+  must match the complete canonical payload, including every provenance field;
+  a changed field is a `conflicting-identity` with `payload-mismatch`, never
+  an automatic merge or update.
 
 The outcome union also reserves `ingested`, `invalid-input`,
 `persistence-failure`, and `commit-unknown` for a future operation. Those are
@@ -145,7 +146,7 @@ does not persist an event, update a bucket, or itself return a durable success.
 
 ### Event accounting versus complete history
 
-The Engine's C window is exactly 72 inclusive clock hours, `H-71 … H`; event
+The Engine's C window is exactly 72 inclusive clock hours, `H-71 â€¦ H`; event
 time assigns each accepted vote to one of those hours using the original
 server-committed timestamp. One successfully ingested event proves neither
 that the rest of its hour was ingested nor that any other window hour was
@@ -202,7 +203,7 @@ changed in this phase.
 ## Phase 24: unified historical vote/seed readiness
 
 The shared `assessVoteSeedHistoryCoverage` contract now defines vote and seed
-coverage over the Engine's unchanged 72-hour C window, `H-71 … H`, using UTC
+coverage over the Engine's unchanged 72-hour C window, `H-71 â€¦ H`, using UTC
 epoch-hour indexes consistent with `getActiveWindow`. Internal per-song and
 chart eligibility in `source-readiness.ts` both use this helper. The
 publication gate delegates to chart eligibility, so it cannot return `ready`
@@ -286,7 +287,7 @@ snapshots as separate evidence. The smallest future contract change, if source
 and chart-use rights are confirmed, is a distinct interval-delta measurement
 variant that records `periodStart`, exclusive `periodEnd`, both snapshot IDs,
 both exact capture times, source/version/correction lineage, and an explicit
-semantic such as “reported cumulative-counter delta over this interval.”
+semantic such as â€œreported cumulative-counter delta over this interval.â€
 Its hour identity must come from the measured interval, not a fabricated
 in-interval `observedAt`. The Engine and persistence contract must then
 explicitly decide whether that different metric is acceptable as ranking
@@ -319,19 +320,19 @@ database**.
    `0012` and `0013`; adds the hourly state head and service-role snapshot,
    claim/load/release, and atomic rollover commit. It does not initialize state
    and does not publish charts.
-6. **`0015_bora_engine_state_bootstrap.sql`.** Requires `0012`–`0014`; adds
+6. **`0015_bora_engine_state_bootstrap.sql`.** Requires `0012`â€“`0014`; adds
    explicit approval and initializes state only when supplied state/coverage
    match the persisted snapshot. It does not create historical data.
-7. **`0016_bora_engine_readiness.sql`.** Requires `0012`–`0015`; read-only
+7. **`0016_bora_engine_readiness.sql`.** Requires `0012`â€“`0015`; read-only
    readiness, with the vote/seed window limitation described above.
 8. **`0017_bora_engine_youtube_snapshot_history.sql`.** Requires only `0012`
-   for its `songs` foreign key and is otherwise independent of `0013`–`0016`.
+   for its `songs` foreign key and is otherwise independent of `0013`â€“`0016`.
    Applying it after `0016` preserves the repository's numeric order but is not
    a semantic dependency.
 
-The main Engine draft chain is therefore `0012 → 0013 → 0014 → 0015 → 0016`,
+The main Engine draft chain is therefore `0012 â†’ 0013 â†’ 0014 â†’ 0015 â†’ 0016`,
 with `0017` after `0012` (conveniently last). If using secure-vote events,
-`0010 → 0011` must separately precede any consumer that expects their source
+`0010 â†’ 0011` must separately precede any consumer that expects their source
 rows.
 
 ### Draft-chain risks to resolve before a controlled environment
@@ -501,8 +502,8 @@ The internal consumers now apply separate evidence requirements:
 
 | Consumer | Required coverage |
 | --- | --- |
-| Evaluation vote/seed history | For every active song, both vote and seed history for every UTC epoch hour `H-71 … H`, with a separate authoritative source and evidence identity/revision for each song, input kind, and hour. |
-| Evaluation platform history | For every active song, each required platform, and all 168 hours `H-167 … H`, source-matched usable evidence and a separately supplied per-song/platform/hour authority. |
+| Evaluation vote/seed history | For every active song, both vote and seed history for every UTC epoch hour `H-71 â€¦ H`, with a separate authoritative source and evidence identity/revision for each song, input kind, and hour. |
+| Evaluation platform history | For every active song, each required platform, and all 168 hours `H-167 â€¦ H`, source-matched usable evidence and a separately supplied per-song/platform/hour authority. |
 | Hourly rollover | Vote and seed evidence for the one closed transition hour, independently, plus each required platform for its existing 168-hour interval. This remains distinct from the evaluation's 72-hour history check. |
 | Publication gate | Reuses evaluation eligibility: the complete 72-hour vote/seed history and 168-hour platform history must qualify before a publication candidate can be ready. This is still an unwired pure gate, not a publisher. |
 
