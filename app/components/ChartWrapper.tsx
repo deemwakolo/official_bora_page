@@ -79,31 +79,61 @@ export default function ChartWrapper({
           );
         }
 
-        // STEP 2 — best-effort Engine handoff AFTER the vote is committed.
-        // `result.eventId` carries the canonical event ID for BOTH the
-        // 'accepted' and the 'duplicate' outcome (an exact retry returns the
-        // original committed event), so a previously failed handoff can be
-        // re-delivered here. Delivery problems are logged only — they never
-        // revert the accepted vote, decrement a counter, or surface a
-        // vote-rejected result. The durable ingest RPC (`bora_engine_ingest_
-        // vote_event`, Step 3) does not exist yet, so a pending delivery is
-        // the expected state until it ships.
+        // STEP 3 — best-effort Engine handoff AFTER the vote is committed.
+        // The action returns the normalized application contract
+        // (`VoteEventIngestionOutcome`); raw RPC statuses never reach this
+        // component. `result.eventId` carries the canonical event ID for
+        // BOTH the 'accepted' and 'duplicate' outcome, so a previously
+        // failed handoff can be re-delivered, and the durable
+        // reconciliation path (`runSecureVoteReconciliation`) replays
+        // anything left commit-unknown after the request has ended.
+        // Delivery problems are log-only — they never revert the accepted
+        // vote, decrement a counter, or surface a vote-rejected result —
+        // and there is no legacy-RPC fallback.
         if (result.eventId) {
           try {
-            const delivery = await ingestAcceptedVoteEvent(result.eventId);
+            const outcome = await ingestAcceptedVoteEvent(result.eventId);
 
-            if (!delivery.ok) {
-              console.error(
-                'BORA_ENGINE_DELIVERY_PENDING',
-                result.eventId,
-                delivery.reason,
-              );
+            if (
+              outcome.status !== 'ingested' &&
+              outcome.status !== 'already-ingested'
+            ) {
+              if (outcome.status === 'persistence-failure') {
+                console.error(
+                  'BORA_ENGINE_DELIVERY_PENDING',
+                  result.eventId,
+                  outcome.errorCode,
+                );
+              } else if (outcome.status === 'invalid-input') {
+                console.error(
+                  'BORA_ENGINE_DELIVERY_BLOCKED',
+                  result.eventId,
+                  outcome.reasons.join(','),
+                );
+              } else if (outcome.status === 'conflicting-identity') {
+                console.error(
+                  'BORA_ENGINE_DELIVERY_BLOCKED',
+                  result.eventId,
+                  outcome.conflict,
+                );
+              } else {
+                // commit-unknown: the commit outcome could not be
+                // established; durable reconciliation replays it.
+                console.error(
+                  'BORA_ENGINE_DELIVERY_PENDING',
+                  result.eventId,
+                  outcome.status,
+                );
+              }
             }
-          } catch (error) {
+          } catch {
+            // Receiver exception at the RPC boundary: commit unestablished,
+            // so it is logged as pending for reconciliation, never as a
+            // rollback or a vote rejection.
             console.error(
               'BORA_ENGINE_DELIVERY_PENDING',
               result.eventId,
-              error,
+              'receiver-exception',
             );
           }
         }

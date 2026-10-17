@@ -1,7 +1,11 @@
 import 'server-only';
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import type { CanonicalAcceptedVoteEvent } from './vote-event';
+import type {
+  CanonicalAcceptedVoteEvent,
+  VoteIdentityMethod,
+  VoteType,
+} from './vote-event';
 
 /**
  * STEP 2 — canonical secure-vote source reader (server-only).
@@ -23,6 +27,45 @@ import type { CanonicalAcceptedVoteEvent } from './vote-event';
  *  - query failure          -> throws `SECURE_VOTE_SOURCE_READ_FAILED`
  *  - unknown event ID       -> returns `null` (not an error)
  */
+
+/** Verified against migration 0010: public.vote_events column set. */
+export const SECURE_VOTE_SOURCE_COLUMNS =
+  'id, song_id, vote_type, voter_ref, identity_method, identity_version, idempotency_key, created_at';
+
+/** One `public.vote_events` row as serialized by PostgREST. */
+export interface SecureVoteSourceRow {
+  readonly id: string;
+  readonly song_id: string;
+  readonly vote_type: VoteType;
+  readonly voter_ref: string;
+  readonly identity_method: VoteIdentityMethod;
+  readonly identity_version: number;
+  readonly idempotency_key: string;
+  readonly created_at: string;
+}
+
+/**
+ * Map one committed source row to the canonical ingestion event. Shared by
+ * the single-event loader and the durable-reconciliation scanner so both
+ * paths deliver an identical, unmodified payload (the original committed
+ * timestamp and provenance are never regenerated).
+ */
+export function toCanonicalSecureVoteEvent(
+  row: SecureVoteSourceRow,
+): CanonicalAcceptedVoteEvent {
+  return {
+    sourceSystem: 'secure_vote_events',
+    sourceEventId: row.id,
+    songId: row.song_id,
+    voteType: row.vote_type,
+    occurredAt: row.created_at,
+    voterRef: row.voter_ref,
+    identityMethod: row.identity_method,
+    identityVersion: row.identity_version,
+    idempotencyKey: row.idempotency_key,
+  };
+}
+
 export async function loadCanonicalSecureVoteEvent(
   eventId: string,
 ): Promise<CanonicalAcceptedVoteEvent | null> {
@@ -41,21 +84,9 @@ export async function loadCanonicalSecureVoteEvent(
     },
   });
 
-  // Verified against migration 0010: public.vote_events(
-  //   id, idempotency_key, song_id, vote_type, voter_ref,
-  //   identity_method, identity_version, created_at)
   const { data, error } = await db
     .from('vote_events')
-    .select(`
-      id,
-      song_id,
-      vote_type,
-      voter_ref,
-      identity_method,
-      identity_version,
-      idempotency_key,
-      created_at
-    `)
+    .select(SECURE_VOTE_SOURCE_COLUMNS)
     .eq('id', eventId)
     .maybeSingle();
 
@@ -65,15 +96,5 @@ export async function loadCanonicalSecureVoteEvent(
 
   if (!data) return null;
 
-  return {
-    sourceSystem: 'secure_vote_events',
-    sourceEventId: data.id,
-    songId: data.song_id,
-    voteType: data.vote_type,
-    occurredAt: data.created_at,
-    voterRef: data.voter_ref,
-    identityMethod: data.identity_method,
-    identityVersion: data.identity_version,
-    idempotencyKey: data.idempotency_key,
-  };
+  return toCanonicalSecureVoteEvent(data as unknown as SecureVoteSourceRow);
 }

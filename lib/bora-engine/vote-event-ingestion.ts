@@ -268,7 +268,13 @@ export function validateVoteEventIngestionRequest(
   if (occurredAtMs === null) reasons.push('invalid-committed-timestamp');
 
   const voterRef = readOptionalString(value, 'voterRef');
-  if (!voterRef.valid || (voterRef.value !== null && !isUuid(voterRef.value))) {
+  if (
+    !voterRef.valid ||
+    voterRef.value === null ||
+    !isUuid(voterRef.value)
+  ) {
+    // secure_vote_events must carry complete canonical provenance: a missing
+    // or null voter reference is rejected, never silently normalized.
     reasons.push('invalid-voter-reference');
   }
 
@@ -301,15 +307,20 @@ export function validateVoteEventIngestionRequest(
   const hasIdentityMethod =
     identityMethod.valid && identityMethod.value !== null;
   const hasIdentityVersion = identityVersion !== null;
-  if (hasIdentityMethod !== hasIdentityVersion) {
+  if (!hasIdentityMethod || !hasIdentityVersion) {
+    // Both halves of identity provenance are mandatory for canonical
+    // secure_vote_events; partial or entirely absent provenance is rejected.
     reasons.push('incomplete-identity-provenance');
   }
 
   const idempotencyKey = readOptionalString(value, 'idempotencyKey');
   if (
     !idempotencyKey.valid ||
-    (idempotencyKey.value !== null && idempotencyKey.value.trim() === '')
+    idempotencyKey.value === null ||
+    idempotencyKey.value.trim() === ''
   ) {
+    // The original idempotency key is required provenance; retries must
+    // compare it, never regenerate or drop it.
     reasons.push('invalid-idempotency-key');
   }
 
@@ -380,6 +391,166 @@ export function assessVoteEventIngestionRetry(
     status: 'conflicting-identity',
     conflict: 'payload-mismatch',
   };
+}
+
+/**
+ * RAW DATABASE CONTRACT → APPLICATION CONTRACT boundary (Phase 3, §2).
+ *
+ * `bora_engine_ingest_vote_event` is installed on the live database outside
+ * version control; its previously inspected success vocabulary is `accepted`
+ * and `duplicate`. This function is the single place where that raw
+ * vocabulary is translated into the application-level
+ * `VoteEventIngestionOutcome` contract, so no status-compatibility logic
+ * spreads across the action, component, or persistence layers:
+ *
+ *   raw `accepted`   → `ingested`      raw `duplicate` → `already-ingested`
+ *   raw `ingested` / `already-ingested` / `invalid-input` /
+ *   `conflicting-identity` (corrected-design §B spellings) map to themselves.
+ *
+ * Evidence rules (§5): structured database codes (SQLSTATE, 5 chars, or
+ * `PGRST*`) prove a server rejection/rollback; `40001`/`40P01`/`23505` prove
+ * a clean rollback that is safe to retry as a WHOLE idempotent transaction;
+ * empty or non-database codes prove nothing about commit (transport loss →
+ * `commit-unknown`); documented raise markers resolve to their distinct
+ * typed outcomes; and an unknown or malformed response is NEVER success —
+ * its effect cannot be established, so it resolves to `commit-unknown`,
+ * recoverable only by replaying the complete idempotent transaction.
+ */
+export type VoteEventIngestionRpcAttempt =
+  | { readonly status: 'settled'; readonly outcome: VoteEventIngestionOutcome }
+  | { readonly status: 'retry-transaction'; readonly errorCode: string };
+
+const RETRYABLE_INGESTION_SQLSTATE: ReadonlySet<string> = new Set([
+  '40001',
+  '40P01',
+  '23505',
+]);
+const INGESTION_IDENTITY_CONFLICT_MARKER = 'BORA_ENGINE_EVENT_IDENTITY_CONFLICT';
+const INGESTION_WORKER_REQUIRED_MARKER = 'BORA_ENGINE_WORKER_REQUIRED';
+const INGESTION_INPUT_ERRORS: ReadonlySet<string> = new Set([
+  'invalid-request',
+  'unsupported-source-system',
+  'invalid-source-event-id',
+  'invalid-song-id',
+  'invalid-vote-type',
+  'invalid-committed-timestamp',
+  'invalid-voter-reference',
+  'invalid-identity-method',
+  'invalid-identity-version',
+  'incomplete-identity-provenance',
+  'invalid-idempotency-key',
+]);
+
+function isStructuredDatabaseErrorCode(code: string): boolean {
+  return code.startsWith('PGRST') || /^[0-9A-Z]{5}$/.test(code);
+}
+
+function readIngestionInputErrors(
+  value: unknown,
+): readonly VoteEventIngestionInputError[] {
+  if (!Array.isArray(value)) return ['invalid-request'];
+  const reasons = value.filter(
+    (entry): entry is VoteEventIngestionInputError =>
+      typeof entry === 'string' && INGESTION_INPUT_ERRORS.has(entry),
+  );
+  return reasons.length > 0 ? reasons : ['invalid-request'];
+}
+
+export function classifyVoteEventIngestionRpcResult(
+  identity: {
+    readonly sourceSystem: 'secure_vote_events';
+    readonly sourceEventId: string;
+  },
+  data: unknown,
+  error: {
+    readonly code?: string | null;
+    readonly message?: string | null;
+  } | null,
+): VoteEventIngestionRpcAttempt {
+  if (error) {
+    const code = typeof error.code === 'string' ? error.code.trim() : '';
+    const message = typeof error.message === 'string' ? error.message : '';
+
+    if (message.includes(INGESTION_IDENTITY_CONFLICT_MARKER)) {
+      return {
+        status: 'settled',
+        outcome: { status: 'conflicting-identity', conflict: 'payload-mismatch' },
+      };
+    }
+    if (message.includes(INGESTION_WORKER_REQUIRED_MARKER)) {
+      return {
+        status: 'settled',
+        outcome: {
+          status: 'persistence-failure',
+          errorCode: code
+            ? `${code}:BORA_ENGINE_WORKER_REQUIRED`
+            : INGESTION_WORKER_REQUIRED_MARKER,
+        },
+      };
+    }
+    if (code && isStructuredDatabaseErrorCode(code)) {
+      if (RETRYABLE_INGESTION_SQLSTATE.has(code)) {
+        return { status: 'retry-transaction', errorCode: code };
+      }
+      return {
+        status: 'settled',
+        outcome: { status: 'persistence-failure', errorCode: code },
+      };
+    }
+    // Transport-level failure: the commit outcome cannot be established.
+    return {
+      status: 'settled',
+      outcome: { status: 'commit-unknown', ...identity },
+    };
+  }
+
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return {
+      status: 'settled',
+      outcome: { status: 'commit-unknown', ...identity },
+    };
+  }
+
+  const status = (data as { readonly status?: unknown }).status;
+  switch (status) {
+    case 'accepted':
+    case 'ingested':
+      return { status: 'settled', outcome: { status: 'ingested', ...identity } };
+    case 'duplicate':
+    case 'already-ingested':
+      return {
+        status: 'settled',
+        outcome: { status: 'already-ingested', ...identity },
+      };
+    case 'invalid-input':
+      return {
+        status: 'settled',
+        outcome: {
+          status: 'invalid-input',
+          reasons: readIngestionInputErrors(
+            (data as { readonly reasons?: unknown }).reasons,
+          ),
+        },
+      };
+    case 'conflicting-identity':
+      return {
+        status: 'settled',
+        outcome: {
+          status: 'conflicting-identity',
+          conflict:
+            (data as { readonly conflict?: unknown }).conflict ===
+            'identity-mismatch'
+              ? 'identity-mismatch'
+              : 'payload-mismatch',
+        },
+      };
+    default:
+      // Unknown or malformed response: never success; effect unestablished.
+      return {
+        status: 'settled',
+        outcome: { status: 'commit-unknown', ...identity },
+      };
+  }
 }
 
 /** Check vote and seed completeness independently across H-71 through H. */

@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache';
 
 import { createClient } from '@/lib/supabase/server';
 import { loadCanonicalSecureVoteEvent } from '@/lib/supabase/secure-vote-source';
-import { validateVoteEventIngestionRequest } from '@/lib/bora-engine/vote-event-ingestion';
+import type { CanonicalAcceptedVoteEvent } from '@/lib/supabase/vote-event';
+import { createBoraEnginePersistence } from '@/lib/bora-engine/persistence';
+import type { VoteEventIngestionOutcome } from '@/lib/bora-engine/vote-event-ingestion';
 
 type PulseType = 'up' | 'down';
 
@@ -69,113 +71,116 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * ingestAcceptedVoteEvent — STEP 2 frontend → server → Engine handoff.
+ * ingestAcceptedVoteEvent — thin server receiver for an ACCEPTED secure
+ * vote (Phase 3).
  *
  * The browser supplies ONLY the canonical event ID returned by
  * `public.cast_vote_secure`. Every vote detail is re-read server-side from
- * the committed `public.vote_events` row
- * (`loadCanonicalSecureVoteEvent`, service role, read-only), and ownership
- * is enforced by comparing the row's `voter_ref` against the caller's
- * verified `auth.uid()` — client-supplied vote data is never trusted.
+ * the committed `public.vote_events` row, and ownership is enforced by
+ * comparing the row's `voter_ref` against the caller's verified
+ * `auth.uid()` — client-supplied vote data is never trusted.
  *
- * DURABILITY BOUNDARY (verified in this repository):
- * `bora_engine_ingest_vote_event` is a proposed Step 3 interface that does
- * NOT exist in any migration — it appears only in design docs
- * (`docs/bora-engine-corrected-transaction-design.md`,
- * `docs/bora-engine-durable-ingestion-design.md`). While it is absent,
- * PostgREST returns a missing-function error and this action resolves
- * `{ ok: false, reason: 'engine-ingestion-failed' }`, which ChartWrapper
- * logs as BORA_ENGINE_DELIVERY_PENDING. The committed vote stays accepted
- * either way. Durable Engine ingestion must NOT be reported as working
- * until the RPC actually ships.
+ * ONE application-level result contract: `VoteEventIngestionOutcome`. The
+ * raw RPC vocabulary (`accepted` / `duplicate`) is translated exclusively
+ * inside `lib/bora-engine/vote-event-ingestion.ts`
+ * (classifyVoteEventIngestionRpcResult), invoked only by the persistence
+ * adapter — no status-compatibility logic lives in this action or in the
+ * component.
  *
- * Engine validation is REUSED, not duplicated:
- * `validateVoteEventIngestionRequest` performs the canonical-row contract
- * check before anything crosses the RPC boundary.
- * `assessVoteEventIngestionRetry` (needs the persisted claim row) and
- * `mapAcceptedVoteEventToEngineInput` (needs authoritative hour phase +
- * bucket state) both depend on Step 3 ledger state and are intentionally
- * not invoked here.
+ * Boundaries honored:
+ *  - No privileged client is constructed here;
+ *    `createBoraEnginePersistence()` owns the service-role client and the
+ *    single atomic `bora_engine_ingest_vote_event` transaction, which
+ *    remains the sole authority for identity claim, exactly-once bucket
+ *    counting, and coverage invalidation. No standalone bucket increment is
+ *    ever issued from the application.
+ *  - NO fallback to `handle_song_vote` on Engine failure; vote acceptance is
+ *    unaffected by this handoff (ChartWrapper treats delivery failures as
+ *    log-only).
+ *  - Gate failures (auth / missing source row / ownership) happen BEFORE any
+ *    RPC: a known non-commit, returned as `invalid-input` (event defects) or
+ *    `persistence-failure` with an explicit infrastructure error code.
+ *  - Anything after the RPC boundary whose commit cannot be established
+ *    returns `commit-unknown`; it is replayed ONLY by the durable
+ *    reconciliation path (`runSecureVoteReconciliation`), never by an
+ *    in-action loop.
  */
-export async function ingestAcceptedVoteEvent(eventId: string) {
+export async function ingestAcceptedVoteEvent(
+  eventId: string,
+): Promise<VoteEventIngestionOutcome> {
   if (typeof eventId !== 'string' || !UUID_PATTERN.test(eventId)) {
-    return { ok: false, reason: 'invalid-event-id' as const };
+    return { status: 'invalid-input', reasons: ['invalid-source-event-id'] };
   }
 
+  let user: { readonly id: string } | null = null;
   try {
     const userClient = await createClient();
     const {
-      data: { user },
+      data: { user: verifiedUser },
       error: authError,
     } = await userClient.auth.getUser();
-
-    if (authError || !user) {
-      return { ok: false, reason: 'auth-required' as const };
-    }
-
-    const event = await loadCanonicalSecureVoteEvent(eventId);
-
-    if (!event) {
-      return { ok: false, reason: 'source-event-not-found' as const };
-    }
-
-    if (event.voterRef !== user.id) {
-      return { ok: false, reason: 'event-owner-mismatch' as const };
-    }
-
-    // Reuse the Engine's ingestion validation instead of duplicating it:
-    // the committed row must satisfy the same contract the Step 3 ingest
-    // RPC will enforce. Invalid rows stop at this isolated boundary and
-    // never reach the RPC call.
-    const validation = validateVoteEventIngestionRequest(event);
-    if (validation.status !== 'valid') {
-      console.error(
-        'BORA_ENGINE_DELIVERY_PENDING',
-        eventId,
-        'invalid-ingestion-request',
-        validation.reasons.join(','),
-      );
-      return { ok: false, reason: 'engine-rejected-event' as const };
-    }
-
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !key) {
-      return { ok: false, reason: 'engine-not-configured' as const };
-    }
-
-    const { createClient: createSupabaseClient } =
-      await import('@supabase/supabase-js');
-
-    const engineDb = createSupabaseClient(url, key, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-    });
-
-    const { data, error } = await engineDb.rpc(
-      'bora_engine_ingest_vote_event',
-      { p_event: event },
-    );
-
-    if (error || !data || typeof data !== 'object') {
-      return { ok: false, reason: 'engine-ingestion-failed' as const };
-    }
-
-    const result = data as { status?: string };
-
-    if (
-      result.status === 'ingested' ||
-      result.status === 'already-ingested'
-    ) {
-      return { ok: true, status: result.status };
-    }
-
-    return { ok: false, reason: 'engine-rejected-event' as const };
+    if (!authError) user = verifiedUser;
   } catch {
-    return { ok: false, reason: 'receiver-failed' as const };
+    user = null;
+  }
+  if (!user) {
+    console.error('BORA_ENGINE_DELIVERY_BLOCKED', eventId, 'auth-required');
+    return { status: 'invalid-input', reasons: ['invalid-request'] };
+  }
+
+  let event: CanonicalAcceptedVoteEvent | null = null;
+  try {
+    event = await loadCanonicalSecureVoteEvent(eventId);
+  } catch (error) {
+    const code =
+      error instanceof Error &&
+      error.message === 'BORA_ENGINE_PERSISTENCE_NOT_CONFIGURED'
+        ? 'source-read-unconfigured'
+        : 'source-read-failed';
+    console.error('BORA_ENGINE_DELIVERY_PENDING', eventId, code);
+    return { status: 'persistence-failure', errorCode: code };
+  }
+  if (!event) {
+    console.error(
+      'BORA_ENGINE_DELIVERY_BLOCKED',
+      eventId,
+      'source-event-not-found',
+    );
+    return { status: 'invalid-input', reasons: ['invalid-request'] };
+  }
+  if (event.voterRef !== user.id) {
+    console.error(
+      'BORA_ENGINE_DELIVERY_BLOCKED',
+      eventId,
+      'event-owner-mismatch',
+    );
+    return { status: 'invalid-input', reasons: ['invalid-voter-reference'] };
+  }
+
+  const setup = createBoraEnginePersistence();
+  if (setup.status === 'configuration-unavailable') {
+    console.error(
+      'BORA_ENGINE_DELIVERY_PENDING',
+      eventId,
+      'configuration-unavailable',
+    );
+    return { status: 'persistence-failure', errorCode: setup.missing };
+  }
+
+  // RPC-boundary zone: an unexpected exception here leaves the commit
+  // outcome unestablished, so it must never be reported as a rollback.
+  try {
+    return await setup.persistence.ingestVoteEvent(event);
+  } catch {
+    console.error(
+      'BORA_ENGINE_DELIVERY_PENDING',
+      eventId,
+      'receiver-exception',
+    );
+    return {
+      status: 'commit-unknown',
+      sourceSystem: 'secure_vote_events',
+      sourceEventId: eventId,
+    };
   }
 }

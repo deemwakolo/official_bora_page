@@ -25,6 +25,18 @@ import {
   isCoverageEvidenceAuthority,
   isCoverageEvidenceRecord,
 } from './coverage-evidence';
+import type { CanonicalAcceptedVoteEvent } from '../supabase/vote-event';
+import {
+  SECURE_VOTE_SOURCE_COLUMNS,
+  toCanonicalSecureVoteEvent,
+  type SecureVoteSourceRow,
+} from '../supabase/secure-vote-source';
+import {
+  assessVoteEventIngestionRetry,
+  classifyVoteEventIngestionRpcResult,
+  validateVoteEventIngestionRequest,
+  type VoteEventIngestionOutcome,
+} from './vote-event-ingestion';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -38,6 +50,19 @@ export type BoraEnginePersistenceSetup =
       readonly missing: 'NEXT_PUBLIC_SUPABASE_URL' | 'BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY';
     };
 
+/**
+ * One rediscovery page: source rows scanned (canonical `public.vote_events`,
+ * append-only), the subset not yet present in the Engine ledger, and whether
+ * the source contained more rows beyond this page. Completeness derives from
+ * the ledger anti-join predicate, never from a durable cursor — unfinished
+ * work simply remains in the source set for the next scan.
+ */
+export interface PendingSecureVoteEventBatch {
+  readonly events: readonly CanonicalAcceptedVoteEvent[];
+  readonly scanned: number;
+  readonly hasMore: boolean;
+}
+
 export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   checkBootstrap(closedHour: HourIndex): Promise<
     | { readonly status: 'ready' }
@@ -47,6 +72,27 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   >;
   readiness(closedHour: number | null): Promise<BoraEngineReadiness>;
   bootstrap(input: EngineBootstrapInput): Promise<EngineBootstrapResult>;
+  /**
+   * Phase 3 — durable ingestion of one committed, accepted secure-vote event
+   * through the single atomic `bora_engine_ingest_vote_event` transaction.
+   * Deduplication, bucket counting, and coverage invalidation remain the
+   * database's authority; this method never issues a standalone bucket
+   * increment and returns the normalized application contract only.
+   */
+  ingestVoteEvent(
+    event: CanonicalAcceptedVoteEvent,
+  ): Promise<VoteEventIngestionOutcome>;
+  /**
+   * Phase 3 — cursor-free rediscovery: canonical source rows not yet present
+   * in `bora_engine_vote_events` under the stable identity
+   * `(source_system, source_event_id)`, ordered by (created_at, id) and
+   * bounded by (offset, limit) for one invocation.
+   */
+  findPendingSecureVoteEvents(options: {
+    readonly cutoverIso: string;
+    readonly offset: number;
+    readonly limit: number;
+  }): Promise<PendingSecureVoteEventBatch>;
 }
 
 export type BoraEngineReadinessCheck = {
@@ -676,6 +722,162 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     return { status: 'persistence-failure' };
   }
 
+  async ingestVoteEvent(
+    event: CanonicalAcceptedVoteEvent,
+  ): Promise<VoteEventIngestionOutcome> {
+    const validation = validateVoteEventIngestionRequest(event);
+    if (validation.status !== 'valid') {
+      return { status: 'invalid-input', reasons: validation.reasons };
+    }
+    const identity = {
+      sourceSystem: 'secure_vote_events' as const,
+      sourceEventId: validation.request.sourceEventId,
+    };
+
+    // Advisory committed-ledger pre-check (§3 reuse of
+    // validateVoteEventIngestionRequest + assessVoteEventIngestionRetry). It
+    // is authoritative ONLY when the ledger row carries complete provenance,
+    // so the full canonical payload can be compared without regenerating
+    // timestamps, identities, or idempotency keys. A provenance-less or
+    // unreadable ledger row defers every decision to the in-transaction RPC
+    // authority (corrected design §B/C/D: the unique identity, not a
+    // pre-read, owns deduplication).
+    const ledger = await this.readLedgerEvent(identity.sourceEventId);
+    if (ledger !== null) {
+      const existing = validateVoteEventIngestionRequest({
+        sourceSystem: ledger.source_system,
+        sourceEventId: ledger.source_event_id,
+        songId: ledger.song_id,
+        voteType: ledger.vote_type,
+        occurredAt: ledger.occurred_at,
+        voterRef: ledger.voter_ref,
+        identityMethod: ledger.identity_method,
+        identityVersion: ledger.identity_version,
+        idempotencyKey: ledger.idempotency_key,
+      });
+      if (existing.status === 'valid') {
+        const assessment = assessVoteEventIngestionRetry(
+          validation.request,
+          existing.request,
+        );
+        if (assessment.status === 'already-ingested') {
+          return { status: 'already-ingested', ...identity };
+        }
+        if (assessment.status === 'conflicting-identity') {
+          return {
+            status: 'conflicting-identity',
+            conflict: assessment.conflict,
+          };
+        }
+      }
+    }
+
+    const maxAttempts = 3;
+    let lastErrorCode = '';
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      let data: unknown = null;
+      let rpcError: {
+        readonly code?: string | null;
+        readonly message?: string | null;
+      } | null = null;
+      try {
+        const result = await this.client.rpc('bora_engine_ingest_vote_event', {
+          p_event: event,
+        });
+        data = result.data;
+        rpcError = result.error;
+      } catch (thrown) {
+        rpcError = normalizeThrownRpcError(thrown);
+      }
+
+      const attemptResult = classifyVoteEventIngestionRpcResult(
+        identity,
+        data,
+        rpcError,
+      );
+      if (attemptResult.status === 'settled') {
+        return attemptResult.outcome;
+      }
+      // Whole-transaction retry only (§C.4): never retry a partial step, and
+      // never retry an unknown commit in-action — that is reconciliation's
+      // job (§D).
+      lastErrorCode = attemptResult.errorCode;
+      if (attempt < maxAttempts) {
+        await sleepIngestionRetryBackoff(attempt);
+      }
+    }
+    // Bounded retries exhausted against a server-reported clean rollback:
+    // a known non-commit (persistence-failure), not commit-unknown.
+    return { status: 'persistence-failure', errorCode: lastErrorCode };
+  }
+
+  async findPendingSecureVoteEvents(options: {
+    readonly cutoverIso: string;
+    readonly offset: number;
+    readonly limit: number;
+  }): Promise<PendingSecureVoteEventBatch> {
+    const limit = clampReconciliationPageSize(options.limit);
+    const offset = Number.isFinite(options.offset)
+      ? Math.max(0, Math.trunc(options.offset))
+      : 0;
+
+    const { data, error } = await this.client
+      .from('vote_events')
+      .select(SECURE_VOTE_SOURCE_COLUMNS)
+      .gte('created_at', options.cutoverIso)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + limit - 1);
+    if (error) {
+      throw new Error('SECURE_VOTE_SOURCE_PAGE_READ_FAILED');
+    }
+    const sourceRows = (data ?? []) as unknown as readonly SecureVoteSourceRow[];
+    if (sourceRows.length === 0) {
+      return { events: [], scanned: 0, hasMore: false };
+    }
+
+    const sourceIds = sourceRows.map((row) => row.id);
+    const { data: ledgerRows, error: ledgerError } = await this.client
+      .from('bora_engine_vote_events')
+      .select('source_event_id')
+      .eq('source_system', 'secure_vote_events')
+      .in('source_event_id', sourceIds);
+    if (ledgerError) {
+      throw new Error('BORA_ENGINE_LEDGER_PAGE_READ_FAILED');
+    }
+    const ledgeredIds = new Set(
+      ((ledgerRows ?? []) as readonly { readonly source_event_id: unknown }[])
+        .map((row) => String(row.source_event_id)),
+    );
+    const events = sourceRows
+      .filter((row) => !ledgeredIds.has(row.id))
+      .map((row) => toCanonicalSecureVoteEvent(row));
+    return {
+      events,
+      scanned: sourceRows.length,
+      hasMore: sourceRows.length >= limit,
+    };
+  }
+
+  private async readLedgerEvent(
+    sourceEventId: string,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const { data, error } = await this.client
+        .from('bora_engine_vote_events')
+        .select(
+          'source_system, source_event_id, song_id, vote_type, occurred_at, voter_ref, identity_method, identity_version, idempotency_key',
+        )
+        .eq('source_system', 'secure_vote_events')
+        .eq('source_event_id', sourceEventId)
+        .maybeSingle();
+      if (error) return null;
+      return (data ?? null) as Record<string, unknown> | null;
+    } catch {
+      return null;
+    }
+  }
+
   private async release(
     closedHour: HourIndex,
     leaseToken: string,
@@ -816,4 +1018,44 @@ export async function bootstrapBoraEngineState(
   } catch {
     return { status: 'persistence-failure' };
   }
+}
+
+function clampReconciliationPageSize(limit: number): number {
+  if (!Number.isFinite(limit)) return 25;
+  return Math.min(100, Math.max(1, Math.trunc(limit)));
+}
+
+/**
+ * Bounded backoff for whole-transaction retries (§C.4): ~150ms then ~300ms
+ * plus small jitter, keeping a server action well inside its execution
+ * budget while avoiding synchronized retry stampedes.
+ */
+function sleepIngestionRetryBackoff(attempt: number): Promise<void> {
+  const baseMs = 150 * 2 ** (attempt - 1);
+  const jitterMs = Math.floor(Math.random() * 75);
+  return new Promise((resolve) => setTimeout(resolve, baseMs + jitterMs));
+}
+
+/**
+ * Normalize a thrown transport-level error (fetch failure, abort, timeout)
+ * into the structural error shape the classifier consumes. No SQLSTATE is
+ * fabricated: an absent or OS-level code classifies as commit-unknown.
+ */
+function normalizeThrownRpcError(thrown: unknown): {
+  readonly code: string;
+  readonly message: string;
+} {
+  if (typeof thrown === 'object' && thrown !== null) {
+    const candidate = thrown as {
+      readonly code?: unknown;
+      readonly name?: unknown;
+      readonly message?: unknown;
+    };
+    const code = typeof candidate.code === 'string' ? candidate.code : '';
+    const name = typeof candidate.name === 'string' ? candidate.name : 'Error';
+    const message =
+      typeof candidate.message === 'string' ? candidate.message : '';
+    return { code, message: `${name}: ${message}` };
+  }
+  return { code: '', message: 'unknown-throw' };
 }
