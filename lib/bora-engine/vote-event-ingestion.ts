@@ -20,12 +20,12 @@ export interface VoteEventIngestionRequest {
   readonly voteType: VoteIngestionDirection;
   /** Original committed database timestamp. It is never regenerated on retry. */
   readonly occurredAt: string;
-  readonly voterRef?: string | null;
-  readonly identityMethod?: VoteIngestionIdentityMethod | null;
-  readonly identityVersion?: number | null;
-  readonly idempotencyKey?: string | null;
+  /** Required canonical provenance from the committed secure-vote source. */
+  readonly voterRef: string;
+  readonly identityMethod: VoteIngestionIdentityMethod;
+  readonly identityVersion: number;
+  readonly idempotencyKey: string;
 }
-
 export interface ValidatedVoteEventIngestionRequest {
   readonly sourceSystem: 'secure_vote_events';
   readonly sourceEventId: string;
@@ -34,12 +34,11 @@ export interface ValidatedVoteEventIngestionRequest {
   readonly occurredAt: string;
   readonly occurredAtMs: number;
   readonly hourIndex: number;
-  readonly voterRef: string | null;
-  readonly identityMethod: VoteIngestionIdentityMethod | null;
-  readonly identityVersion: number | null;
-  readonly idempotencyKey: string | null;
+  readonly voterRef: string;
+  readonly identityMethod: VoteIngestionIdentityMethod;
+  readonly identityVersion: number;
+  readonly idempotencyKey: string;
 }
-
 export type VoteEventIngestionValidation =
   | {
       readonly status: 'valid';
@@ -327,6 +326,23 @@ export function validateVoteEventIngestionRequest(
   if (reasons.length > 0) {
     return { status: 'invalid-input', reasons };
   }
+
+  // Required canonical provenance must be established at runtime before
+  // constructing the non-nullable validated request.
+  if (
+    voterRef.value === null ||
+    identityMethod.value === null ||
+    (identityMethod.value !== 'guest' &&
+      identityMethod.value !== 'account') ||
+    identityVersion === null ||
+    idempotencyKey.value === null
+  ) {
+    return {
+      status: 'invalid-input',
+      reasons: ['incomplete-identity-provenance'],
+    };
+  }
+
   if (
     sourceEventId === null ||
     songId === null ||
@@ -356,10 +372,7 @@ export function validateVoteEventIngestionRequest(
       occurredAtMs,
       hourIndex,
       voterRef: voterRef.value,
-      identityMethod:
-        identityMethod.value === 'guest' || identityMethod.value === 'account'
-          ? identityMethod.value
-          : null,
+      identityMethod: identityMethod.value,
       identityVersion,
       idempotencyKey: idempotencyKey.value,
     },
