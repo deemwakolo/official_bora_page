@@ -4,8 +4,8 @@
 
 This is a source-contract review, not a database or provider check. No
 connection was made to Supabase or a provider, and no migration status was
-queried. Repository deployment-readiness documentation describes migrations
-`0012`Ã¢â‚¬â€œ`0017` as unapplied drafts. Separate secure-voting documentation records
+queried. Repository deployment-readiness documentation previously described migrations
+`0012`Ã¢â‚¬â€œ`0017` as unapplied drafts; the verified live Supabase migration history records all six migrations as applied. Separate secure-voting documentation records
 historical production observations about `0010`/`0011`; those notes were not
 independently verified during this phase and must not be treated as current
 deployment evidence.
@@ -125,8 +125,8 @@ The outcome union also reserves `ingested`, `invalid-input`, `persistence-failur
 
 This is a source-contract review, not a database or provider check. No
 connection was made to Supabase or a provider, and no migration status was
-queried. Repository deployment-readiness documentation describes migrations
-`0012`Ã¢â‚¬â€œ`0017` as unapplied drafts. Separate secure-voting documentation records
+queried. Repository deployment-readiness documentation previously described migrations
+`0012`Ã¢â‚¬â€œ`0017` as unapplied drafts; the verified live Supabase migration history records all six migrations as applied. Separate secure-voting documentation records
 historical production observations about `0010`/`0011`; those notes were not
 independently verified during this phase and must not be treated as current
 deployment evidence.

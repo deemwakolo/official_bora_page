@@ -13,7 +13,7 @@ current source, which is authoritative where it differs from earlier reports.
 
 **Non-goals.** It does not activate ingestion, alter the live voting path, change
 scoring/weights/windows/ranking, apply migrations, add RPCs or workers, or enable
-publication. All migrations (`0012`–`0017`) are treated as **unapplied drafts**;
+publication. All migrations (`0012`–`0017`) are recorded as applied in the verified live Supabase migration history;
 `0010`/`0011` describe the secure-vote source the design consumes but their
 production status is a `[VERIFY]` item, not an assumption.
 
@@ -32,7 +32,7 @@ production status is a `[VERIFY]` item, not an assumption.
 | Vote/seed history gate | `vote-event-ingestion.ts` `assessVoteSeedHistoryCoverage`; `source-readiness.ts` | Requires independent, authoritative evidence for each active song / input kind / UTC hour across the 72-hour C window (`H-71…H`). Missing rows → `missing`, never `checked-empty`. |
 | Publication contract | `publication-transaction.ts`, `publication-gate.ts` | Pure request validation + retry disposition (`assessPublicationRetry`, `unknownPublicationCommit`), immutable snapshot + explicit pointer advancement. Unwired. |
 | Secure-vote source | `lib/supabase/secure-vote.ts`, `supabase/migrations/0010` | `public.vote_events` rows carry `id`, `song_id`, `vote_type`, `voter_ref`, `identity_method`, `identity_version`, `idempotency_key`, `created_at`. `cast_vote_secure` is the only write boundary; duplicates surface as success, never a counter change. |
-| Atomic hour ops | `supabase/migrations/0014` (draft) | `bora_engine_{hourly_snapshot,claim_hour,load_hour,release_hour,commit_hour}` — `security definer`, `service_role` only, lease/claim guarded. |
+| Atomic hour ops | `supabase/migrations/0014` | `bora_engine_{hourly_snapshot,claim_hour,load_hour,release_hour,commit_hour}` — `security definer`, `service_role` only, lease/claim guarded. |
 
 ### A.2 The actual gaps the design must close
 
@@ -380,9 +380,8 @@ never on in-process locks or application memory.
 
 ## 7. Schema gap analysis
 
-Compared against the **actual draft schema** (migrations `0012`, `0014`, `0015`,
-`0016`, `0017`). These are unapplied drafts; nothing here claims they are applied
-or already enforce a guarantee.
+Compared against the **actual schema** (migrations `0012`, `0014`, `0015`,
+`0016`, `0017`). These migrations are recorded as applied in the verified live Supabase migration history; nothing here claims they already enforce a guarantee.
 
 | Requirement | Draft schema today | Gap |
 | --- | --- | --- |

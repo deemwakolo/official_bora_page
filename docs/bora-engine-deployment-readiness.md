@@ -6,19 +6,22 @@ considered complete without independent operational evidence.
 
 ## 1. Database migrations
 
-The repository contains migration files `0012` through `0017`. Each is an
-**unapplied draft** in this repository; no reliable evidence of application is
-present here. Review and approve the SQL and its dependencies before using an
-approved migration workflow.
+The repository contains migration files `0012` through `0017`. The verified
+live Supabase migration history records all six migrations as applied. This
+confirms their recorded migration status in the inspected project; it does not
+establish that the BORA Engine is initialized, that all historical input data
+is present, or that the hourly evaluation and publication workflows are
+operational. The migration definitions remain available in the repository for
+source review.
 
 | Migration | Purpose and dependency |
 | --- | --- |
-| `0012_bora_engine_data_foundation.sql` | Proposes private Engine song state, canonical vote events and hourly vote buckets, platform-hour projections, seed-hour records, per-input coverage, hourly run/closure history, evaluation-run history, and publication snapshots/head. Uses the established UUID identity `public.songs.id`; it does not redefine `songs`, alter existing vote paths, or provide a trusted worker/RPC. |
+| `0012_bora_engine_data_foundation.sql` | Defines private Engine song state, canonical vote events and hourly vote buckets, platform-hour projections, seed-hour records, per-input coverage, hourly run/closure history, evaluation-run history, and publication snapshots/head. Uses the established UUID identity `public.songs.id`; it does not redefine `songs`, alter existing vote paths, or provide a trusted worker/RPC. |
 | `0013_bora_engine_platform_observation_history.sql` | Adds append-only platform observation history, source identity, provenance, and correction chains while leaving the one-per-hour projection in place. Depends on the projection and base Engine foundation from `0012`. |
 | `0014_bora_engine_hourly_atomic_operations.sql` | Adds the state head and service-role-only snapshot, claim, load, release, and atomic commit functions. It enforces database-time eligibility and lease checks, state/coverage comparison, rollover trace persistence, and completed-hour recording. Depends on `0012` and `0013`; it intentionally does not initialize the state head. |
 | `0015_bora_engine_state_bootstrap.sql` | Adds an approval record and service-role-only bootstrap/check functions. Bootstrap requires explicit initial state and coverage matching persisted rows, refuses an existing state head, and refuses incomplete required history. Depends on `0012`–`0014`. |
 | `0016_bora_engine_readiness.sql` | Adds a read-only, service-role-only readiness RPC for bootstrap state and vote, seed, and per-platform coverage/record counts, including explicit zero records. Depends on `0012`–`0015`. |
-| `0017_bora_engine_youtube_snapshot_history.sql` | Proposes append-only cumulative YouTube view-count snapshots, distinct from hourly observations, with stable source identity, retry deduplication, revision/invalidation links, and server-only table access. Depends on `0012` for the song foreign key. This is also an **unapplied draft**. |
+| `0017_bora_engine_youtube_snapshot_history.sql` | Defines append-only cumulative YouTube view-count snapshots, distinct from hourly observations, with stable source identity, retry deduplication, revision/invalidation links, and server-only table access. Depends on `0012` for the song foreign key. |
 
 ## 2. Private configuration
 
@@ -72,13 +75,13 @@ coverage.
 | Capability | Source status | Deployment/operational status |
 | --- | --- | --- |
 | Trusted operator authorization | Implemented in `operator-authorization.ts`: verifies the user with the server Supabase client and checks the private ID allowlist. `operator-readiness.ts` only calls readiness after `authorized`. | Not established until `BORA_ENGINE_OPERATOR_USER_IDS` is provisioned with approved IDs and the normal authenticated server client works. No route, action, or UI exposes this entry point. |
-| Readiness RPC | Proposed in migration `0016`, restricted to `service_role`. | Unavailable until `0016` and dependencies are reviewed and applied, private persistence configuration exists, and the RPC is callable. |
+| Readiness RPC | Defined in migration `0016`, restricted to `service_role`. Recorded as applied in the verified live Supabase migration history. | Not operationally verified until private persistence configuration exists, grants/RLS are confirmed, and the RPC is successfully invoked through an authorized operator boundary. |
 | Bootstrap and state-head initialization | Bootstrap validation/RPC call exists in `persistence.ts`; SQL proposal is in `0015`, with the state head defined by `0014`. It requires explicit approval metadata, matching persisted state/coverage, and an uninitialized head. | Not initialized or operationally verified. No automatic default state is created. |
 | Hourly claim, lease, and atomic commit | `hourly-runner.ts` and the service-role adapter in `persistence.ts` call the proposed `0014` atomic operations. The runner uses the existing Engine rollover logic. | Not operational until migrations are applied, trusted configuration is provisioned, reconciled state/history exist, and database behavior is verified. The adapter is not evidence that the SQL has been deployed. |
 | Hourly invocation | `hour-entry.ts` validates one explicit closed hour and invokes the runner. | No controlled operator/worker invocation mechanism is registered. The function is internal only: there is no public route, server action, UI handler, or scheduler. |
 | Platform source readiness and evaluation eligibility | `source-readiness.ts` defines source states, interval coverage outcomes, and a deterministic gate using the existing 168-hour window and rollover grace period. `publication-gate.ts` adds pure publication eligibility validation but is unwired. The internal operator readiness result includes current platform assessments. | No source currently has an established `available` assessment for the Engine's required hourly measurements; no chart evaluation caller invokes the eligibility gate. No activated collector or connected trusted server-side song-to-video mapping source exists. |
 | Platform collectors/provider credentials | Pure observation validation exists; a server-only YouTube Data API client and cumulative snapshot/derivation contracts are implemented. | No activated collector or connected trusted server-side song-to-video mapping source exists. YouTube API key configuration remains outstanding. No Spotify or Boomplay collectors or credentials are established. |
-| Chart publication integration | Migration `0012` proposes evaluation/publication tables and a publication head. `publication-gate.ts` and `publication-transaction.ts` define pure, unwired validation/request/retry contracts. Engine evaluation code exists separately. No publication RPC or transaction is defined. | No connected publication workflow moves an Engine result to the public chart. Durable idempotency, publication-slot concurrency control, source-snapshot recheck, atomic entry/header/pointer/completion commit, and request-ID reconciliation require a future privileged database operation and migration. Public charting remains on its existing behavior. |
+| Chart publication integration | Migration `0012` defines evaluation/publication tables and a publication head. `publication-gate.ts` and `publication-transaction.ts` define pure, unwired validation/request/retry contracts. Engine evaluation code exists separately. No publication RPC or transaction is defined. | No connected publication workflow moves an Engine result to the public chart. Durable idempotency, publication-slot concurrency control, source-snapshot recheck, atomic entry/header/pointer/completion commit, and request-ID reconciliation require a future privileged database operation and migration. Public charting remains on its existing behavior. |
 
 The application persistence adapter reads `NEXT_PUBLIC_SUPABASE_URL` and
 `BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY`; the operator helper reads
@@ -139,10 +142,9 @@ full contract and integration boundary.
 
 All gates are **pending** based on repository evidence:
 
-1. [ ] **Review and approve SQL drafts.** Review migrations `0012`–`0017` in
+1. [ ] **Review and confirm applied migration history.** Review migrations `0012`–`0017` in
    dependency order, including assumptions about the existing `songs` table,
-   permissions, function behavior, and rollback/recovery. Apply only through
-   the approved database change workflow.
+   permissions, function behavior, and rollback/recovery. Confirm the applied migration status in the target environment using an approved read-only inspection. Do not reapply migrations already recorded as applied.
 2. [ ] **Configure private credentials and operator allowlist.** Provision the
    service-role key and explicitly approved operator IDs in protected
    deployment configuration. Confirm they are server-only; do not commit or
@@ -150,10 +152,7 @@ All gates are **pending** based on repository evidence:
 3. [ ] **Establish trustworthy bootstrap evidence.** Assemble the explicit
    initial Engine state/reference hour and required reconciled history and
    coverage. Obtain operator approval; do not infer or fabricate missing data.
-4. [ ] **Apply migrations through the approved workflow.** Apply dependencies
-   in order and record the resulting migration status using the approved
-   operational process. The repository drafts alone do not establish that
-   they have been applied.
+4. [ ] **Confirm migration availability.** Verify that migrations `0012`–`0017` are recorded as applied in the target environment through an approved read-only inspection of the migration history. Do not reapply migrations already recorded as applied.
 5. [ ] **Inspect readiness as an authorized operator.** After configuration and
    migration availability, call the internal readiness boundary only through
    an approved trusted invocation. Confirm bootstrap, vote/seed coverage, and

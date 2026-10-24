@@ -10,7 +10,7 @@ No implementation was performed.
 source/schema by file:line — `supabase/migrations/0012`, `0014`, `0015`, `0016`;
 `lib/bora-engine/coverage-evidence.ts`, `vote-event-ingestion.ts`,
 `publication-transaction.ts`, `publication-gate.ts`, `persistence.ts`; and
-`engine/src/engine/constants.ts`. Migrations are **unapplied drafts**.
+`engine/src/engine/constants.ts`. Migrations are recorded as applied in the verified live Supabase migration history; their application does not by itself establish runtime correctness.
 
 **Proven PostgreSQL behavior treated as established** (distinct from assumptions):
 - **PG1.** `INSERT … ON CONFLICT (cols) DO NOTHING RETURNING …` speculatively

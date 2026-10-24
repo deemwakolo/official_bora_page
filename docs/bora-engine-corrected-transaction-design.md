@@ -8,7 +8,7 @@ function, or database state was created or changed to produce this document.
 
 **Grounding.** Every correction cites the actual source and draft SQL:
 `lib/bora-engine/{vote-event-ingestion,coverage-evidence,source-readiness,persistence,publication-gate,publication-transaction}.ts`
-and `supabase/migrations/0012,0014,0015,0016`. Migrations are **unapplied drafts**.
+and `supabase/migrations/0012,0014,0015,0016`. Migrations are recorded as applied in the verified live Supabase migration history; their application does not by itself establish runtime correctness.
 
 **Proven PostgreSQL behavior relied upon** (distinct from assumptions needing
 verification), under the default `READ COMMITTED` isolation used by
