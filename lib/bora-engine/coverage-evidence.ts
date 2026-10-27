@@ -1,4 +1,4 @@
-import { C_WINDOW_HOURS, HOUR_MS, PLATFORM_WINDOW_HOURS } from '../../engine/src/engine/constants';
+import { C_WINDOW_HOURS, PLATFORM_WINDOW_HOURS } from '../../engine/src/engine/constants';
 
 export type CoverageInputKind =
   | 'vote-history'
@@ -334,4 +334,88 @@ export function doesVoteEventInvalidateEvaluation(
   return Boolean(
     window && eventHour >= window.firstHour && eventHour <= window.lastHour,
   );
+}
+
+/**
+ * Derived (not assumed) required input slots for chart evaluation.
+ *
+ * The requirement set is shared by readiness and publication so the slot set
+ * is derived from one canonical window calculation, not maintained by hand.
+ * Per active song:
+ *   - VOTES (`vote-history`): 72 hours in [R-71, R]
+ *   - SEED (`seed-history`):   72 hours in [R-71, R]
+ *   - YOUTUBE / SPOTIFY / BOOMPLAY: 168 hours each in [R-167, R]
+ *   - Total: 72 + 72 + 3 * 168 = 648 logical slots
+ */
+export function getRequiredSlotIntervals(
+  referenceHour: number,
+): ReadonlyArray<{
+  readonly inputType: CoverageInputKind;
+  readonly firstHour: number;
+  readonly lastHour: number;
+}> {
+  if (!Number.isSafeInteger(referenceHour) || referenceHour < 0) {
+    return [];
+  }
+  const slots: {
+    readonly inputType: CoverageInputKind;
+    readonly firstHour: number;
+    readonly lastHour: number;
+  }[] = [];
+
+  for (const kind of ['vote-history', 'seed-history'] as const) {
+    slots.push({
+      inputType: kind,
+      firstHour: referenceHour - (C_WINDOW_HOURS - 1),
+      lastHour: referenceHour,
+    });
+  }
+
+  for (const platform of ['youtube', 'spotify', 'boomplay'] as const) {
+    slots.push({
+      inputType: `platform-observation-history` as const,
+      firstHour: referenceHour - (PLATFORM_WINDOW_HOURS - 1),
+      lastHour: referenceHour,
+    });
+  }
+
+  return slots;
+}
+
+/**
+ * Deterministic rebuild verification: recount the vote bucket from the ledger
+ * for a single (song_id, hour_index) and compare against the persisted bucket.
+ * Returns null when the bucket matches the authoritative ledger recount.
+ */
+export function reassessRecountBucket(
+  songId: string | null,
+  hourIndex: number,
+  ledgerUpvotes: number,
+  ledgerDownvotes: number,
+  bucketUpvotes: number,
+  bucketDownvotes: number,
+  bucketVersion: number,
+): {
+  readonly status: 'match' | 'drift';
+  readonly expectedUpvotes: number;
+  readonly expectedDownvotes: number;
+  readonly bucketVersion: number;
+} | null {
+  if (songId === null) {
+    return null;
+  }
+  if (ledgerUpvotes !== bucketUpvotes || ledgerDownvotes !== bucketDownvotes) {
+    return {
+      status: 'drift',
+      expectedUpvotes: ledgerUpvotes,
+      expectedDownvotes: ledgerDownvotes,
+      bucketVersion,
+    };
+  }
+  return {
+    status: 'match',
+    expectedUpvotes: ledgerUpvotes,
+    expectedDownvotes: ledgerDownvotes,
+    bucketVersion,
+  };
 }

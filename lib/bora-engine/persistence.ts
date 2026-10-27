@@ -63,6 +63,20 @@ export interface PendingSecureVoteEventBatch {
   readonly hasMore: boolean;
 }
 
+export type YouTubeSnapshotPersistenceInput = {
+  readonly songId: string;
+  readonly videoId: string;
+  readonly value: string; // Exact integer cumulative views as string
+  readonly retrievedAt: string;
+  readonly sourceSystem: string;
+  readonly sourceObservationId: string;
+  readonly hourIndex: number;
+};
+
+export type YouTubeSnapshotPersistenceResult =
+  | { readonly status: 'success'; readonly observationValue: number }
+  | { readonly status: 'error'; readonly reason: string };
+
 export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   checkBootstrap(closedHour: HourIndex): Promise<
     | { readonly status: 'ready' }
@@ -71,6 +85,14 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
     | { readonly status: 'already-completed' }
   >;
   readiness(closedHour: number | null): Promise<BoraEngineReadiness>;
+  /**
+   * Phase 4 — Publication readiness RPC. Determines whether a closed hour's
+   * vote data satisfies the full-window readiness predicate (648 slots per
+   * active song) and has no invalidated vote events in the publication
+   * window. Delegates to bora_engine_readiness for the core predicate and
+   * adds publication-specific validity checks at the database level.
+   */
+  publishEligibility(closedHour: HourIndex): Promise<BoraEnginePublishEligibility>;
   bootstrap(input: EngineBootstrapInput): Promise<EngineBootstrapResult>;
   /**
    * Phase 3 — durable ingestion of one committed, accepted secure-vote event
@@ -93,6 +115,13 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
     readonly offset: number;
     readonly limit: number;
   }): Promise<PendingSecureVoteEventBatch>;
+  /**
+   * Persists a fetched YouTube cumulative snapshot, computes the hourly delta,
+   * updates the platform observation projection, and marks input coverage as COMPLETE.
+   */
+  persistYouTubeSnapshot(
+    input: YouTubeSnapshotPersistenceInput,
+  ): Promise<YouTubeSnapshotPersistenceResult>;
 }
 
 export type BoraEngineReadinessCheck = {
@@ -127,6 +156,14 @@ export interface BoraEngineReadiness {
     readonly boomplay: BoraEngineReadinessCheck;
     readonly databaseContract: BoraEngineReadinessCheck;
   };
+}
+
+export interface BoraEnginePublishEligibility {
+  readonly status: 'eligible' | 'not-eligible';
+  readonly closedHour: number;
+  readonly reason?: 'no-reference-hour' | 'reference-hour-mismatch' | 'vote-events-invalidated-in-window' | 'readiness-incomplete';
+  readonly referenceHour?: number;
+  readonly readiness?: BoraEngineReadiness;
 }
 
 export interface EngineBootstrapInput {
@@ -540,6 +577,34 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     return result;
   }
 
+  async publishEligibility(closedHour: HourIndex): Promise<BoraEnginePublishEligibility> {
+    const { data, error } = await this.client.rpc('bora_engine_publish_eligibility', {
+      p_closed_hour: closedHour,
+    });
+    if (error) throw new Error('BORA_ENGINE_PUBLISH_ELIGIBILITY_UNAVAILABLE');
+    if (!isRecord(data)) throw new Error('BORA_ENGINE_INVALID_PUBLISH_ELIGIBILITY');
+
+    if (data.status === 'eligible') {
+      return {
+        status: 'eligible',
+        closedHour: data.closedHour as number,
+        readiness: data.readiness ? parseReadiness(data.readiness) ?? undefined : undefined,
+      };
+    }
+
+    if (data.status === 'not-eligible') {
+      return {
+        status: 'not-eligible',
+        closedHour: data.closedHour as number,
+        reason: data.reason as BoraEnginePublishEligibility['reason'],
+        referenceHour: data.referenceHour as number | undefined,
+        readiness: data.readiness ? parseReadiness(data.readiness) ?? undefined : undefined,
+      };
+    }
+
+    throw new Error('BORA_ENGINE_INVALID_PUBLISH_ELIGIBILITY');
+  }
+
   async claimHour(input: {
     readonly closedHour: HourIndex;
     readonly claimRequestId: string;
@@ -859,6 +924,119 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     };
   }
 
+  /**
+   * Persists a fetched YouTube cumulative snapshot, computes the hourly delta,
+   * updates the platform observation projection, and marks input coverage as COMPLETE.
+   */
+  async persistYouTubeSnapshot(
+    input: YouTubeSnapshotPersistenceInput,
+  ): Promise<YouTubeSnapshotPersistenceResult> {
+    const supabase = this.client;
+
+    // 1. Verify song exists and matches the registered youtube_id mapping
+    const { data: songData, error: songError } = await supabase
+      .from('songs')
+      .select('id, youtube_id')
+      .eq('id', input.songId)
+      .single();
+
+    if (songError || !songData || songData.youtube_id !== input.videoId) {
+      return {
+        status: 'error',
+        reason: 'song-youtube-id-mismatch-or-not-found',
+      };
+    }
+
+    // 2. Insert snapshot into immutable historical ledger
+    const { error: snapshotError } = await supabase
+      .from('bora_engine_youtube_snapshot_history')
+      .insert({
+        song_id: input.songId,
+        video_id: input.videoId,
+        provider: 'youtube-data-api-v3',
+        metric: 'cumulative_views',
+        unit: 'views_total',
+        source_status: 'OBSERVED',
+        view_count: input.value,
+        retrieved_at: input.retrievedAt,
+        source_system: input.sourceSystem,
+        source_observation_id: input.sourceObservationId,
+        version: 0,
+      });
+
+    if (snapshotError) {
+      if (snapshotError.code === '23505') {
+        return { status: 'error', reason: 'duplicate-source-observation-id' };
+      }
+      return {
+        status: 'error',
+        reason: `snapshot-insert-failed: ${snapshotError.message}`,
+      };
+    }
+
+    // 3. Fetch the immediately preceding snapshot to compute hourly delta
+    const { data: prevSnapshots } = await supabase
+      .from('bora_engine_youtube_snapshot_history')
+      .select('view_count, retrieved_at')
+      .eq('song_id', input.songId)
+      .eq('video_id', input.videoId)
+      .lt('retrieved_at', input.retrievedAt)
+      .order('retrieved_at', { ascending: false })
+      .limit(1);
+
+    let hourlyDelta = 0;
+    if (prevSnapshots && prevSnapshots.length > 0) {
+      const prevVal = Number(prevSnapshots[0].view_count);
+      const currVal = Number(input.value);
+      if (!isNaN(prevVal) && !isNaN(currVal) && currVal >= prevVal) {
+        hourlyDelta = currVal - prevVal;
+      }
+    }
+
+    // 4. Upsert the hourly platform observation projection
+    const { error: obsError } = await supabase
+      .from('bora_engine_platform_observations')
+      .upsert(
+        {
+          song_id: input.songId,
+          platform: 'youtube',
+          hour_index: input.hourIndex,
+          value: hourlyDelta,
+          source: 'EXTERNAL',
+          lifecycle: 'ACTIVE',
+          version: 1,
+          source_system: input.sourceSystem,
+          source_observation_id: input.sourceObservationId,
+          observed_at: input.retrievedAt,
+        },
+        { onConflict: 'song_id,platform,hour_index' },
+      );
+
+    if (obsError) {
+      return {
+        status: 'error',
+        reason: `observation-upsert-failed: ${obsError.message}`,
+      };
+    }
+
+    // 5. Update hourly input coverage status to COMPLETE
+    await supabase
+      .from('bora_engine_hourly_input_coverage')
+      .upsert(
+        {
+          song_id: input.songId,
+          input_type: 'YOUTUBE',
+          hour_index: input.hourIndex,
+          status: 'COMPLETE',
+          detail: null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'song_id,input_type,hour_index' },
+      );
+
+    return { status: 'success', observationValue: hourlyDelta };
+  }
+
   private async readLedgerEvent(
     sourceEventId: string,
   ): Promise<Record<string, unknown> | null> {
@@ -1017,6 +1195,32 @@ export async function bootstrapBoraEngineState(
     return await setup.persistence.bootstrap(input);
   } catch {
     return { status: 'persistence-failure' };
+  }
+}
+
+export async function getBoraEnginePublishEligibility(
+  closedHour: HourIndex,
+): Promise<BoraEnginePublishEligibility | { readonly status: 'unavailable'; readonly closedHour: HourIndex }> {
+  if (!Number.isSafeInteger(closedHour) || closedHour < 0) {
+    return {
+      status: 'unavailable',
+      closedHour,
+    };
+  }
+  const setup = createBoraEnginePersistence();
+  if (setup.status === 'configuration-unavailable') {
+    return {
+      status: 'unavailable',
+      closedHour,
+    };
+  }
+  try {
+    return await setup.persistence.publishEligibility(closedHour);
+  } catch {
+    return {
+      status: 'unavailable',
+      closedHour,
+    };
   }
 }
 

@@ -6,6 +6,10 @@ import {
 } from '../../engine/src/engine/constants';
 import type { PlatformId } from '../../engine/src/engine/types';
 import {
+  getRequiredSlotIntervals,
+  type CoverageEvidenceReason,
+} from './coverage-evidence';
+import {
   assessVoteSeedHistoryCoverage,
   type VoteSeedCoverageAuthority,
   type VoteSeedHourCoverage,

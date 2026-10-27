@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.build.json",
+  "include": [
+    "next-env.d.ts",
+    "lib/bora-engine/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "GUI backup",
+    "engine",
+    "lib/supabase/secure-vote.test.ts"
+  ]
+}

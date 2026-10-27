@@ -6,7 +6,6 @@ import {
   isCoverageEvidenceRecord,
   type CoverageEvidenceAuthority,
   type CoverageEvidenceRecord,
-  type CoverageInputKind,
   type CoverageEvidenceReason,
 } from './coverage-evidence';
 

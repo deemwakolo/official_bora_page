@@ -6,8 +6,10 @@ considered complete without independent operational evidence.
 
 ## 1. Database migrations
 
-The repository contains migration files `0012` through `0017`. The verified
-live Supabase migration history records all six migrations as applied. This
+The repository contains migration files `0012` through `0021`. The verified
+live Supabase migration history records migrations `0012`–`0017` as applied.
+Migrations `0018`–`0021` are present in the repository source as forward-only
+additive migrations but may require independent deployment verification. This
 confirms their recorded migration status in the inspected project; it does not
 establish that the BORA Engine is initialized, that all historical input data
 is present, or that the hourly evaluation and publication workflows are
@@ -22,6 +24,10 @@ source review.
 | `0015_bora_engine_state_bootstrap.sql` | Adds an approval record and service-role-only bootstrap/check functions. Bootstrap requires explicit initial state and coverage matching persisted rows, refuses an existing state head, and refuses incomplete required history. Depends on `0012`–`0014`. |
 | `0016_bora_engine_readiness.sql` | Adds a read-only, service-role-only readiness RPC for bootstrap state and vote, seed, and per-platform coverage/record counts, including explicit zero records. Depends on `0012`–`0015`. |
 | `0017_bora_engine_youtube_snapshot_history.sql` | Defines append-only cumulative YouTube view-count snapshots, distinct from hourly observations, with stable source identity, retry deduplication, revision/invalidation links, and server-only table access. Depends on `0012` for the song foreign key. |
+| `0018_bora_engine_durable_ingestion_validation.sql` | Adds the immutable vote-event invalidation ledger (`bora_engine_vote_event_invalidations`) with append-only trigger enforcement, and the atomic `bora_engine_ingest_vote_event` RPC which is the sole authority for secure-vote identity claim and bucket counting. Depends on `0012`–`0017`. |
+| `0019_bora_engine_full_window_readiness.sql` | Replaces `bora_engine_readiness` with a full-window predicate enforcing 648 satisfied slots per active song across the 72-hour + 168-hour required intervals, plus vote/seed coverage assessment for the complete window. Depends on `0012`–`0018`. |
+| `0020_bora_engine_bootstrap_full_window.sql` | Replaces `bora_engine_check_hour` to enforce full-window completeness (648 slots) during bootstrap eligibility, correcting the prior 506-slot expectation. Depends on `0012`–`0019`. |
+| `0021_bora_engine_publish_eligibility.sql` | Adds the service-role-only publication-readiness RPC `bora_engine_publish_eligibility(p_closed_hour)`, which delegates to `bora_engine_readiness` for the 648-slot full-window predicate, enforces reference-hour match, and rejects publication if any invalidated vote events fall within the 72-hour preceding window. Depends on `0012`–`0020`. |
 
 ## 2. Private configuration
 
