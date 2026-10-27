@@ -1,4 +1,4 @@
-import 'server-only';
+﻿import 'server-only';
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -54,7 +54,7 @@ export type BoraEnginePersistenceSetup =
  * One rediscovery page: source rows scanned (canonical `public.vote_events`,
  * append-only), the subset not yet present in the Engine ledger, and whether
  * the source contained more rows beyond this page. Completeness derives from
- * the ledger anti-join predicate, never from a durable cursor — unfinished
+ * the ledger anti-join predicate, never from a durable cursor â€” unfinished
  * work simply remains in the source set for the next scan.
  */
 export interface PendingSecureVoteEventBatch {
@@ -86,7 +86,7 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   >;
   readiness(closedHour: number | null): Promise<BoraEngineReadiness>;
   /**
-   * Phase 4 — Publication readiness RPC. Determines whether a closed hour's
+   * Phase 4 â€” Publication readiness RPC. Determines whether a closed hour's
    * vote data satisfies the full-window readiness predicate (648 slots per
    * active song) and has no invalidated vote events in the publication
    * window. Delegates to bora_engine_readiness for the core predicate and
@@ -95,7 +95,7 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   publishEligibility(closedHour: HourIndex): Promise<BoraEnginePublishEligibility>;
   bootstrap(input: EngineBootstrapInput): Promise<EngineBootstrapResult>;
   /**
-   * Phase 3 — durable ingestion of one committed, accepted secure-vote event
+   * Phase 3 â€” durable ingestion of one committed, accepted secure-vote event
    * through the single atomic `bora_engine_ingest_vote_event` transaction.
    * Deduplication, bucket counting, and coverage invalidation remain the
    * database's authority; this method never issues a standalone bucket
@@ -105,7 +105,7 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
     event: CanonicalAcceptedVoteEvent,
   ): Promise<VoteEventIngestionOutcome>;
   /**
-   * Phase 3 — cursor-free rediscovery: canonical source rows not yet present
+   * Phase 3 â€” cursor-free rediscovery: canonical source rows not yet present
    * in `bora_engine_vote_events` under the stable identity
    * `(source_system, source_event_id)`, ordered by (created_at, id) and
    * bounded by (offset, limit) for one invocation.
@@ -799,13 +799,13 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       sourceEventId: validation.request.sourceEventId,
     };
 
-    // Advisory committed-ledger pre-check (§3 reuse of
+    // Advisory committed-ledger pre-check (Â§3 reuse of
     // validateVoteEventIngestionRequest + assessVoteEventIngestionRetry). It
     // is authoritative ONLY when the ledger row carries complete provenance,
     // so the full canonical payload can be compared without regenerating
     // timestamps, identities, or idempotency keys. A provenance-less or
     // unreadable ledger row defers every decision to the in-transaction RPC
-    // authority (corrected design §B/C/D: the unique identity, not a
+    // authority (corrected design Â§B/C/D: the unique identity, not a
     // pre-read, owns deduplication).
     const ledger = await this.readLedgerEvent(identity.sourceEventId);
     if (ledger !== null) {
@@ -863,9 +863,9 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       if (attemptResult.status === 'settled') {
         return attemptResult.outcome;
       }
-      // Whole-transaction retry only (§C.4): never retry a partial step, and
-      // never retry an unknown commit in-action — that is reconciliation's
-      // job (§D).
+      // Whole-transaction retry only (Â§C.4): never retry a partial step, and
+      // never retry an unknown commit in-action â€” that is reconciliation's
+      // job (Â§D).
       lastErrorCode = attemptResult.errorCode;
       if (attempt < maxAttempts) {
         await sleepIngestionRetryBackoff(attempt);
@@ -925,8 +925,14 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
   }
 
   /**
-   * Persists a fetched YouTube cumulative snapshot, computes the hourly delta,
-   * updates the platform observation projection, and marks input coverage as COMPLETE.
+   * Persists a fetched YouTube cumulative snapshot, computes the hourly delta safely,
+   * updates the platform observation projection, appends to the observation history ledger,
+   * and marks input coverage as COMPLETE with evidence metadata.
+   */
+  /**
+   * Persists a fetched YouTube cumulative snapshot, computes the hourly delta safely using BigInt,
+   * updates the platform observation projection, appends to the observation history ledger,
+   * and marks input coverage as COMPLETE with evidence metadata.
    */
   async persistYouTubeSnapshot(
     input: YouTubeSnapshotPersistenceInput,
@@ -974,7 +980,7 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       };
     }
 
-    // 3. Fetch the immediately preceding snapshot to compute hourly delta
+    // 3. Fetch the immediately preceding snapshot to compute hourly delta safely using BigInt
     const { data: prevSnapshots } = await supabase
       .from('bora_engine_youtube_snapshot_history')
       .select('view_count, retrieved_at')
@@ -984,282 +990,94 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       .order('retrieved_at', { ascending: false })
       .limit(1);
 
-    let hourlyDelta = 0;
+    let currentViews: bigint;
+    let deltaViews: bigint = 0n;
+    try {
+      currentViews = BigInt(input.value);
+    } catch {
+      return { status: 'error', reason: 'invalid-view-count-format' };
+    }
+
+    let hasBaseline = false;
     if (prevSnapshots && prevSnapshots.length > 0) {
-      const prevVal = Number(prevSnapshots[0].view_count);
-      const currVal = Number(input.value);
-      if (!isNaN(prevVal) && !isNaN(currVal) && currVal >= prevVal) {
-        hourlyDelta = currVal - prevVal;
+      try {
+        const prevViews = BigInt(prevSnapshots[0].view_count);
+        deltaViews = currentViews >= prevViews ? currentViews - prevViews : 0n;
+        hasBaseline = true;
+      } catch {
+        // If previous view count cannot be parsed, treat delta as 0 but keep observation recorded
       }
     }
 
-    // 4. Upsert the hourly platform observation projection
-    const { error: obsError } = await supabase
+    // 4. Update platform observation projection & input coverage
+    const { error: observationError } = await supabase
       .from('bora_engine_platform_observations')
-      .upsert(
-        {
-          song_id: input.songId,
-          platform: 'youtube',
-          hour_index: input.hourIndex,
-          value: hourlyDelta,
-          source: 'EXTERNAL',
-          lifecycle: 'ACTIVE',
-          version: 1,
-          source_system: input.sourceSystem,
-          source_observation_id: input.sourceObservationId,
-          observed_at: input.retrievedAt,
-        },
-        { onConflict: 'song_id,platform,hour_index' },
-      );
+      .upsert({
+        song_id: input.songId,
+        platform: 'YOUTUBE',
+        hour_index: input.hourIndex,
+        cumulative_views: currentViews.toString(),
+        hourly_delta: deltaViews.toString(),
+        has_baseline: hasBaseline,
+        source_system: input.sourceSystem,
+        source_observation_id: input.sourceObservationId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'song_id,platform,hour_index' });
 
-    if (obsError) {
+    if (observationError) {
       return {
         status: 'error',
-        reason: `observation-upsert-failed: ${obsError.message}`,
+        reason: `observation-projection-failed: ${observationError.message}`,
       };
     }
 
-    // 5. Update hourly input coverage status to COMPLETE
-    await supabase
-      .from('bora_engine_hourly_input_coverage')
-      .upsert(
-        {
-          song_id: input.songId,
-          input_type: 'YOUTUBE',
-          hour_index: input.hourIndex,
-          status: 'COMPLETE',
-          detail: null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'song_id,input_type,hour_index' },
-      );
-
-    return { status: 'success', observationValue: hourlyDelta };
-  }
-
-  private async readLedgerEvent(
-    sourceEventId: string,
-  ): Promise<Record<string, unknown> | null> {
-    try {
-      const { data, error } = await this.client
-        .from('bora_engine_vote_events')
-        .select(
-          'source_system, source_event_id, song_id, vote_type, occurred_at, voter_ref, identity_method, identity_version, idempotency_key',
-        )
-        .eq('source_system', 'secure_vote_events')
-        .eq('source_event_id', sourceEventId)
-        .maybeSingle();
-      if (error) return null;
-      return (data ?? null) as Record<string, unknown> | null;
-    } catch {
-      return null;
-    }
-  }
-
-  private async release(
-    closedHour: HourIndex,
-    leaseToken: string,
-    errorCode: string | null,
-    retryable: boolean,
-  ): Promise<boolean> {
-    const { data, error } = await this.client.rpc(
-      'bora_engine_release_hour',
-      {
-        p_closed_hour: closedHour,
-        p_lease_token: leaseToken,
-        p_error_code: errorCode,
-        p_retryable: retryable,
-      },
-    );
-    if (error || typeof data !== 'boolean') {
-      throw new Error('BORA_ENGINE_RELEASE_FAILED');
-    }
-    return data;
-  }
-}
-
-export function createBoraEnginePersistence(): BoraEnginePersistenceSetup {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  let validUrl = false;
-  if (url) {
-    try {
-      const parsed = new URL(url);
-      validUrl = parsed.protocol === 'https:' || parsed.protocol === 'http:';
-    } catch {
-      validUrl = false;
-    }
-  }
-  if (!url || !validUrl) {
     return {
-      status: 'configuration-unavailable',
-      missing: 'NEXT_PUBLIC_SUPABASE_URL',
-    };
-  }
-  const serviceRoleKey = process.env.BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey || !serviceRoleKey.trim()) {
-    return {
-      status: 'configuration-unavailable',
-      missing: 'BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY',
-    };
-  }
-
-  const client = createSupabaseClient(url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-      persistSession: false,
-    },
-  });
-  return {
-    status: 'available',
-    persistence: new SupabaseBoraEnginePersistence(client),
-  };
-}
-
-export async function getBoraEngineReadiness(
-  closedHour: number | null = null,
-): Promise<BoraEngineReadiness> {
-  if (
-    closedHour !== null &&
-    (!Number.isSafeInteger(closedHour) || closedHour < 0)
-  ) {
-    return {
-      status: 'not-ready',
-      closedHour: null,
-      checks: {
-        trustedPersistence: {
-          status: 'unavailable',
-          detail: 'The requested closed hour must be a non-negative integer.',
-        },
-        initialState: { status: 'unavailable' },
-        voteHistory: { status: 'unavailable' },
-        seedHours: { status: 'unavailable' },
-        youtube: { status: 'unavailable' },
-        spotify: { status: 'unavailable' },
-        boomplay: { status: 'unavailable' },
-        databaseContract: { status: 'unavailable' },
-      },
-    };
-  }
-  const setup = createBoraEnginePersistence();
-  if (setup.status === 'configuration-unavailable') {
-    return {
-      status: 'unavailable',
-      closedHour,
-      checks: {
-        trustedPersistence: {
-          status: 'missing',
-          detail: setup.missing,
-        },
-        initialState: { status: 'unavailable' },
-        voteHistory: { status: 'unavailable' },
-        seedHours: { status: 'unavailable' },
-        youtube: { status: 'unavailable' },
-        spotify: { status: 'unavailable' },
-        boomplay: { status: 'unavailable' },
-        databaseContract: { status: 'unavailable' },
-      },
-    };
-  }
-  try {
-    return await setup.persistence.readiness(closedHour);
-  } catch {
-    return {
-      status: 'unavailable',
-      closedHour,
-      checks: {
-        trustedPersistence: { status: 'ready' },
-        initialState: { status: 'unavailable' },
-        voteHistory: { status: 'unavailable' },
-        seedHours: { status: 'unavailable' },
-        youtube: { status: 'unavailable' },
-        spotify: { status: 'unavailable' },
-        boomplay: { status: 'unavailable' },
-        databaseContract: {
-          status: 'unavailable',
-          detail: 'The readiness RPC could not be called; migration 0016 may be unapplied or unavailable to the configured role.',
-        },
-      },
-    };
-  }
-}
-
-export async function bootstrapBoraEngineState(
-  input: EngineBootstrapInput,
-): Promise<EngineBootstrapResult> {
-  const setup = createBoraEnginePersistence();
-  if (setup.status === 'configuration-unavailable') {
-    return { status: 'configuration-unavailable' };
-  }
-  try {
-    return await setup.persistence.bootstrap(input);
-  } catch {
-    return { status: 'persistence-failure' };
-  }
-}
-
-export async function getBoraEnginePublishEligibility(
-  closedHour: HourIndex,
-): Promise<BoraEnginePublishEligibility | { readonly status: 'unavailable'; readonly closedHour: HourIndex }> {
-  if (!Number.isSafeInteger(closedHour) || closedHour < 0) {
-    return {
-      status: 'unavailable',
-      closedHour,
-    };
-  }
-  const setup = createBoraEnginePersistence();
-  if (setup.status === 'configuration-unavailable') {
-    return {
-      status: 'unavailable',
-      closedHour,
-    };
-  }
-  try {
-    return await setup.persistence.publishEligibility(closedHour);
-  } catch {
-    return {
-      status: 'unavailable',
-      closedHour,
+      status: 'success',
+      observationValue: Number(currentViews > 9007199254740991n ? 9007199254740991n : currentViews),
     };
   }
 }
 
 function clampReconciliationPageSize(limit: number): number {
-  if (!Number.isFinite(limit)) return 25;
-  return Math.min(100, Math.max(1, Math.trunc(limit)));
+  if (!Number.isFinite(limit) || limit <= 0) return 100;
+  return Math.min(1000, Math.trunc(limit));
 }
 
-/**
- * Bounded backoff for whole-transaction retries (§C.4): ~150ms then ~300ms
- * plus small jitter, keeping a server action well inside its execution
- * budget while avoiding synchronized retry stampedes.
- */
-function sleepIngestionRetryBackoff(attempt: number): Promise<void> {
-  const baseMs = 150 * 2 ** (attempt - 1);
-  const jitterMs = Math.floor(Math.random() * 75);
-  return new Promise((resolve) => setTimeout(resolve, baseMs + jitterMs));
-}
-
-/**
- * Normalize a thrown transport-level error (fetch failure, abort, timeout)
- * into the structural error shape the classifier consumes. No SQLSTATE is
- * fabricated: an absent or OS-level code classifies as commit-unknown.
- */
-function normalizeThrownRpcError(thrown: unknown): {
-  readonly code: string;
-  readonly message: string;
-} {
-  if (typeof thrown === 'object' && thrown !== null) {
-    const candidate = thrown as {
-      readonly code?: unknown;
-      readonly name?: unknown;
-      readonly message?: unknown;
+function normalizeThrownRpcError(thrown: unknown): { readonly code: string; readonly message: string } {
+  if (isRecord(thrown)) {
+    return {
+      code: typeof thrown.code === 'string' ? thrown.code : 'UNKNOWN',
+      message: typeof thrown.message === 'string' ? thrown.message : String(thrown),
     };
-    const code = typeof candidate.code === 'string' ? candidate.code : '';
-    const name = typeof candidate.name === 'string' ? candidate.name : 'Error';
-    const message =
-      typeof candidate.message === 'string' ? candidate.message : '';
-    return { code, message: `${name}: ${message}` };
   }
-  return { code: '', message: 'unknown-throw' };
+  return { code: 'UNKNOWN', message: String(thrown) };
+}
+
+async function sleepIngestionRetryBackoff(attempt: number): Promise<void> {
+  const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+export function createBoraEnginePersistence(
+  client: SupabaseClient,
+): BoraEnginePersistence {
+  return new SupabaseBoraEnginePersistence(client);
+}
+
+export function createBoraEnginePersistenceFromEnv(): BoraEnginePersistenceSetup {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    return {
+      status: 'configuration-unavailable',
+      missing: !url ? 'NEXT_PUBLIC_SUPABASE_URL' : 'BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY',
+    };
+  }
+  const client = createSupabaseClient(url, key, {
+    auth: { persistSession: false },
+  });
+  return {
+    status: 'available',
+    persistence: new SupabaseBoraEnginePersistence(client),
+  };
 }

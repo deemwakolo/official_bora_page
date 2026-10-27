@@ -51,9 +51,6 @@ begin
     else
       v_state_status := 'incomplete';
     end if;
-  else
-    v_closed_hour := p_closed_hour;
-  end if;
 
     -- Seed hours: full 72-hour window [R-71, R]
     select jsonb_build_object(
@@ -211,6 +208,7 @@ begin
       and c.input_type = 'BOOMPLAY'
       and c.hour_index between v_closed_hour - 167 and v_closed_hour;
   else
+    v_closed_hour := p_closed_hour;
     v_vote := jsonb_build_object(
       'status', 'incomplete', 'expected', 1, 'complete', 0, 'missing', 1,
       'unavailable', 0, 'failed', 0, 'records', 0, 'zeroRecords', 0,
