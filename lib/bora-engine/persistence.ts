@@ -1,4 +1,4 @@
-﻿import 'server-only';
+import 'server-only';
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -940,21 +940,44 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     const supabase = this.client;
 
     // 1. Verify song exists and matches the registered youtube_id mapping
-    const { data: songData, error: songError } = await supabase
+    const { data: song, error: songError } = await supabase
       .from('songs')
       .select('id, youtube_id')
       .eq('id', input.songId)
       .single();
 
-    if (songError || !songData || songData.youtube_id !== input.videoId) {
+    if (songError || !song) {
       return {
         status: 'error',
-        reason: 'song-youtube-id-mismatch-or-not-found',
+        reason: `song-not-found: ${input.songId}`,
       };
     }
 
-    // 2. Insert snapshot into immutable historical ledger
-    const { error: snapshotError } = await supabase
+    if (song.youtube_id !== input.videoId) {
+      return {
+        status: 'error',
+        reason: `youtube-id-mismatch: expected ${song.youtube_id}, got ${input.videoId}`,
+      };
+    }
+
+    // 2. Validate cumulative views using BigInt
+    if (!/^\d+$/.test(input.value)) {
+      return { status: 'error', reason: 'invalid-view-count-format' };
+    }
+    const currentCumulative = BigInt(input.value);
+
+    // 3. Fetch previous snapshot for baseline calculation
+    const { data: prevSnapshot } = await supabase
+      .from('bora_engine_youtube_snapshot_history')
+      .select('view_count, hour_index')
+      .eq('song_id', input.songId)
+      .eq('video_id', input.videoId)
+      .order('hour_index', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // 4. Insert current cumulative snapshot into history
+    const { error: snapInsertError } = await supabase
       .from('bora_engine_youtube_snapshot_history')
       .insert({
         song_id: input.songId,
@@ -963,79 +986,127 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
         metric: 'cumulative_views',
         unit: 'views_total',
         source_status: 'OBSERVED',
-        view_count: input.value,
+        view_count: currentCumulative.toString(),
         retrieved_at: input.retrievedAt,
         source_system: input.sourceSystem,
         source_observation_id: input.sourceObservationId,
         version: 0,
       });
 
-    if (snapshotError) {
-      if (snapshotError.code === '23505') {
+    if (snapInsertError) {
+      if (snapInsertError.code === '23505') {
         return { status: 'error', reason: 'duplicate-source-observation-id' };
       }
       return {
         status: 'error',
-        reason: `snapshot-insert-failed: ${snapshotError.message}`,
+        reason: `snapshot-insert-failed: ${snapInsertError.message}`,
       };
     }
 
-    // 3. Fetch the immediately preceding snapshot to compute hourly delta safely using BigInt
-    const { data: prevSnapshots } = await supabase
-      .from('bora_engine_youtube_snapshot_history')
-      .select('view_count, retrieved_at')
-      .eq('song_id', input.songId)
-      .eq('video_id', input.videoId)
-      .lt('retrieved_at', input.retrievedAt)
-      .order('retrieved_at', { ascending: false })
-      .limit(1);
+    let hourlyDelta: bigint | null = null;
+    let hasValidBaseline = false;
 
-    let currentViews: bigint;
-    let deltaViews: bigint = 0n;
-    try {
-      currentViews = BigInt(input.value);
-    } catch {
-      return { status: 'error', reason: 'invalid-view-count-format' };
-    }
-
-    let hasBaseline = false;
-    if (prevSnapshots && prevSnapshots.length > 0) {
+    if (!prevSnapshot) {
+      // First snapshot: baseline recorded, activity unmeasured
+      hasValidBaseline = false;
+    } else {
       try {
-        const prevViews = BigInt(prevSnapshots[0].view_count);
-        deltaViews = currentViews >= prevViews ? currentViews - prevViews : 0n;
-        hasBaseline = true;
+        const prevViews = BigInt(prevSnapshot.view_count);
+        if (currentCumulative < prevViews) {
+          return {
+            status: 'error',
+            reason: 'view-count-decreased',
+          };
+        }
+        hourlyDelta = currentCumulative - prevViews;
+        hasValidBaseline = true;
       } catch {
-        // If previous view count cannot be parsed, treat delta as 0 but keep observation recorded
+        return {
+          status: 'error',
+          reason: 'invalid-previous-view-count-format',
+        };
       }
     }
 
-    // 4. Update platform observation projection & input coverage
-    const { error: observationError } = await supabase
-      .from('bora_engine_platform_observations')
+    // 5. If measured, record platform observation history and update projection
+    if (hourlyDelta !== null && hasValidBaseline) {
+      const deltaStr = hourlyDelta.toString();
+
+      const { error: obsHistoryError } = await supabase
+        .from('bora_engine_platform_observation_history')
+        .insert({
+          song_id: input.songId,
+          platform: 'youtube',
+          hour_index: input.hourIndex,
+          value: deltaStr,
+          source: 'EXTERNAL',
+          source_system: input.sourceSystem,
+          source_observation_id: input.sourceObservationId,
+          observed_at: input.retrievedAt,
+          version: 1,
+        });
+
+      if (obsHistoryError && obsHistoryError.code !== '23505') {
+        return {
+          status: 'error',
+          reason: `observation-history-failed: ${obsHistoryError.message}`,
+        };
+      }
+
+      // Upsert current platform observation projection
+      const { error: obsProjError } = await supabase
+        .from('bora_engine_platform_observations')
+        .upsert({
+          song_id: input.songId,
+          platform: 'youtube',
+          hour_index: input.hourIndex,
+          value: deltaStr,
+          source: 'EXTERNAL',
+          lifecycle: 'ACTIVE',
+          version: 1,
+          source_system: input.sourceSystem,
+          source_observation_id: input.sourceObservationId,
+          observed_at: input.retrievedAt,
+        }, { onConflict: 'song_id,platform,hour_index' });
+
+      if (obsProjError) {
+        return {
+          status: 'error',
+          reason: `observation-projection-failed: ${obsProjError.message}`,
+        };
+      }
+    }
+
+    // 6. Record strict coverage provenance
+    const { error: coverageError } = await supabase
+      .from('bora_engine_hourly_input_coverage')
       .upsert({
         song_id: input.songId,
-        platform: 'YOUTUBE',
+        input_type: 'YOUTUBE',
         hour_index: input.hourIndex,
-        cumulative_views: currentViews.toString(),
-        hourly_delta: deltaViews.toString(),
-        has_baseline: hasBaseline,
-        source_system: input.sourceSystem,
-        source_observation_id: input.sourceObservationId,
+        status: 'COMPLETE',
+        detail: hasValidBaseline ? 'snapshot-delta-computed' : 'initial-baseline-snapshot',
+        currentness: input.retrievedAt,
+        source_identity: input.sourceSystem,
+        evidence_id: input.sourceObservationId,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'song_id,platform,hour_index' });
+      }, { onConflict: 'song_id,input_type,hour_index' });
 
-    if (observationError) {
+    if (coverageError) {
       return {
         status: 'error',
-        reason: `observation-projection-failed: ${observationError.message}`,
+        reason: `coverage-upsert-failed: ${coverageError.message}`,
       };
     }
 
     return {
       status: 'success',
-      observationValue: Number(currentViews > 9007199254740991n ? 9007199254740991n : currentViews),
+      observationValue: hourlyDelta !== null
+        ? Number(hourlyDelta > 9007199254740991n ? 9007199254740991n : hourlyDelta)
+        : 0,
     };
   }
+
 }
 
 function clampReconciliationPageSize(limit: number): number {
