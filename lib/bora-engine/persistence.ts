@@ -54,7 +54,7 @@ export type BoraEnginePersistenceSetup =
  * One rediscovery page: source rows scanned (canonical `public.vote_events`,
  * append-only), the subset not yet present in the Engine ledger, and whether
  * the source contained more rows beyond this page. Completeness derives from
- * the ledger anti-join predicate, never from a durable cursor â€” unfinished
+ * the ledger anti-join predicate, never from a durable cursor ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â unfinished
  * work simply remains in the source set for the next scan.
  */
 export interface PendingSecureVoteEventBatch {
@@ -81,12 +81,13 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   checkBootstrap(closedHour: HourIndex): Promise<
     | { readonly status: 'ready' }
     | { readonly status: 'missing' }
+    | { readonly status: 'not-ready' }
     | { readonly status: 'reference-hour-mismatch' }
     | { readonly status: 'already-completed' }
   >;
   readiness(closedHour: number | null): Promise<BoraEngineReadiness>;
   /**
-   * Phase 4 â€” Publication readiness RPC. Determines whether a closed hour's
+   * Phase 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Publication readiness RPC. Determines whether a closed hour's
    * vote data satisfies the full-window readiness predicate (648 slots per
    * active song) and has no invalidated vote events in the publication
    * window. Delegates to bora_engine_readiness for the core predicate and
@@ -95,7 +96,7 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   publishEligibility(closedHour: HourIndex): Promise<BoraEnginePublishEligibility>;
   bootstrap(input: EngineBootstrapInput): Promise<EngineBootstrapResult>;
   /**
-   * Phase 3 â€” durable ingestion of one committed, accepted secure-vote event
+   * Phase 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â durable ingestion of one committed, accepted secure-vote event
    * through the single atomic `bora_engine_ingest_vote_event` transaction.
    * Deduplication, bucket counting, and coverage invalidation remain the
    * database's authority; this method never issues a standalone bucket
@@ -105,7 +106,7 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
     event: CanonicalAcceptedVoteEvent,
   ): Promise<VoteEventIngestionOutcome>;
   /**
-   * Phase 3 â€” cursor-free rediscovery: canonical source rows not yet present
+   * Phase 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â cursor-free rediscovery: canonical source rows not yet present
    * in `bora_engine_vote_events` under the stable identity
    * `(source_system, source_event_id)`, ordered by (created_at, id) and
    * bounded by (offset, limit) for one invocation.
@@ -302,17 +303,26 @@ function parseCoverageReadiness(
   ) {
     return null;
   }
+
   const expected = parseReadinessCount(value.expected);
   const complete = parseReadinessCount(value.complete);
   const missing = parseReadinessCount(value.missing);
   const unavailable = parseReadinessCount(value.unavailable);
   const failed = parseReadinessCount(value.failed);
   const records = parseReadinessCount(value.records);
-  const zeroRecords = parseReadinessCount(value.zeroRecords);
+
+  // Some live RPC responses, including vote history, omit zeroRecords.
+  // If present, it must still be a valid non-negative integer.
+  const zeroRecords =
+    value.zeroRecords === undefined
+      ? undefined
+      : parseReadinessCount(value.zeroRecords);
+
   const acceptedEvents =
     value.acceptedEvents === undefined
       ? 0
       : parseReadinessCount(value.acceptedEvents);
+
   if (
     expected === null ||
     complete === null ||
@@ -320,11 +330,12 @@ function parseCoverageReadiness(
     unavailable === null ||
     failed === null ||
     records === null ||
-    zeroRecords === null ||
+    (value.zeroRecords !== undefined && zeroRecords === null) ||
     acceptedEvents === null
   ) {
     return null;
   }
+
   return {
     status: value.status,
     expected,
@@ -333,7 +344,7 @@ function parseCoverageReadiness(
     unavailable,
     failed,
     records,
-    zeroRecords,
+    ...(zeroRecords === undefined ? {} : { zeroRecords }),
     ...(value.acceptedEvents === undefined ? {} : { acceptedEvents }),
   };
 }
@@ -563,6 +574,9 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     }
     if (data.status === 'already-completed') {
       return { status: 'already-completed' as const };
+    }
+    if (data.status === 'not-ready') {
+      return { status: 'not-ready' as const };
     }
     throw new Error('BORA_ENGINE_INVALID_SNAPSHOT');
   }
@@ -799,13 +813,13 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       sourceEventId: validation.request.sourceEventId,
     };
 
-    // Advisory committed-ledger pre-check (Â§3 reuse of
+    // Advisory committed-ledger pre-check (Ãƒâ€šÃ‚Â§3 reuse of
     // validateVoteEventIngestionRequest + assessVoteEventIngestionRetry). It
     // is authoritative ONLY when the ledger row carries complete provenance,
     // so the full canonical payload can be compared without regenerating
     // timestamps, identities, or idempotency keys. A provenance-less or
     // unreadable ledger row defers every decision to the in-transaction RPC
-    // authority (corrected design Â§B/C/D: the unique identity, not a
+    // authority (corrected design Ãƒâ€šÃ‚Â§B/C/D: the unique identity, not a
     // pre-read, owns deduplication).
     const ledger = await this.readLedgerEvent(identity.sourceEventId);
     if (ledger !== null) {
@@ -863,9 +877,9 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       if (attemptResult.status === 'settled') {
         return attemptResult.outcome;
       }
-      // Whole-transaction retry only (Â§C.4): never retry a partial step, and
-      // never retry an unknown commit in-action â€” that is reconciliation's
-      // job (Â§D).
+      // Whole-transaction retry only (Ãƒâ€šÃ‚Â§C.4): never retry a partial step, and
+      // never retry an unknown commit in-action ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â that is reconciliation's
+      // job (Ãƒâ€šÃ‚Â§D).
       lastErrorCode = attemptResult.errorCode;
       if (attempt < maxAttempts) {
         await sleepIngestionRetryBackoff(attempt);
