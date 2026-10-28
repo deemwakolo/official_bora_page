@@ -1,4 +1,4 @@
-﻿import { createBoraEnginePersistence, type BoraEnginePersistence } from './persistence';
+﻿import { createBoraEnginePersistenceFromEnv } from './persistence';
 
 export interface SecureVoteReconciliationOptions {
   readonly cutoverIso: string;
@@ -29,7 +29,7 @@ export async function reconcileSecureVoteDelivery(options: SecureVoteReconciliat
   const batchSize = clampReconciliationPageSize(options.batchSize ?? 25);
   const maxBatches = clampReconciliationBatchSize(options.maxBatches ?? 4);
 
-  const setup = createBoraEnginePersistence();
+  const setup = createBoraEnginePersistenceFromEnv();
   if (setup.status === 'configuration-unavailable') {
     return { status: 'configuration-unavailable', missing: setup.missing };
   }

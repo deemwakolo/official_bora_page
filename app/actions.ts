@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { loadCanonicalSecureVoteEvent } from '@/lib/supabase/secure-vote-source';
 import type { CanonicalAcceptedVoteEvent } from '@/lib/supabase/vote-event';
-import { createBoraEnginePersistence } from '@/lib/bora-engine/persistence';
+import { createBoraEnginePersistenceFromEnv } from '@/lib/bora-engine/persistence';
 import type { VoteEventIngestionOutcome } from '@/lib/bora-engine/vote-event-ingestion';
 
 type PulseType = 'up' | 'down';
@@ -157,7 +157,7 @@ export async function ingestAcceptedVoteEvent(
     return { status: 'invalid-input', reasons: ['invalid-voter-reference'] };
   }
 
-  const setup = createBoraEnginePersistence();
+  const setup = createBoraEnginePersistenceFromEnv();
   if (setup.status === 'configuration-unavailable') {
     console.error(
       'BORA_ENGINE_DELIVERY_PENDING',

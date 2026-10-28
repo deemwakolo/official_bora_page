@@ -371,7 +371,7 @@ export function getRequiredSlotIntervals(
     });
   }
 
-  for (const platform of ['youtube', 'spotify', 'boomplay'] as const) {
+  for (const _platform of ['youtube', 'spotify', 'boomplay'] as const) {
     slots.push({
       inputType: `platform-observation-history` as const,
       firstHour: referenceHour - (PLATFORM_WINDOW_HOURS - 1),
@@ -389,7 +389,7 @@ export function getRequiredSlotIntervals(
  */
 export function reassessRecountBucket(
   songId: string | null,
-  hourIndex: number,
+  _hourIndex: number,
   ledgerUpvotes: number,
   ledgerDownvotes: number,
   bucketUpvotes: number,

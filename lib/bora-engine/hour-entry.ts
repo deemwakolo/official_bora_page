@@ -5,7 +5,7 @@ import {
   TRANSITION_MS,
 } from '../../engine/src/engine/constants';
 import type { HourIndex } from '../../engine/src/engine/types';
-import { createBoraEnginePersistence } from './persistence';
+import { createBoraEnginePersistenceFromEnv } from './persistence';
 import { runHourlyRollover } from './hourly-runner';
 import type { HourlyRolloverResult } from './hourly-runner';
 
@@ -95,7 +95,7 @@ export async function runBoraEngineHour(input: {
     return { status: 'invalid-request' };
   }
 
-  const setup = createBoraEnginePersistence();
+  const setup = createBoraEnginePersistenceFromEnv();
   if (setup.status === 'configuration-unavailable') {
     return { status: 'configuration-unavailable' };
   }

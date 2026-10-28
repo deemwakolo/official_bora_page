@@ -313,10 +313,18 @@ function parseCoverageReadiness(
 
   // Some live RPC responses, including vote history, omit zeroRecords.
   // If present, it must still be a valid non-negative integer.
-  const zeroRecords =
-    value.zeroRecords === undefined
+  const zeroRecordsRaw = value.zeroRecords;
+  const zeroRecordsParsed =
+    zeroRecordsRaw === undefined
       ? undefined
-      : parseReadinessCount(value.zeroRecords);
+      : parseReadinessCount(zeroRecordsRaw);
+
+  if (zeroRecordsRaw !== undefined && zeroRecordsParsed === null) {
+    return null;
+  }
+
+  const zeroRecords: number | undefined =
+    zeroRecordsParsed === null ? undefined : zeroRecordsParsed;
 
   const acceptedEvents =
     value.acceptedEvents === undefined
@@ -330,7 +338,6 @@ function parseCoverageReadiness(
     unavailable === null ||
     failed === null ||
     records === null ||
-    (value.zeroRecords !== undefined && zeroRecords === null) ||
     acceptedEvents === null
   ) {
     return null;
@@ -1121,6 +1128,48 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     };
   }
 
+  private async readLedgerEvent(
+    sourceEventId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const { data, error } = await this.client
+      .from('bora_engine_vote_events')
+      .select(
+        'source_system, source_event_id, song_id, vote_type, occurred_at, voter_ref, identity_method, identity_version, idempotency_key',
+      )
+      .eq('source_system', 'secure_vote_events')
+      .eq('source_event_id', sourceEventId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error('BORA_ENGINE_VOTE_LEDGER_READ_FAILED');
+    }
+
+    return (data ?? null) as Record<string, unknown> | null;
+  }
+
+  private async release(
+    closedHour: HourIndex,
+    leaseToken: string,
+    errorCode: string | null,
+    retryable: boolean,
+  ): Promise<boolean> {
+    const { data, error } = await this.client.rpc(
+      'bora_engine_release_hour',
+      {
+        p_closed_hour: closedHour,
+        p_lease_token: leaseToken,
+        p_error_code: errorCode,
+        p_retryable: retryable,
+      },
+    );
+
+    if (error || typeof data !== 'boolean') {
+      throw new Error('BORA_ENGINE_RELEASE_FAILED');
+    }
+
+    return data;
+  }
+
 }
 
 function clampReconciliationPageSize(limit: number): number {
@@ -1141,6 +1190,54 @@ function normalizeThrownRpcError(thrown: unknown): { readonly code: string; read
 async function sleepIngestionRetryBackoff(attempt: number): Promise<void> {
   const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
   await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+export async function getBoraEngineReadiness(
+  closedHour: number | null = null,
+): Promise<BoraEngineReadiness> {
+  const setup = createBoraEnginePersistenceFromEnv();
+  if (setup.status === 'configuration-unavailable') {
+    return {
+      status: 'unavailable',
+      closedHour,
+      checks: {
+        trustedPersistence: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+        initialState: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+        voteHistory: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+        seedHours: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+        youtube: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+        spotify: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+        boomplay: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+        databaseContract: {
+          status: 'unavailable',
+          detail: 'BORA engine persistence is not configured',
+        },
+      },
+    };
+  }
+
+  return setup.persistence.readiness(closedHour);
 }
 
 export function createBoraEnginePersistence(
