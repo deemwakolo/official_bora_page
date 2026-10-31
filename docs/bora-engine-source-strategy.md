@@ -50,7 +50,7 @@ decisions:
 
 | Platform | Required Engine measurement | Current status | Reason |
 | --- | --- | --- | --- |
-| YouTube | `video_views` / `views_per_hour` | `not-configured` | The YouTube Data API cumulative snapshot client exists, but there is no connected trusted server-side song/video mapping source, snapshot persistence, or defensible conversion to hourly activity. |
+| YouTube | `video_views` / `views_per_hour` | `not-configured` | The YouTube Data API client and cumulative snapshot history/persistence exist, but there is no connected trusted server-side song/video mapping or capture-on-add workflow. Cumulative snapshots alone do not establish hourly activity. |
 | Spotify | `track_streams` / `streams_per_hour` | `not-authorized` | Standard Spotify API-derived listenership metrics are not approved under the current permission assumptions; the feasibility review found the proposed ranking use prohibited absent applicable authorization or exception. |
 | Boomplay | `track_streams` / `streams_per_hour` | `unsupported` | A suitable authorized track-level measurement interface and BORA mapping source have not been established. |
 
@@ -70,6 +70,22 @@ redistributed. This decision does not itself establish provider authorization,
 credentials, trusted song mappings, or usable hourly measurements. The current
 assessments above therefore remain blocking until each source is independently
 verified and connected.
+
+## Approved baseline capture policy
+
+For future song additions, capture a current measurement from each of the
+three authorized platform sources independently. The existing 30-song cohort
+is not included in this capture policy. Each baseline must retain the verified
+song/platform mapping, source identity, evidence identity, metric and unit, and
+observation timestamp. A cumulative counter remains cumulative; it is not
+itself an hourly observation.
+
+The raw baselines are preserved as starting references for later observations.
+If a baseline source is unavailable, the song may remain in the public
+registry but is Engine-ineligible until all three baselines are valid. No
+scoring or seed formula has been approved for converting the raw baselines into
+Engine state. Do not infer values, mark a missing source as zero, or bootstrap
+or publish until the source contracts and seed formula are approved.
 
 ## Coverage semantics
 

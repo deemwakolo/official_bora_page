@@ -1,5 +1,141 @@
 # BORA Engine — Stage 01 Baseline Report
 
+> **Current verification update — 2026-10-31 (local time, UTC+03:00)**
+> The dated sections below preserve the original 2026-10-24 audit. Where they
+> conflict with this update, this newer read-only reconciliation is
+> authoritative.
+
+## Current Reconciliation
+
+### Repository and validation
+
+- At the start of this reconciliation, `main` and `origin/main` both pointed
+  to `dd2dcb00193308c9a375e138b7b4fd699d03b230`
+  (`Harden FAQ and database function access`).
+- The production TypeScript check passes. The Engine TypeScript check initially
+  failed because a constructor parameter property is incompatible with the
+  Engine configuration's `erasableSyntaxOnly`; it now passes after replacing
+  the parameter property with an explicit field and constructor assignment.
+- YouTube persistence now records only validated cumulative snapshots. It no
+  longer assigns a first snapshot or an arbitrary multi-hour delta to an hourly
+  slot, creates an observation, or marks hourly coverage `COMPLETE`. Same-ID
+  retries are idempotent when the payload matches; conflicting payload reuse
+  is rejected.
+- Lint passes with existing warnings in unrelated UI components.
+- YouTube snapshot persistence regression tests pass (3/3); focused Engine
+  persistence-contract tests pass (17/17).
+- The two focused Engine persistence-contract test files pass (17 tests).
+  The full Engine Vitest command did not complete in this environment and was
+  stopped after remaining at runner startup; the full suite is not verified by
+  this update.
+- No migration was replayed, no production data was written, and no deployment
+  was performed.
+
+### Live migration and data state
+
+The live migration history records Engine migrations `0012`–`0021`,
+`20261031090535` (`bora_engine_rollover_648_coverage`), and
+`20261031174329` (`bora_engine_atomic_publication`), followed by security
+migrations `0034`–`0036`. Migration `0033` is already applied and must not be
+replayed.
+
+Fresh read-only counts show:
+
+| Item | Rows/state |
+| --- | ---: |
+| `public.songs` | 30 |
+| Canonical `public.vote_events` | 33 |
+| Engine vote events, vote buckets, seed hours, song state | 0 each |
+| Hourly runs, closures, state heads, bootstrap approvals | 0 each |
+| Evaluation runs, publications, publication entries | 0 each |
+| Publication head | One singleton row, no current publication |
+| Publication source head | One row |
+| Vote invalidations and YouTube snapshot history | 0 each |
+
+Two non-empty input tables need explicit interpretation rather than the old
+claim that every Engine table is empty:
+
+- `bora_engine_platform_observations` has one active YouTube record (`views`,
+  source `youtube-data-api-v3`) at hour `498088`. It does not establish a
+  complete hourly `views_per_hour` history.
+- `bora_engine_hourly_input_coverage` has one `COMPLETE` record with
+  `input_type = 'api_poll'` at hour `498088`. That input type is not one of the
+  Engine's required vote, seed, or platform slots, so it does not satisfy
+  bootstrap, rollover, or publication readiness.
+
+The live `songs` table has 30 non-empty, distinct YouTube IDs. The server-side
+collector still has no trusted loader wired to that mapping, and the ID count
+does not establish an authorized hourly measurement source.
+
+### Production configuration and workflow wiring
+
+`vercel env ls production` confirmed variable names; no values were extracted,
+exposed, or acted upon. Production has `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `BORA_ADMIN_USER_IDS`, and
+`NEXT_PUBLIC_BORA_SECURE_VOTING`. The secure-voting variable's value was not
+inspected, so the active production vote path is **unknown**. These required
+Engine variables were absent from the listing:
+`BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY`,
+`BORA_ENGINE_OPERATOR_USER_IDS`, `BORA_YOUTUBE_API_KEY`, and `CRON_SECRET`.
+
+The repository already contains the protected hourly route and a Vercel cron
+entry at minute 15. The route requires `CRON_SECRET`; deployment invocation
+and runtime success are not established. The route's source-readiness gate
+currently blocks all three platforms (YouTube not configured, Spotify not
+authorized, Boomplay unsupported), as required by the approved mandatory
+three-platform policy.
+
+The public page already reads the current Engine publication and falls back to
+the registry chart when no publication exists. The evaluation/publication
+transaction code also exists, but there is no production caller that supplies
+a trusted complete evaluation snapshot. Bootstrap and legitimate publication
+remain blocked by missing authoritative state, an approved seed formula,
+fresh vote history/cutover, and authorized platform measurements.
+
+### Stage 01 disposition and approved decisions
+
+Stage 01 is **reconciled but not operationally accepted**. The Engine remains
+uninitialized. The user approved these policies:
+
+- Start Engine vote history fresh. Do not ingest the 33 existing canonical
+  events into the Engine, and do not delete or alter those canonical rows.
+- Automatically capture baselines only for future song additions, not the
+  existing 30-song cohort. Preserve each platform metric independently with
+  the verified song mapping, source identity, evidence ID, metric/unit, and
+  observation time. Keep cumulative metrics distinct from hourly deltas.
+- If any required platform baseline is unavailable, allow the registry song
+  addition but keep that song Engine-ineligible until all three baselines are
+  valid.
+- Do not derive a seed/scoring formula from those baselines. The formula is
+  undecided; do not bootstrap or publish until it is explicitly approved.
+- Keep all three platforms mandatory and leave existing database voting limits
+  and restrictions unchanged.
+- Only the project owner may authorize production operations, and the
+  assistant may act only under explicit owner instructions. Copilot is not an
+  independent production operator. The current operator allowlist supports
+  verified Supabase user IDs, not an AI identity; do not invent an AI user ID
+  or add an alternate privileged identity without an auditable approval
+  mechanism.
+
+Still blocking implementation/activation:
+
+1. Establish an authorized source, verified song mapping, metric semantics,
+   and credentials for each platform. Existing source assessments remain
+   YouTube `not-configured`, Spotify `not-authorized`, and Boomplay
+   `unsupported`. The user plans to provide YouTube source details during the
+   population stage and Spotify/Boomplay details later.
+2. Approve how raw baselines establish Engine state/reference hour and how
+   they relate to the still-undecided seed formula.
+3. Implement and verify the future-song baseline capture workflow; none of
+   the platform collectors is connected to song creation yet.
+4. Provision the service credential, owner operator allowlist, provider
+   credentials, and cron secret only in protected deployment configuration.
+   The production secure-voting variable exists, but its value was not
+   inspected; do not change it before prerequisites and explicit approval.
+
+Do not treat any live row as valid coverage merely because it exists, and do
+not replay an already-applied migration.
+
 **Audit date/time:** 2026-10-24 (local checkout time)
 **Live database verification date/time:** 2026-10-24 (fresh read-only query)
 **Vercel env verification date/time:** 2026-10-24 (fresh read-only query)

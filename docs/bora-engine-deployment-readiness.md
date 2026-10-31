@@ -6,12 +6,10 @@ considered complete without independent operational evidence.
 
 ## 1. Database migrations
 
-The repository contains Engine migrations through `0033`, with gaps in the
-numbering. The previously verified live Supabase migration history recorded
-migrations `0012`–`0017` as applied. Later migrations require independent
-deployment verification. This does not establish that the Engine is
-initialized, that historical inputs are complete, or that a workflow is
-operational.
+The repository contains Engine migrations through `0036`, with gaps in the
+numbering. The live migration history was verified through `0036` on
+2026-10-31. This does not establish that the Engine is initialized, that
+historical inputs are complete, or that a workflow is operational.
 
 | Migration | Purpose and dependency |
 | --- | --- |
@@ -21,12 +19,15 @@ operational.
 | `0015_bora_engine_state_bootstrap.sql` | Adds an approval record and service-role-only bootstrap/check functions. Bootstrap requires explicit initial state and coverage matching persisted rows, refuses an existing state head, and refuses incomplete required history. Depends on `0012`–`0014`. |
 | `0016_bora_engine_readiness.sql` | Adds a read-only, service-role-only readiness RPC for bootstrap state and vote, seed, and per-platform coverage/record counts, including explicit zero records. Depends on `0012`–`0015`. |
 | `0017_bora_engine_youtube_snapshot_history.sql` | Defines append-only cumulative YouTube view-count snapshots, distinct from hourly observations, with stable source identity, retry deduplication, revision/invalidation links, and server-only table access. Depends on `0012` for the song foreign key. |
-| `0018_bora_engine_durable_ingestion_validation.sql` | Adds the immutable vote-event invalidation ledger (`bora_engine_vote_event_invalidations`) with append-only trigger enforcement, and the atomic `bora_engine_ingest_vote_event` RPC which is the sole authority for secure-vote identity claim and bucket counting. Depends on `0012`–`0017`. |
+| `0018_bora_engine_durable_ingestion_validation.sql` | Adds the immutable vote-event invalidation ledger with append-only trigger enforcement, and the atomic `bora_engine_ingest_vote_event` RPC which is the sole authority for secure-vote identity claim and bucket counting. Migration `0033` corrects the live invalidation table identity and four-field event join; the current table is `bora_engine_vote_coverage_invalidation`. Depends on `0012`–`0017`. |
 | `0019_bora_engine_full_window_readiness.sql` | Replaces `bora_engine_readiness` with a full-window predicate enforcing 648 satisfied slots per active song across the 72-hour + 168-hour required intervals, plus vote/seed coverage assessment for the complete window. Depends on `0012`–`0018`. |
 | `0020_bora_engine_bootstrap_full_window.sql` | Replaces `bora_engine_check_hour` to enforce full-window completeness (648 slots) during bootstrap eligibility, correcting the prior 506-slot expectation. Depends on `0012`–`0019`. |
 | `0021_bora_engine_publish_eligibility.sql` | Adds the service-role-only publication-readiness RPC `bora_engine_publish_eligibility(p_closed_hour)`, which delegates to `bora_engine_readiness` for the 648-slot full-window predicate, enforces reference-hour match, and rejects publication if any invalidated vote events fall within the 72-hour preceding window. Depends on `0012`–`0020`. |
 | `0032_bora_engine_rollover_648_coverage.sql` | Aligns hourly load, commit, and bootstrap checks with the 648-slot coverage requirement. |
 | `0033_bora_engine_atomic_publication.sql` | Repairs the bootstrap/hour check to require complete coverage evidence, extends the hourly snapshot with persisted evidence authority, restores the full publication-eligibility RPC, and adds source-revision tracking plus the service-role-only atomic `bora_engine_publish_chart(jsonb)` transaction. |
+| `0034_security_hardening.sql` | Enables FAQ RLS with published-record reads and administrator writes, hardens selected function search paths and grants, and removes an obsolete unguarded admin-upsert overload. |
+| `0035_security_hardening_followup.sql` | Optimizes the FAQ read policy and removes ambiguity between the administrator song-upsert overloads. |
+| `0036_internal_table_privilege_cleanup.sql` | Removes unnecessary client grants from internal configuration/statistics tables and drops a redundant authenticated song-read policy. |
 
 ## 2. Private configuration
 
@@ -54,6 +55,17 @@ who may request readiness through the internal operator boundary.
 Before bootstrap, prepare and reconcile explicit persisted history for every
 Engine song that is active at the reference hour:
 
+- The 33 existing canonical vote events are intentionally excluded from Engine
+  history under the approved fresh-start policy. Preserve the canonical rows;
+  start Engine vote history at an explicit new cutover instead of backfilling
+  those events.
+- For future song additions (not the existing 30-song cohort), the approved
+  baseline policy is to capture current measurements independently from all
+  three authorized platforms, with verified mappings and
+  source/evidence/timestamp metadata. If a capture is unavailable, keep the
+  registry song but leave it Engine-ineligible until all three baselines are
+  valid. No seed formula is approved for converting these raw baselines into
+  Engine state.
 - A complete, operator-approved initial Engine state and its reference hour.
   Do not derive it from public chart ranks, `momentum_score`, `slot_number`,
   `previous_rank`, or aggregate vote counters.
@@ -83,12 +95,12 @@ coverage.
 | Trusted operator authorization | Implemented in `operator-authorization.ts`: verifies the user with the server Supabase client and checks the private ID allowlist. `operator-readiness.ts` only calls readiness after `authorized`. | Not established until `BORA_ENGINE_OPERATOR_USER_IDS` is provisioned with approved IDs and the normal authenticated server client works. No route, action, or UI exposes this entry point. |
 | Readiness RPC | Defined in migration `0016`, restricted to `service_role`. Recorded as applied in the verified live Supabase migration history. | Not operationally verified until private persistence configuration exists, grants/RLS are confirmed, and the RPC is successfully invoked through an authorized operator boundary. |
 | Bootstrap and state-head initialization | Bootstrap validation/RPC call exists in `persistence.ts`; SQL proposal is in `0015`, with the state head defined by `0014`. It requires explicit approval metadata, matching persisted state/coverage, and an uninitialized head. | Not initialized or operationally verified. No automatic default state is created. |
-| Hourly claim, lease, and atomic commit | `hourly-runner.ts` and the service-role adapter in `persistence.ts` call the proposed `0014` atomic operations. The runner uses the existing Engine rollover logic. | Not operational until migrations are applied, trusted configuration is provisioned, reconciled state/history exist, and database behavior is verified. The adapter is not evidence that the SQL has been deployed. |
+| Hourly claim, lease, and atomic commit | `hourly-runner.ts` and the service-role adapter in `persistence.ts` call the `0014` atomic operations. The runner uses the existing Engine rollover logic. | Migrations through `0036` are recorded in the live history (verified 2026-10-31). Execution remains blocked by missing source readiness and uninitialized state/history; deployment invocation is not verified. |
 | Bootstrap/readiness check | `scripts/bora-engine-stage-5-check.mjs` reads the readiness and bootstrap-check RPCs for an explicit closed hour, including persisted evidence metadata and the current three-platform assessments. | Read-only helper only. It does not seed synthetic evidence, initialize state, or advance an hour. It has not been run against an isolated database. |
 | Hourly invocation | `hour-entry.ts` validates one explicit closed hour; `/api/internal/bora-engine/hourly` protects the call with `CRON_SECRET` and derives a stable retry UUID per closed hour. `vercel.json` schedules it at minute 15, after the 10-minute transition grace. | Source configuration only. Deployment, secret provisioning, migration availability, and worker behavior remain unverified. |
 | Platform source readiness and evaluation eligibility | `source-readiness.ts` defines source states, interval coverage outcomes, and the deterministic all-platform gate. `publication-service.ts` evaluates only after that gate succeeds. | No source currently has an established `available` assessment for the Engine's required hourly measurements. No collector or connected trusted server-side song-to-video mapping is activated. |
 | Platform collectors/provider credentials | Pure observation validation exists; a server-only YouTube Data API client and cumulative snapshot/derivation contracts are implemented. | No activated collector or connected trusted server-side song-to-video mapping source exists. YouTube API key configuration remains outstanding. No Spotify or Boomplay collectors or credentials are established. |
-| Chart publication integration | Migration `0033` defines source-revision tracking and an atomic service-role publication RPC. `publication-service.ts` applies the evidence gate and validates candidates; `publication-reader.ts` reads the current head for the server-rendered public chart. | The migration has not been independently applied or verified. The all-three-platform evidence policy is approved, but current source assessments remain unavailable; legitimate evaluation and publication are blocked. Existing registry chart data remains the display only until an Engine publication exists. |
+| Chart publication integration | Migration `0033` defines source-revision tracking and an atomic service-role publication RPC. `publication-service.ts` applies the evidence gate and validates candidates; `publication-reader.ts` reads the current head for the server-rendered public chart. | Migration `0033` is recorded as applied. The all-three-platform evidence policy is approved, but current source assessments remain unavailable; legitimate evaluation and publication are blocked. The public page falls back to registry chart data until an Engine publication exists. |
 
 The application persistence adapter reads `NEXT_PUBLIC_SUPABASE_URL` and
 `BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY`; the operator helper reads
