@@ -1,0 +1,51 @@
+name: BORA Engine hourly processing
+
+on:
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bora-engine-hourly
+  cancel-in-progress: false
+
+jobs:
+  process-hour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Invoke protected hourly Engine route
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$CRON_SECRET" ]]; then
+            echo "::error::Missing repository Actions secret CRON_SECRET."
+            exit 1
+          fi
+
+          response="$(curl --silent --show-error --max-time 120 \
+            --write-out $'\n%{http_code}' \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "https://deemwakolo-officialborapage.vercel.app/api/internal/bora-engine/hourly")"
+          http_status="${response##*$'\n'}"
+          response_body="${response%$'\n'*}"
+          engine_status="$(jq -r '.status // empty' <<< "$response_body")"
+
+          case "${http_status}:${engine_status}" in
+            200:completed|200:already-completed)
+              echo "Hourly Engine run completed: ${engine_status}."
+              ;;
+            409:not-ready|409:not-eligible|409:already-claimed|409:state-hour-mismatch|409:source-readiness-blocked|503:bootstrap-required)
+              echo "Hourly Engine run deferred by readiness: ${engine_status}."
+              ;;
+            *)
+              echo "::error::Hourly Engine request failed (HTTP ${http_status}, status ${engine_status:-unknown})."
+              exit 1
+              ;;
+          esac

@@ -60,7 +60,11 @@ The approved secure-vote cutover is `2026-11-01T21:00:00Z` (2026-11-02
 advance Engine state. The local `.env.local` values do not configure Vercel.
 Deploy the application changes and verify production admin/operator
 allowlists, service-role key, cron secret, and cutover setting before making
-the UI available in production.
+the UI available in production. Hourly requests are scheduled by the GitHub
+Actions workflow at `15` minutes past each UTC hour because the linked Vercel
+Hobby plan does not support hourly Vercel Cron Jobs. Add the same server-only
+`CRON_SECRET` as a GitHub Actions repository secret before relying on the
+workflow; never commit or print its value.
 
 After deployment, enter only source-authorized identities and real measured
 values. Capture initial baselines when tracking begins, not from historical

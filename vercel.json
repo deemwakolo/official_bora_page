@@ -2,11 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": false
-  },
-  "crons": [
-    {
-      "path": "/api/internal/bora-engine/hourly",
-      "schedule": "15 * * * *"
-    }
-  ]
+  }
 }
