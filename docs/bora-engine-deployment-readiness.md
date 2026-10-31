@@ -6,15 +6,12 @@ considered complete without independent operational evidence.
 
 ## 1. Database migrations
 
-The repository contains migration files `0012` through `0021`. The verified
-live Supabase migration history records migrations `0012`–`0017` as applied.
-Migrations `0018`–`0021` are present in the repository source as forward-only
-additive migrations but may require independent deployment verification. This
-confirms their recorded migration status in the inspected project; it does not
-establish that the BORA Engine is initialized, that all historical input data
-is present, or that the hourly evaluation and publication workflows are
-operational. The migration definitions remain available in the repository for
-source review.
+The repository contains Engine migrations through `0033`, with gaps in the
+numbering. The previously verified live Supabase migration history recorded
+migrations `0012`–`0017` as applied. Later migrations require independent
+deployment verification. This does not establish that the Engine is
+initialized, that historical inputs are complete, or that a workflow is
+operational.
 
 | Migration | Purpose and dependency |
 | --- | --- |
@@ -28,6 +25,8 @@ source review.
 | `0019_bora_engine_full_window_readiness.sql` | Replaces `bora_engine_readiness` with a full-window predicate enforcing 648 satisfied slots per active song across the 72-hour + 168-hour required intervals, plus vote/seed coverage assessment for the complete window. Depends on `0012`–`0018`. |
 | `0020_bora_engine_bootstrap_full_window.sql` | Replaces `bora_engine_check_hour` to enforce full-window completeness (648 slots) during bootstrap eligibility, correcting the prior 506-slot expectation. Depends on `0012`–`0019`. |
 | `0021_bora_engine_publish_eligibility.sql` | Adds the service-role-only publication-readiness RPC `bora_engine_publish_eligibility(p_closed_hour)`, which delegates to `bora_engine_readiness` for the 648-slot full-window predicate, enforces reference-hour match, and rejects publication if any invalidated vote events fall within the 72-hour preceding window. Depends on `0012`–`0020`. |
+| `0032_bora_engine_rollover_648_coverage.sql` | Aligns hourly load, commit, and bootstrap checks with the 648-slot coverage requirement. |
+| `0033_bora_engine_atomic_publication.sql` | Repairs the bootstrap/hour check to require complete coverage evidence, extends the hourly snapshot with persisted evidence authority, restores the full publication-eligibility RPC, and adds source-revision tracking plus the service-role-only atomic `bora_engine_publish_chart(jsonb)` transaction. |
 
 ## 2. Private configuration
 
@@ -39,6 +38,7 @@ credentials, or user IDs.
 | Variable | Purpose |
 | --- | --- |
 | `BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY` | Private credential used by `lib/bora-engine/persistence.ts` for privileged Engine RPCs. It must remain server-only and must never be included in a client bundle. |
+| `CRON_SECRET` | Private bearer secret used to authorize the scheduled `/api/internal/bora-engine/hourly` route. Keep it server-only. |
 | `BORA_ENGINE_OPERATOR_USER_IDS` | Server-only comma-separated allowlist of explicitly approved Supabase user IDs. `lib/bora-engine/operator-authorization.ts` matches the verified `auth.getUser()` identity against this list. Missing or malformed configuration fails closed. |
 | `BORA_ADMIN_USER_IDS` | Server-only comma-separated allowlist of Supabase user UUIDs authorized as **site administrators**. `lib/administrator-authorization.ts` matches the verified `auth.getUser()` identity against this list. This is a **distinct scope** from `BORA_ENGINE_OPERATOR_USER_IDS` (Engine operators and site administrators are not automatically equated) and must contain the same administrator identities that carry the database `app_metadata.role = 'bora_administrator'` claim (see section 6). Missing or malformed configuration fails closed. |
 | `BORA_YOUTUBE_API_KEY` | Private key used by the server-only YouTube Data API v3 client. It is required for provider requests and must never be exposed to browser code, responses, or logs. |
@@ -84,19 +84,25 @@ coverage.
 | Readiness RPC | Defined in migration `0016`, restricted to `service_role`. Recorded as applied in the verified live Supabase migration history. | Not operationally verified until private persistence configuration exists, grants/RLS are confirmed, and the RPC is successfully invoked through an authorized operator boundary. |
 | Bootstrap and state-head initialization | Bootstrap validation/RPC call exists in `persistence.ts`; SQL proposal is in `0015`, with the state head defined by `0014`. It requires explicit approval metadata, matching persisted state/coverage, and an uninitialized head. | Not initialized or operationally verified. No automatic default state is created. |
 | Hourly claim, lease, and atomic commit | `hourly-runner.ts` and the service-role adapter in `persistence.ts` call the proposed `0014` atomic operations. The runner uses the existing Engine rollover logic. | Not operational until migrations are applied, trusted configuration is provisioned, reconciled state/history exist, and database behavior is verified. The adapter is not evidence that the SQL has been deployed. |
-| Hourly invocation | `hour-entry.ts` validates one explicit closed hour and invokes the runner. | No controlled operator/worker invocation mechanism is registered. The function is internal only: there is no public route, server action, UI handler, or scheduler. |
-| Platform source readiness and evaluation eligibility | `source-readiness.ts` defines source states, interval coverage outcomes, and a deterministic gate using the existing 168-hour window and rollover grace period. `publication-gate.ts` adds pure publication eligibility validation but is unwired. The internal operator readiness result includes current platform assessments. | No source currently has an established `available` assessment for the Engine's required hourly measurements; no chart evaluation caller invokes the eligibility gate. No activated collector or connected trusted server-side song-to-video mapping source exists. |
+| Bootstrap/readiness check | `scripts/bora-engine-stage-5-check.mjs` reads the readiness and bootstrap-check RPCs for an explicit closed hour, including persisted evidence metadata and the current three-platform assessments. | Read-only helper only. It does not seed synthetic evidence, initialize state, or advance an hour. It has not been run against an isolated database. |
+| Hourly invocation | `hour-entry.ts` validates one explicit closed hour; `/api/internal/bora-engine/hourly` protects the call with `CRON_SECRET` and derives a stable retry UUID per closed hour. `vercel.json` schedules it at minute 15, after the 10-minute transition grace. | Source configuration only. Deployment, secret provisioning, migration availability, and worker behavior remain unverified. |
+| Platform source readiness and evaluation eligibility | `source-readiness.ts` defines source states, interval coverage outcomes, and the deterministic all-platform gate. `publication-service.ts` evaluates only after that gate succeeds. | No source currently has an established `available` assessment for the Engine's required hourly measurements. No collector or connected trusted server-side song-to-video mapping is activated. |
 | Platform collectors/provider credentials | Pure observation validation exists; a server-only YouTube Data API client and cumulative snapshot/derivation contracts are implemented. | No activated collector or connected trusted server-side song-to-video mapping source exists. YouTube API key configuration remains outstanding. No Spotify or Boomplay collectors or credentials are established. |
-| Chart publication integration | Migration `0012` defines evaluation/publication tables and a publication head. `publication-gate.ts` and `publication-transaction.ts` define pure, unwired validation/request/retry contracts. Engine evaluation code exists separately. No publication RPC or transaction is defined. | No connected publication workflow moves an Engine result to the public chart. Durable idempotency, publication-slot concurrency control, source-snapshot recheck, atomic entry/header/pointer/completion commit, and request-ID reconciliation require a future privileged database operation and migration. Public charting remains on its existing behavior. |
+| Chart publication integration | Migration `0033` defines source-revision tracking and an atomic service-role publication RPC. `publication-service.ts` applies the evidence gate and validates candidates; `publication-reader.ts` reads the current head for the server-rendered public chart. | The migration has not been independently applied or verified. The all-three-platform evidence policy is approved, but current source assessments remain unavailable; legitimate evaluation and publication are blocked. Existing registry chart data remains the display only until an Engine publication exists. |
 
 The application persistence adapter reads `NEXT_PUBLIC_SUPABASE_URL` and
 `BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY`; the operator helper reads
 `BORA_ENGINE_OPERATOR_USER_IDS`. The existing cookie-auth client uses
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
-The repository's `vercel.json` has Git deployments disabled and contains no
-cron configuration. This is source configuration only; it does not prove the
-status of any external deployment platform or provide an hourly worker.
+The Stage 5 read-only check can be run with
+`node scripts/bora-engine-stage-5-check.mjs <closed-epoch-hour>` after setting
+the private Supabase URL and service-role key. Run it only against the intended
+disposable or approved database; it never initializes or advances state.
+
+The repository's `vercel.json` keeps Git deployments disabled and declares the
+hourly cron. This is source configuration only; it does not prove the status
+of any external deployment or provide an operating worker.
 
 ### YouTube-specific source status
 
@@ -139,8 +145,9 @@ source-matched coverage for each active song across the inclusive 168-hour
 window, and complete vote and seed coverage for the closed hour after the
 existing rollover grace period. Verified zero and verified empty intervals
 are distinct; missing or unavailable data cannot be treated as zero or complete.
-This gate is not yet connected to an Engine chart-evaluation caller, so it does
-not activate processing or change scoring. See
+This gate is connected to the publication service, but current source
+assessments remain blocking and no provider pipeline supplies the required
+evidence. The decision does not activate processing or change scoring. See
 [`bora-engine-source-strategy.md`](./bora-engine-source-strategy.md) for the
 full contract and integration boundary.
 
@@ -164,15 +171,22 @@ All gates are **pending** based on repository evidence:
    an approved trusted invocation. Confirm bootstrap, vote/seed coverage, and
    each platform's source authorization/readiness and 168-hour coverage;
    resolve all missing, failed, invalid, unauthorized, or unavailable inputs.
-6. [ ] **Establish controlled hourly invocation.** Design, authorize, and
-   verify a private worker/operator invocation with explicit UTC target-hour
-   identity, retry handling, and monitoring. No scheduler or invocation path
-   is currently configured by this repository.
-7. [ ] **Verify a complete hourly run and publication.** Validate the atomic
-   claim/lease/commit lifecycle and persisted result in the deployed
-   environment. Separately implement and verify chart evaluation/publication
-   and its intended public read path before considering any public chart
-   integration.
+6. [ ] **Establish controlled hourly invocation.** Provision `CRON_SECRET`,
+   confirm migration availability, then verify the protected route and
+   scheduled execution in a disposable environment. The source schedule is
+   minute 15 UTC, after the 10-minute transition grace.
+7. [ ] **Verify a complete hourly run.** Use trustworthy evidence and validate
+   the atomic claim/lease/commit lifecycle, state head, closure rows, and
+   completed run in a disposable environment. Retry the same closed hour and
+   confirm it cannot advance twice.
+8. [ ] **Establish all three authorized platform sources.** Confirm authorized
+   hourly measurements and trusted song mappings for YouTube, Spotify, and
+   Boomplay; resolve source-specific evidence persistence before attempting
+   evaluation.
+9. [ ] **Verify publication and public reading.** Apply migration `0033`
+   through the approved database change process, test idempotency and rollback
+   behavior in a disposable environment, and verify that the public chart
+   displays only a successfully published Engine snapshot.
 
 Do not activate the public chart integration until all preceding gates have
 evidence and the Engine output/publication contract has been reviewed.

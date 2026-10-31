@@ -66,6 +66,26 @@ export interface PublicationTransactionRequest {
   readonly entries: readonly PublicationCandidateEntry[];
 }
 
+export interface BoraEnginePublishedChartEntry {
+  readonly songId: string;
+  readonly lifecycle: 'ACTIVE' | 'VAULT';
+  readonly rank: number | null;
+  readonly boraScore: number | null;
+  readonly title: string;
+  readonly artist: string;
+  readonly coverUrl: string;
+  readonly youtubeId: string | null;
+}
+
+export interface BoraEnginePublishedChart {
+  readonly publicationId: string;
+  readonly referenceHour: number;
+  readonly publishedAt: string;
+  readonly totalActiveC: number;
+  readonly platformTotals: Readonly<Record<PlatformId, number>>;
+  readonly entries: readonly BoraEnginePublishedChartEntry[];
+}
+
 export type PublicationRequestProblem =
   | 'invalid-request-id'
   | 'invalid-reference-hour'
@@ -290,8 +310,7 @@ function entryProblems(
     value.xp > 1 ||
     !isFiniteNonNegative(value.kuraFresh) ||
     !isFiniteNonNegative(value.persistentKuraBefore) ||
-    (value.persistentKuraNext !== null &&
-      !isFiniteNonNegative(value.persistentKuraNext)) ||
+    !isFiniteNonNegative(value.persistentKuraNext) ||
     !validPerformance ||
     !isFiniteNonNegative(value.boraScore)
   ) {

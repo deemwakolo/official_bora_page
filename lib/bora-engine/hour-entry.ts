@@ -8,6 +8,7 @@ import type { HourIndex } from '../../engine/src/engine/types';
 import { createBoraEnginePersistenceFromEnv } from './persistence';
 import { runHourlyRollover } from './hourly-runner';
 import type { HourlyRolloverResult } from './hourly-runner';
+import { getCurrentPlatformSourceAssessments } from './source-readiness';
 
 const LEASE_DURATION_MS = 120_000;
 
@@ -17,6 +18,13 @@ export type BoraEngineHourEntryResult =
   | { readonly status: 'bootstrap-required' }
   | { readonly status: 'already-completed'; readonly closedHour: number }
   | { readonly status: 'state-hour-mismatch' }
+  | {
+      readonly status: 'source-readiness-blocked';
+      readonly platforms: readonly {
+        readonly platform: string;
+        readonly status: string;
+      }[];
+    }
   | { readonly status: 'persistence-failure' }
   | {
       readonly status: 'completed';
@@ -75,11 +83,7 @@ function sanitizeResult(
   }
 }
 
-/**
- * Internal server-only entry point. It is not registered as a route, action,
- * UI handler, or scheduled task. An operator integration must explicitly call
- * it with a stable request UUID for safe retries.
- */
+/** Internal server-only entry point for the protected hourly worker route. */
 export async function runBoraEngineHour(input: {
   readonly closedHour: number;
   readonly claimRequestId: string;
@@ -114,6 +118,18 @@ export async function runBoraEngineHour(input: {
     };
   }
 
+  const unavailablePlatforms = getCurrentPlatformSourceAssessments(
+    new Date(nowMs).toISOString(),
+  )
+    .filter((assessment) => assessment.status !== 'available')
+    .map(({ platform, status }) => ({ platform, status }));
+  if (unavailablePlatforms.length > 0) {
+    return {
+      status: 'source-readiness-blocked',
+      platforms: unavailablePlatforms,
+    };
+  }
+
   try {
     const bootstrap = await setup.persistence.checkBootstrap(closedHour);
     if (bootstrap.status === 'missing') {
@@ -124,6 +140,13 @@ export async function runBoraEngineHour(input: {
     }
     if (bootstrap.status === 'already-completed') {
       return { status: 'already-completed', closedHour: input.closedHour };
+    }
+    if (bootstrap.status === 'not-ready') {
+      return {
+        status: 'not-ready',
+        closedHour: input.closedHour,
+        gapCount: 1,
+      };
     }
   } catch {
     return { status: 'persistence-failure' };

@@ -62,6 +62,15 @@ and BORA's use rights are established. YouTube cumulative counts remain
 cumulative and must never be treated as hourly views without a defensible
 measurement method.
 
+## V1 source-policy decision
+
+The approved V1 policy requires authorized measurements from YouTube, Spotify,
+and Boomplay. No platform is optional, and missing platform weights must not be
+redistributed. This decision does not itself establish provider authorization,
+credentials, trusted song mappings, or usable hourly measurements. The current
+assessments above therefore remain blocking until each source is independently
+verified and connected.
+
 ## Coverage semantics
 
 `PlatformHourCoverage` distinguishes the following outcomes:

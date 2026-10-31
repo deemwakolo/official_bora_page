@@ -37,6 +37,15 @@ import {
   validateVoteEventIngestionRequest,
   type VoteEventIngestionOutcome,
 } from './vote-event-ingestion';
+import {
+  unknownPublicationCommit,
+  validatePublicationRequest,
+  type BoraEnginePublishedChart,
+  type PublicationNotReadyReason,
+  type PublicationRequestProblem,
+  type PublicationTransactionOutcome,
+  type PublicationTransactionRequest,
+} from './publication-transaction';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -123,6 +132,10 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   persistYouTubeSnapshot(
     input: YouTubeSnapshotPersistenceInput,
   ): Promise<YouTubeSnapshotPersistenceResult>;
+  publishChart(
+    request: PublicationTransactionRequest,
+  ): Promise<PublicationTransactionOutcome>;
+  readCurrentPublication(): Promise<BoraEnginePublishedChart | null>;
 }
 
 export type BoraEngineReadinessCheck = {
@@ -163,7 +176,7 @@ export interface BoraEngineReadiness {
 export interface BoraEnginePublishEligibility {
   readonly status: 'eligible' | 'not-eligible';
   readonly closedHour: number;
-  readonly reason?: 'no-reference-hour' | 'reference-hour-mismatch' | 'vote-events-invalidated-in-window' | 'readiness-incomplete';
+  readonly reason?: 'no-reference-hour' | 'reference-hour-mismatch' | 'vote-events-invalidated-in-window' | 'readiness-incomplete' | 'coverage-evidence-incomplete';
   readonly referenceHour?: number;
   readonly readiness?: BoraEngineReadiness;
 }
@@ -186,6 +199,24 @@ export type EngineBootstrapResult =
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function relatedRecord(value: unknown): JsonRecord | null {
+  if (Array.isArray(value)) {
+    return value.length === 1 && isRecord(value[0]) ? value[0] : null;
+  }
+  return isRecord(value) ? value : null;
+}
+
+function finiteNumber(value: unknown): number | null {
+  if (
+    (typeof value !== 'number' && typeof value !== 'string') ||
+    (typeof value === 'string' && value.trim() === '')
+  ) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function isUuid(value: unknown): value is string {
@@ -555,6 +586,237 @@ function normalizeCoverage(
 
 class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
   constructor(private readonly client: SupabaseClient) {}
+
+  async publishChart(
+    request: PublicationTransactionRequest,
+  ): Promise<PublicationTransactionOutcome> {
+    const validated = validatePublicationRequest(request);
+    if (validated.status !== 'valid') {
+      return {
+        status: 'invalid-publication',
+        ...(typeof request?.requestId === 'string'
+          ? { requestId: request.requestId }
+          : {}),
+        reasons: validated.reasons,
+      };
+    }
+
+    const { data, error } = await this.client.rpc(
+      'bora_engine_publish_chart',
+      { p_request: validated.request },
+    );
+    if (error || !isRecord(data)) {
+      return unknownPublicationCommit(validated.request.requestId);
+    }
+
+    if (
+      (data.status === 'published' ||
+        data.status === 'already-published') &&
+      data.requestId === validated.request.requestId &&
+      isUuid(data.publicationId)
+    ) {
+      return {
+        status: data.status,
+        requestId: validated.request.requestId,
+        publicationId: data.publicationId,
+      };
+    }
+    if (
+      (data.status === 'not-ready' ||
+        data.status === 'invalid-publication') &&
+      Array.isArray(data.reasons) &&
+      data.reasons.every((reason) => typeof reason === 'string')
+    ) {
+      const allowedReasons: readonly string[] =
+        data.status === 'not-ready'
+          ? [
+              'source-readiness-changed',
+              'coverage-incomplete',
+              'source-unavailable',
+              'source-unauthorized',
+              'evaluation-not-eligible',
+            ]
+          : [
+              'invalid-request-id',
+              'invalid-reference-hour',
+              'invalid-state-revision',
+              'state-reference-hour-mismatch',
+              'invalid-current-publication',
+              'invalid-source-snapshot',
+              'invalid-evaluation-identity',
+              'invalid-evaluation-validation',
+              'invalid-evaluation-totals',
+              'empty-candidate',
+              'invalid-entry',
+              'duplicate-song',
+              'invalid-entry-order',
+              'idempotency-key-reused',
+              'request-record-mismatch',
+              'incomplete-active-ranks',
+              'missing-or-invalid-entry-values',
+            ];
+      if (!data.reasons.every((reason) => allowedReasons.includes(reason))) {
+        return unknownPublicationCommit(validated.request.requestId);
+      }
+      if (data.status === 'not-ready') {
+        return {
+          status: 'not-ready',
+          requestId: validated.request.requestId,
+          reasons: data.reasons as PublicationNotReadyReason[],
+        };
+      }
+      return {
+        status: 'invalid-publication',
+        requestId: validated.request.requestId,
+        reasons: data.reasons as PublicationRequestProblem[],
+      };
+    }
+    if (
+      data.status === 'stale-state' &&
+      data.requestId === validated.request.requestId &&
+      (data.reason === 'state-revision-changed' ||
+        data.reason === 'reference-hour-changed' ||
+        data.reason === 'current-publication-changed' ||
+        data.reason === 'source-snapshot-changed')
+    ) {
+      return {
+        status: 'stale-state',
+        requestId: validated.request.requestId,
+        reason: data.reason,
+      };
+    }
+    if (
+      data.status === 'lease-conflict' &&
+      data.requestId === validated.request.requestId
+    ) {
+      return {
+        status: 'lease-conflict',
+        requestId: validated.request.requestId,
+      };
+    }
+    if (
+      data.status === 'failed' &&
+      data.requestId === validated.request.requestId &&
+      typeof data.errorCode === 'string'
+    ) {
+      return {
+        status: 'failed',
+        requestId: validated.request.requestId,
+        errorCode: data.errorCode,
+      };
+    }
+    return unknownPublicationCommit(validated.request.requestId);
+  }
+
+  async readCurrentPublication(): Promise<BoraEnginePublishedChart | null> {
+    const { data, error } = await this.client
+      .from('bora_engine_publication_head')
+      .select(
+        'publication_id, publication:bora_engine_publications(id, reference_hour, published_at, total_active_c, platform_total_youtube, platform_total_spotify, platform_total_boomplay, entries:bora_engine_publication_entries(song_id, lifecycle, rank, bora_score, song:songs(id, title, artist, cover_url, youtube_id))',
+      )
+      .eq('singleton', true)
+      .maybeSingle();
+    if (error) throw new Error('BORA_ENGINE_PUBLICATION_READ_FAILED');
+    if (!isRecord(data)) return null;
+    if (data.publication_id === null) return null;
+
+    const publication = relatedRecord(data.publication);
+    if (
+      !publication ||
+      !isUuid(data.publication_id) ||
+      data.publication_id !== publication.id ||
+      !isUuid(publication.id) ||
+      !Number.isSafeInteger(publication.reference_hour) ||
+      typeof publication.published_at !== 'string' ||
+      !Array.isArray(publication.entries)
+    ) {
+      throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
+    }
+    const totalActiveC = finiteNumber(publication.total_active_c);
+    const youtube = finiteNumber(publication.platform_total_youtube);
+    const spotify = finiteNumber(publication.platform_total_spotify);
+    const boomplay = finiteNumber(publication.platform_total_boomplay);
+    if (
+      totalActiveC === null ||
+      youtube === null ||
+      spotify === null ||
+      boomplay === null
+    ) {
+      throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
+    }
+
+    const entries = publication.entries.map((raw) => {
+      if (!isRecord(raw) || !isUuid(raw.song_id)) {
+        throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
+      }
+      const song = relatedRecord(raw.song);
+      if (
+        !song ||
+        song.id !== raw.song_id ||
+        typeof song.title !== 'string' ||
+        (song.artist !== null && typeof song.artist !== 'string') ||
+        (song.cover_url !== null && typeof song.cover_url !== 'string') ||
+        (song.youtube_id !== null && typeof song.youtube_id !== 'string')
+      ) {
+        throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
+      }
+      if (raw.lifecycle === 'VAULT' && raw.rank === null) {
+        return {
+          songId: raw.song_id,
+          lifecycle: 'VAULT' as const,
+          rank: null,
+          boraScore: null,
+          title: song.title,
+          artist: typeof song.artist === 'string' ? song.artist : '',
+          coverUrl: typeof song.cover_url === 'string' ? song.cover_url : '',
+          youtubeId:
+            typeof song.youtube_id === 'string' ? song.youtube_id : null,
+        };
+      }
+      const boraScore = finiteNumber(raw.bora_score);
+      if (
+        raw.lifecycle !== 'ACTIVE' ||
+        !Number.isSafeInteger(raw.rank) ||
+        (raw.rank as number) < 1 ||
+        boraScore === null
+      ) {
+        throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
+      }
+      return {
+        songId: raw.song_id,
+        lifecycle: 'ACTIVE' as const,
+        rank: raw.rank as number,
+        boraScore,
+        title: song.title,
+        artist: typeof song.artist === 'string' ? song.artist : '',
+        coverUrl: typeof song.cover_url === 'string' ? song.cover_url : '',
+        youtubeId:
+          typeof song.youtube_id === 'string' ? song.youtube_id : null,
+      };
+    });
+
+    const activeEntries = entries
+      .filter((entry) => entry.lifecycle === 'ACTIVE')
+      .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+    if (
+      activeEntries.length === 0 ||
+      activeEntries.some((entry, index) => entry.rank !== index + 1)
+    ) {
+      throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
+    }
+    const vaultEntries = entries
+      .filter((entry) => entry.lifecycle === 'VAULT')
+      .sort((a, b) => a.songId.localeCompare(b.songId));
+
+    return {
+      publicationId: publication.id,
+      referenceHour: publication.reference_hour as number,
+      publishedAt: publication.published_at,
+      totalActiveC,
+      platformTotals: { youtube, spotify, boomplay },
+      entries: [...activeEntries, ...vaultEntries],
+    };
+  }
 
   async checkBootstrap(closedHour: HourIndex) {
     const { data, error } = await this.client.rpc('bora_engine_check_hour', {

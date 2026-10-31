@@ -12,6 +12,8 @@ import PublicShell from './components/workflow/PublicShell';
 
 import { getRegistry } from '../lib/admin-actions';
 
+import { getCurrentBoraEnginePublication } from '../lib/bora-engine/publication-reader';
+
 import { getTrending } from '../lib/trending';
 
 import { resolveBoraUIConfig } from '../lib/ui-config';
@@ -61,11 +63,14 @@ export default async function Home() {
 
   // CHUKUA DATA YA NYIMBO KUTOKA KWENYE REGISTRY
 
-  const registryData = await getRegistry();
+  const [registryData, enginePublication] = await Promise.all([
+    getRegistry(),
+    getCurrentBoraEnginePublication(),
+  ]);
 
   // PANGA NYIMBO KWA MOMENTUM SCORE NA CHUKUA TOP 15
 
-  const rankedSongs = (registryData || [])
+  const registryRankedSongs = (registryData || [])
     .map((item: any) => ({
       ...item,
       rank: item.slot_number ?? 0,
@@ -77,6 +82,47 @@ export default async function Home() {
         Number(a.momentum_score)
     )
     .slice(0, 15);
+
+  const engineRankedSongs =
+    enginePublication.status === 'published'
+      ? enginePublication.publication.entries
+          .reduce<
+            {
+              id: string;
+              slot_number: number;
+              title: string;
+              artist: string;
+              cover_url: string;
+              youtube_id: string | undefined;
+              momentum_score: number;
+            }[]
+          >((songs, entry) => {
+            if (
+              entry.lifecycle === 'ACTIVE' &&
+              entry.rank !== null &&
+              entry.boraScore !== null
+            ) {
+              songs.push({
+                id: entry.songId,
+                slot_number: entry.rank,
+                title: entry.title,
+                artist: entry.artist,
+                cover_url: entry.coverUrl,
+                youtube_id: entry.youtubeId ?? undefined,
+                momentum_score: entry.boraScore,
+              });
+            }
+            return songs;
+          }, [])
+      : null;
+  const rankedSongs = engineRankedSongs ?? registryRankedSongs;
+
+  if (enginePublication.status === 'unavailable') {
+    console.error(
+      '[bora-engine-publication] chart reader unavailable:',
+      enginePublication.reason,
+    );
+  }
 
   // LOG YA KUJUA ENGINE IMEPOKEA ENTRIES NGAPI
 

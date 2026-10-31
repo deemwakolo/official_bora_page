@@ -117,8 +117,7 @@ function isEvaluatedSong(value: unknown): value is EvaluatedSong {
     isFiniteNonNegative(value.xp) &&
     isFiniteNonNegative(value.kuraFresh) &&
     isFiniteNonNegative(value.persistentKuraBefore) &&
-    (value.persistentKuraNext === null ||
-      isFiniteNonNegative(value.persistentKuraNext)) &&
+    isFiniteNonNegative(value.persistentKuraNext) &&
     isFiniteNonNegative(performance.youtube) &&
     isFiniteNonNegative(performance.spotify) &&
     isFiniteNonNegative(performance.boomplay) &&
