@@ -46,3 +46,9 @@ commit, bounded retry, readiness preservation, and duplicate diagnostics.
 These tests run under the Engine Vitest harness; they are adapter-level tests,
 not production ingestion or bootstrap operations. Deployment-level signature
 and privilege verification remains a separate operational check.
+
+`engine/src/engine/rollover/persistence-contract.test.ts` structurally checks
+the effective `bora_engine_commit_hour` definition from migration 0032,
+including its rollover validation, locking, write ordering, and replay
+protection. This source contract does not execute PostgreSQL; transaction and
+concurrency behavior still require an isolated database integration suite.

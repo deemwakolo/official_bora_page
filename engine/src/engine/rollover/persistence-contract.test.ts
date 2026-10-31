@@ -19,9 +19,11 @@ function stripSqlComments(raw: string): string {
     .replace(/--[^\n]*/g, ' ');
 }
 
-/** Extract the `bora_engine_commit_hour` function body (up to its closing $$). */
+/** Extract the latest `bora_engine_commit_hour` definition in a migration. */
 function commitHourBody(sql: string): string {
-  const start = sql.indexOf('create function public.bora_engine_commit_hour(');
+  const start = sql.lastIndexOf(
+    'create or replace function public.bora_engine_commit_hour(',
+  );
   expect(start, 'commit_hour function not found').toBeGreaterThan(-1);
   const end = sql.indexOf('$$;', start);
   expect(end, 'commit_hour closing dollar-quote not found').toBeGreaterThan(
@@ -37,7 +39,7 @@ describe('DB-C: commit_hour validates rollover steps against persisted input', (
     const raw = readFileSync(
       fileURLToPath(
         new URL(
-          '../../../../supabase/migrations/0014_bora_engine_hourly_atomic_operations.sql',
+          '../../../../supabase/migrations/0032_bora_engine_rollover_648_coverage.sql',
           import.meta.url,
         ),
       ),

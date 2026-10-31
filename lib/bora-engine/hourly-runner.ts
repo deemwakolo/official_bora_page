@@ -79,8 +79,8 @@ export type HourlyCommitResult =
  * or unexpired claims, and reclaim failed/expired leases. commitHour must
  * atomically verify lease ownership and unchanged state, verify each active
  * song has not already decayed for this hour, persist the next state and
- * closure trace, then mark the run completed. Migration 0014 proposes these
- * operations, but no applied schema or trusted application adapter exists.
+ * closure trace, then mark the run completed. Migrations 0014 and 0032 define
+ * these operations, and the application persistence adapter implements them.
  */
 export interface HourlyRolloverPersistence {
   claimHour(input: {
@@ -387,8 +387,8 @@ async function recordFailure(
 }
 
 /**
- * Run one explicitly identified rollover when a real atomic persistence
- * adapter is provided. This module deliberately ships without such an adapter.
+ * Run one explicitly identified rollover using the atomic persistence adapter
+ * provided by the caller.
  */
 export async function runHourlyRollover(
   options: RunHourlyRolloverOptions,
