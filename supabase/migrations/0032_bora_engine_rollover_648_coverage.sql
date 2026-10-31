@@ -220,8 +220,6 @@ begin
     and (
       (c.input_type in ('VOTES', 'SEED')
         and c.hour_index between p_closed_hour - 71 and p_closed_hour)
-      (c.input_type in ('VOTES', 'SEED')
-        and c.hour_index = p_closed_hour)
       or
       (c.input_type in ('YOUTUBE', 'SPOTIFY', 'BOOMPLAY')
         and c.hour_index between p_closed_hour - 167 and p_closed_hour)
@@ -451,7 +449,7 @@ begin
   end if;
 
   return jsonb_build_object('status', 'completed');
-end
+end;
 $$;
 
 revoke all on function public.bora_engine_load_hour(bigint, uuid)
