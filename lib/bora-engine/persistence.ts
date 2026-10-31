@@ -868,7 +868,15 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       } | null = null;
       try {
         const result = await this.client.rpc('bora_engine_ingest_vote_event', {
-          p_event: event,
+          p_source_system: event.sourceSystem,
+          p_source_event_id: event.sourceEventId,
+          p_song_id: event.songId,
+          p_vote_type: event.voteType,
+          p_occurred_at: event.occurredAt,
+          p_voter_ref: event.voterRef,
+          p_identity_method: event.identityMethod,
+          p_identity_version: event.identityVersion,
+          p_idempotency_key: event.idempotencyKey,
         });
         data = result.data;
         rpcError = result.error;
