@@ -428,7 +428,7 @@ begin
   end if;
 
   return jsonb_build_object('status', 'completed');
-end;
+end
 $$;
 
 revoke all on function public.bora_engine_load_hour(bigint, uuid)
