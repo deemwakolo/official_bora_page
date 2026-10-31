@@ -140,6 +140,7 @@ export type BoraEngineReadinessCheck = {
   readonly failed?: number;
   readonly records?: number;
   readonly zeroRecords?: number;
+  readonly duplicates?: number;
   readonly acceptedEvents?: number;
   readonly referenceHour?: number;
 }
@@ -310,6 +311,16 @@ function parseCoverageReadiness(
   const unavailable = parseReadinessCount(value.unavailable);
   const failed = parseReadinessCount(value.failed);
   const records = parseReadinessCount(value.records);
+  const duplicatesRaw = value.duplicates;
+  const duplicatesParsed =
+    duplicatesRaw === undefined
+      ? undefined
+      : parseReadinessCount(duplicatesRaw);
+  if (duplicatesRaw !== undefined && duplicatesParsed === null) {
+    return null;
+  }
+  const duplicates: number | undefined =
+    duplicatesParsed === null ? undefined : duplicatesParsed;
 
   // Some live RPC responses, including vote history, omit zeroRecords.
   // If present, it must still be a valid non-negative integer.
@@ -352,6 +363,7 @@ function parseCoverageReadiness(
     failed,
     records,
     ...(zeroRecords === undefined ? {} : { zeroRecords }),
+    ...(duplicates === undefined ? {} : { duplicates }),
     ...(value.acceptedEvents === undefined ? {} : { acceptedEvents }),
   };
 }
@@ -401,30 +413,8 @@ function parseReadiness(value: unknown): BoraEngineReadiness | null {
   ) {
     return null;
   }
-  const historyCheck = (
-    check: BoraEngineReadinessCheck,
-    inputName: 'vote' | 'seed',
-  ): BoraEngineReadinessCheck =>
-    check.status === 'ready'
-      ? {
-          status: 'unresolved',
-          ...(Number.isSafeInteger(songCount * 72)
-            ? { expected: songCount * 72, missing: songCount * 72 }
-            : {}),
-          detail:
-            `Migration 0016 readiness establishes only the requested hour; ` +
-            `it does not return attributable, current coverage for all 72 ` +
-            `${inputName} hours per active song.`,
-        }
-      : check;
-  const voteHistory = historyCheck(checks.voteHistory, 'vote');
-  const seedHours = historyCheck(checks.seedHours, 'seed');
   return {
-    status:
-      value.status === 'ready' &&
-      (voteHistory.status !== 'ready' || seedHours.status !== 'ready')
-        ? 'not-ready'
-        : value.status,
+    status: value.status,
     closedHour: value.closedHour as number | null,
     checks: {
       trustedPersistence: { status: 'ready' },
@@ -433,8 +423,8 @@ function parseReadiness(value: unknown): BoraEngineReadiness | null {
         records: songCount,
         ...(referenceHour === null ? {} : { referenceHour }),
       },
-      voteHistory,
-      seedHours,
+      voteHistory: checks.voteHistory,
+      seedHours: checks.seedHours,
       youtube: checks.youtube,
       spotify: checks.spotify,
       boomplay: checks.boomplay,
@@ -868,15 +858,17 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       } | null = null;
       try {
         const result = await this.client.rpc('bora_engine_ingest_vote_event', {
-          p_source_system: event.sourceSystem,
-          p_source_event_id: event.sourceEventId,
-          p_song_id: event.songId,
-          p_vote_type: event.voteType,
-          p_occurred_at: event.occurredAt,
-          p_voter_ref: event.voterRef,
-          p_identity_method: event.identityMethod,
-          p_identity_version: event.identityVersion,
-          p_idempotency_key: event.idempotencyKey,
+          p_event: {
+            sourceSystem: identity.sourceSystem,
+            sourceEventId: validation.request.sourceEventId,
+            songId: validation.request.songId,
+            voteType: validation.request.voteType,
+            occurredAt: validation.request.occurredAt,
+            voterRef: validation.request.voterRef,
+            identityMethod: validation.request.identityMethod,
+            identityVersion: validation.request.identityVersion,
+            idempotencyKey: validation.request.idempotencyKey,
+          },
         });
         data = result.data;
         rpcError = result.error;
