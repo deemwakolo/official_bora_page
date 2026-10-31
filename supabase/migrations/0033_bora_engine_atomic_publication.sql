@@ -160,10 +160,12 @@ begin
 
   select exists (
     select 1
-    from public.bora_engine_vote_event_invalidations inv
+    from public.bora_engine_vote_coverage_invalidation inv
     join public.bora_engine_vote_events e
-      on e.source_system = inv.source_system
+      on e.song_id = inv.song_id
+      and e.source_system = inv.source_system
       and e.source_event_id = inv.source_event_id
+      and e.hour_index = inv.hour_index
     where e.hour_index between p_closed_hour - 71 and p_closed_hour
   )
     into v_has_invalidation;
@@ -418,7 +420,7 @@ create trigger bora_engine_publish_revision_input_coverage
   after insert or update or delete on public.bora_engine_hourly_input_coverage
   for each statement execute function public.bora_engine_bump_publication_source_revision();
 create trigger bora_engine_publish_revision_invalidations
-  after insert or update or delete on public.bora_engine_vote_event_invalidations
+  after insert or update or delete on public.bora_engine_vote_coverage_invalidation
   for each statement execute function public.bora_engine_bump_publication_source_revision();
 
 create function public.bora_engine_publish_chart(p_request jsonb)
@@ -632,7 +634,7 @@ begin
     public.bora_engine_platform_observation_history,
     public.bora_engine_youtube_snapshot_history,
     public.bora_engine_hourly_input_coverage,
-    public.bora_engine_vote_event_invalidations
+    public.bora_engine_vote_coverage_invalidation
   in share mode;
 
   select revision
