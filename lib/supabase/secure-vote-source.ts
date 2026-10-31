@@ -70,7 +70,9 @@ export async function loadCanonicalSecureVoteEvent(
   eventId: string,
 ): Promise<CanonicalAcceptedVoteEvent | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY;
+  const key =
+    process.env.BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
     throw new Error('BORA_ENGINE_PERSISTENCE_NOT_CONFIGURED');

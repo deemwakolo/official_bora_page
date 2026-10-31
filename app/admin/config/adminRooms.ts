@@ -37,7 +37,7 @@ export const ADMIN_ROOMS = [
     id: 'engine',
     route: '/admin/engine',
     label: 'Engine',
-    description: 'Votes · Ranking · Thresholds',
+    description: 'Evidence · Coverage · Publishing',
     icon: Cpu,
   },
   {

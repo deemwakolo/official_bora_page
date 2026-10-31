@@ -17,13 +17,12 @@ import { useMasterSound } from './components-themes/haptics/MasterSound';
 import { useMasterHaptics } from './components-themes/haptics/MasterHaptics';
 
 /**
- * SECURE VOTING SWITCH (default OFF).
- *
- * The hardened cast_vote_secure path activates only when
- * NEXT_PUBLIC_BORA_SECURE_VOTING is exactly 'true'.
+ * Secure voting is the default now that the production RPC, serialization
+ * migration, and anonymous sign-in have been verified. Set the build-time
+ * flag to `false` only for an intentional rollback.
  */
 const SECURE_VOTING =
-  process.env.NEXT_PUBLIC_BORA_SECURE_VOTING === 'true';
+  process.env.NEXT_PUBLIC_BORA_SECURE_VOTING !== 'false';
 
 interface Song {
   id: string;

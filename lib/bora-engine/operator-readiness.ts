@@ -6,7 +6,7 @@ import {
   getBoraEngineReadiness,
   type BoraEngineReadiness,
 } from './persistence';
-import { getCurrentPlatformSourceAssessments } from './source-readiness';
+import { getConfiguredPlatformSourceAssessments } from './platform-source-configuration';
 
 export type { BoraEngineOperatorAuthorization } from './operator-authorization';
 
@@ -15,8 +15,8 @@ export type BoraEngineOperatorReadinessResult =
   | {
       readonly status: 'readiness';
       readonly readiness: BoraEngineReadiness;
-      readonly sourceAssessments: ReturnType<
-        typeof getCurrentPlatformSourceAssessments
+      readonly sourceAssessments: Awaited<
+        ReturnType<typeof getConfiguredPlatformSourceAssessments>
       >;
     };
 
@@ -28,7 +28,7 @@ export async function getBoraEngineOperatorReadiness(): Promise<BoraEngineOperat
   const authorization = await authorizeBoraEngineOperator();
   if (authorization.status !== 'authorized') return authorization;
 
-  const sourceAssessments = getCurrentPlatformSourceAssessments(
+  const sourceAssessments = await getConfiguredPlatformSourceAssessments(
     new Date().toISOString(),
   );
   const readiness = await getBoraEngineReadiness();

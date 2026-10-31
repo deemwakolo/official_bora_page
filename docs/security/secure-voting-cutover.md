@@ -20,22 +20,22 @@ differs per environment.
 | DB: vote-event log + RPC | `supabase/migrations/0010_hardened_guest_voting.sql` | Prepared |
 | DB: rate-limit serialization | `supabase/migrations/0011_serialize_vote_rate_limit.sql` | Prepared, **forward-only** |
 | Frontend helper | `lib/supabase/secure-vote.ts` | Prepared (no fallback to legacy) |
-| Frontend wiring | `app/components/ChartWrapper.tsx` | Wired behind a **default-off** switch |
+| Frontend wiring | `app/components/ChartWrapper.tsx` | Secure path is the default; exact `false` is rollback |
 
 - **RPC:** `cast_vote_secure(p_song_id uuid, p_vote_type text, p_idempotency_key text) returns jsonb`
-- **Switch:** `NEXT_PUBLIC_BORA_SECURE_VOTING === 'true'` (build-time inlined by Next.js).
-- **Legacy path** `handle_song_vote(song_id, vote_type)` remains the default and is **never revoked** by this work.
+- **Switch:** secure voting is used unless `NEXT_PUBLIC_BORA_SECURE_VOTING` is exactly `"false"` (build-time inlined by Next.js).
+- **Legacy path** `handle_song_vote(song_id, vote_type)` remains available for an explicit rollback and is **never revoked**.
 
 ### Confirmed vs. unknown environment state
 
-- **VERIFIED (production `ktngrhqhxiklfewmwmev`):** migration `0010` was applied — `vote_events`
-  and `cast_vote_secure` exist, `EXECUTE` granted to `authenticated` only, live
-  `handle_song_vote` unchanged, `songs` counters unchanged. `0011` was **not applied**,
-  so the **production RPC currently still carries the rate-limit race** (no per-voter lock).
+- **VERIFIED (production `ktngrhqhxiklfewmwmev`, 2026-10-31):** the migration history
+  includes both `0010` and `0011`. The per-voter serialization migration is recorded
+  as applied. Anonymous sign-in was confirmed by the project owner. Re-check the
+  function definition and grants before cutover.
 - **VERIFY (every target):** do **not** assume `0010`/`0011` are applied. Check
   `supabase_migrations.schema_migrations` and `pg_proc` on the target before acting.
-- **VERIFY:** anonymous sign-in must be enabled in **Auth → Providers** (separate from the
-  local `config.toml` flag, which only governs the local stack).
+- **VERIFY:** anonymous sign-in must be enabled in **Auth → Providers** on every
+  other target (separate from the local `config.toml` flag).
 
 ---
 
@@ -123,15 +123,15 @@ supabase migration up
 
 ## 6. Set the frontend switch in the target environment
 
-Set, for the **target environment only**:
+To select secure voting explicitly, set for the **target environment only**:
 
 ```
 NEXT_PUBLIC_BORA_SECURE_VOTING=true
 ```
 
-- Exact string `"true"`. Any other value (`"1"`, `"yes"`, `"TRUE"`, empty, unset) keeps legacy.
-- Do **not** set this in `.env.local`, in unrelated environments, or in CI unless you are
-  explicitly activating that environment.
+- Exact string `"true"` selects secure voting. Unset and other values also select the secure path, unless the value is exactly `"false"`.
+- Exact string `"false"` is the rollback switch. Do not set it in unrelated
+  environments or CI unless intentionally rolling that environment back.
 
 ## 7. Redeploy the frontend
 
@@ -156,19 +156,20 @@ is produced and deployed.** Redeploy so the bundle contains the secure branch.
   JS-client flow (Docker is unavailable on the dev machine; local `supabase start` blocked
   by incomplete migration history). Only SQL-transaction checks (rolled back) and the
   harness self-tests (`node scripts/verify-cast-vote-secure.mjs --selftest`, 9/9) exist.
-- **The `0011` race fix is prepared, not deployed** to production at the time of writing —
-  apply it (step 4) before enabling, or the 60/hour cap can be overshot under concurrency.
+- **The production build-time flag value remains unverified.** A lingering explicit
+  `"false"` keeps that deployed build on the legacy path; otherwise a new build selects
+  the secure path by default.
 - **Guest identity persistence depends on the browser Supabase Auth session** (cookie/
   localStorage). It can be cleared, copied, or bypassed; it is **not** proof of a unique
   person and does **not** prevent multi-identity / multi-device abuse. The rate limit is a
   soft velocity cap, not a sybil defence.
-- The secure path has **never been activated on the public site.**
+- Whether the secure path is active on the public site remains **unverified**;
+  the deployed build-time flag has not been inspected.
 
 ## 9. Rollback procedure
 
 1. **Frontend rollback (fast, no data loss):**
-   - Set `NEXT_PUBLIC_BORA_SECURE_VOTING` to anything other than the exact string `"true"`
-     (e.g. remove it or set `false`), then **redeploy a new frontend build**.
+   - Set `NEXT_PUBLIC_BORA_SECURE_VOTING=false`, then **redeploy a new frontend build**.
    - Because Next.js inlines the variable at build time, an env-only change without a
      rebuild does **not** take effect. The flag is effectively compile-time.
 2. **What rollback does NOT do:**
@@ -204,6 +205,6 @@ is produced and deployed.** Redeploy so the bundle contains the secure branch.
 | 8 | (Read limitations) | — |
 | 9 | Rollback = unset flag + rebuild | see §9 caveats |
 
-**Status:** prepared and documented; **not activated**. No migration was applied, no Auth
-setting changed, and no environment variable was set by this runbook.
-
+**Status:** repository code is prepared and defaults to secure voting, but public
+activation is **unverified**. This runbook did not apply migrations, change Auth
+settings, or set environment variables.

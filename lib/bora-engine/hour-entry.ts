@@ -8,7 +8,7 @@ import type { HourIndex } from '../../engine/src/engine/types';
 import { createBoraEnginePersistenceFromEnv } from './persistence';
 import { runHourlyRollover } from './hourly-runner';
 import type { HourlyRolloverResult } from './hourly-runner';
-import { getCurrentPlatformSourceAssessments } from './source-readiness';
+import { getConfiguredPlatformSourceAssessments } from './platform-source-configuration';
 
 const LEASE_DURATION_MS = 120_000;
 
@@ -118,9 +118,9 @@ export async function runBoraEngineHour(input: {
     };
   }
 
-  const unavailablePlatforms = getCurrentPlatformSourceAssessments(
+  const unavailablePlatforms = (await getConfiguredPlatformSourceAssessments(
     new Date(nowMs).toISOString(),
-  )
+  ))
     .filter((assessment) => assessment.status !== 'available')
     .map(({ platform, status }) => ({ platform, status }));
   if (unavailablePlatforms.length > 0) {

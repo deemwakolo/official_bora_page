@@ -1,6 +1,67 @@
-import AdminRoomPlaceholder from '../components/AdminRoomPlaceholder';
+import EngineRoomGUI from './EngineRoomGUI';
+import {
+  getEngineRoomPlatformMappings,
+  getEngineRoomOperationsSnapshot,
+  getEngineRoomSongList,
+} from '@/lib/bora-engine/admin-room-read-model';
+import type { EngineRoomPlatformMappings } from '@/lib/bora-engine/admin-room-read-model';
+import { getConfiguredPlatformSourceAssessments } from '@/lib/bora-engine/platform-source-configuration';
+import { authorizeBoraAdministrator } from '@/lib/administrator-authorization';
+import { authorizeBoraEngineOperator } from '@/lib/bora-engine/operator-authorization';
 
-// BORA ENGINE ROOM: voting, ranking, thresholds & XP.
-export default function Page() {
-  return <AdminRoomPlaceholder room="engine" />;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export default async function EngineRoomPage() {
+  const [administrator, operator] = await Promise.all([
+    authorizeBoraAdministrator(),
+    authorizeBoraEngineOperator(),
+  ]);
+  const isAdministrator = administrator.status === 'authorized';
+  const isOperator = operator.status === 'authorized';
+  const sourceAssessments = await getConfiguredPlatformSourceAssessments(
+    new Date().toISOString(),
+  );
+
+  if (!isAdministrator && !isOperator) {
+    const configurationUnavailable =
+      administrator.status === 'authorization-unavailable' ||
+      operator.status === 'authorization-unavailable';
+
+    return (
+      <EngineRoomGUI
+        access={{
+          isAdministrator: false,
+          isOperator: false,
+          unavailable: configurationUnavailable,
+        }}
+        operations={null}
+        songList={null}
+        platformMappings={{ status: 'unavailable' }}
+        sourceAssessments={sourceAssessments}
+      />
+    );
+  }
+
+  const [operations, songList, platformMappings] = await Promise.all([
+    isOperator ? getEngineRoomOperationsSnapshot() : Promise.resolve(null),
+    isAdministrator ? getEngineRoomSongList() : Promise.resolve(null),
+    isAdministrator
+      ? getEngineRoomPlatformMappings()
+      : Promise.resolve<EngineRoomPlatformMappings>({ status: 'unavailable' }),
+  ]);
+
+  return (
+    <EngineRoomGUI
+      access={{
+        isAdministrator,
+        isOperator,
+        unavailable: false,
+      }}
+      operations={operations}
+      songList={songList}
+      platformMappings={platformMappings}
+      sourceAssessments={sourceAssessments}
+    />
+  );
 }

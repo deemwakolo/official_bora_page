@@ -1,4 +1,4 @@
-import 'use server';
+'use server';
 
 import { authorizeBoraEngineOperator } from './operator-authorization';
 import {
@@ -11,7 +11,7 @@ export type RunSecureVoteReconciliationResult =
   | { readonly status: 'unauthenticated' }
   | { readonly status: 'forbidden' }
   | { readonly status: 'authorization-unavailable'; readonly detail: string }
-  | { readonly status: 'invalid-input'; readonly detail: string };
+  | { readonly status: 'configuration-unavailable'; readonly detail: string };
 
 /**
  * TRUSTED SERVER-SIDE RECONCILIATION ENTRY POINT (Phase 3, §6).
@@ -42,11 +42,7 @@ export type RunSecureVoteReconciliationResult =
  * running unattended. The durable rediscovery machinery itself is
  * implemented above; automatic scheduling is the remaining prerequisite.
  */
-export async function runSecureVoteReconciliation(input: {
-  readonly cutoverIso?: string | null;
-  readonly batchSize?: number | null;
-  readonly maxBatches?: number | null;
-}): Promise<RunSecureVoteReconciliationResult> {
+export async function runSecureVoteReconciliation(): Promise<RunSecureVoteReconciliationResult> {
   const authorization = await authorizeBoraEngineOperator();
   if (authorization.status !== 'authorized') {
     if (authorization.status === 'authorization-unavailable') {
@@ -58,24 +54,22 @@ export async function runSecureVoteReconciliation(input: {
     return { status: authorization.status };
   }
 
+  const cutoverIso = process.env.BORA_ENGINE_VOTE_CUTOVER_AT;
   if (
-    typeof input?.cutoverIso !== 'string' ||
-    input.cutoverIso.trim() === '' ||
-    !Number.isFinite(Date.parse(input.cutoverIso))
+    !cutoverIso ||
+    !Number.isFinite(Date.parse(cutoverIso)) ||
+    !/Z$/i.test(cutoverIso) ||
+    Date.parse(cutoverIso) > Date.now()
   ) {
     return {
-      status: 'invalid-input',
-      detail: 'An explicit ISO-8601 cutover boundary (cutoverIso) is required.',
+      status: 'configuration-unavailable',
+      detail:
+        'Configure BORA_ENGINE_VOTE_CUTOVER_AT as the actual, non-future secure-voting activation time in UTC.',
     };
   }
 
   const report = await reconcileSecureVoteDelivery({
-    cutoverIso: input.cutoverIso,
-    batchSize:
-      typeof input.batchSize === 'number' ? input.batchSize : undefined,
-    maxBatches:
-      typeof input.maxBatches === 'number' ? input.maxBatches : undefined,
+    cutoverIso,
   });
   return { status: 'authorized', report };
 }
-
