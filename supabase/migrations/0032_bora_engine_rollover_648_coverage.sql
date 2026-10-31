@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Migration: 0032_bora_engine_rollover_648_coverage.sql
--- Description: Corrects bora_engine_load_hour and bora_engine_commit_hour
---              coverage expectation from 506 to 648 slots per active song.
+-- Description: Enforces the 648-slot coverage expectation for
+--              bora_engine_load_hour and bora_engine_commit_hour.
 --
 -- Coverage contract:
 --   VOTES     72 slots
@@ -295,6 +295,64 @@ begin
       and s.last_decay_hour >= p_closed_hour
   ) then
     raise exception 'BORA_ENGINE_HOUR_ALREADY_DECAYED';
+  end if;
+
+  if exists (
+    select 1
+    from public.bora_engine_song_state s
+    where s.lifecycle = 'ACTIVE'
+      and not exists (
+        select 1
+        from jsonb_to_recordset(p_steps) as x(
+          "songId" text,
+          "hourClosed" bigint,
+          "closedHourC" numeric,
+          "freshInjected" numeric,
+          "decayRate" numeric,
+          "persistentBefore" numeric,
+          "persistentAfter" numeric
+        )
+        join jsonb_array_elements(p_next_state -> 'songs') as n(value)
+          on n.value ->> 'songId' = x."songId"
+        where x."songId" = s.song_id::text
+          and x."hourClosed" = p_closed_hour
+          and x."persistentBefore" = s.persistent_kura
+          and x."persistentAfter" = (n.value ->> 'persistentKura')::numeric
+      )
+  ) then
+    raise exception 'BORA_ENGINE_INVALID_ROLLOVER_TRACE';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_to_recordset(p_steps) as x(
+      "songId" text,
+      "hourClosed" bigint,
+      "closedHourC" numeric,
+      "freshInjected" numeric,
+      "decayRate" numeric,
+      "persistentBefore" numeric,
+      "persistentAfter" numeric
+    )
+    join public.bora_engine_song_state s
+      on s.song_id::text = x."songId" and s.lifecycle = 'ACTIVE'
+    where x."hourClosed" = p_closed_hour
+      and (
+        x."closedHourC" is null
+        or x."closedHourC" < 0
+        or x."closedHourC" > 2
+        or x."freshInjected" is null
+        or x."freshInjected" < 0
+        or x."decayRate" is null
+        or x."decayRate" < 0
+        or x."decayRate" > 0.0025
+        or x."persistentBefore" is null
+        or x."persistentBefore" < 0
+        or x."persistentAfter" is null
+        or x."persistentAfter" < 0
+      )
+  ) then
+    raise exception 'BORA_ENGINE_INVALID_ROLLOVER_STEP';
   end if;
 
   if exists (
