@@ -442,4 +442,3 @@ grant execute on function public.bora_engine_load_hour(bigint, uuid)
 grant execute on function public.bora_engine_commit_hour(
   bigint, uuid, bigint, jsonb, jsonb, jsonb, jsonb
 ) to service_role;
-  end if;
