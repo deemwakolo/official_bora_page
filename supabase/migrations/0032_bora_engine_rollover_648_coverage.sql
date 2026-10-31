@@ -95,26 +95,6 @@ begin
   return public.bora_engine_hourly_snapshot(p_closed_hour);
 end;
 $$;
-        and c.hour_index = p_closed_hour)
-      or
-      (c.input_type in ('YOUTUBE', 'SPOTIFY', 'BOOMPLAY')
-        and c.hour_index between p_closed_hour - 167 and p_closed_hour)
-    );
-
-  if v_complete_count <> v_active_count * 648 then
-    return jsonb_build_object(
-      'status', 'not-ready',
-      'reason', 'coverage-incomplete',
-      'closedHour', p_closed_hour,
-      'expected', v_active_count * 648,
-      'complete', v_complete_count,
-      'missing', greatest(v_active_count * 648 - v_complete_count, 0)
-    );
-  end if;
-
-  return public.bora_engine_hourly_snapshot(p_closed_hour);
-end;
-$$;
 
 -- Redefine bora_engine_commit_hour with corrected 648-slot coverage expectation.
 create or replace function public.bora_engine_commit_hour(
