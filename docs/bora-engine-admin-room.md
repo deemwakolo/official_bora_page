@@ -13,8 +13,9 @@ production Supabase project. It adds independent platform identity mappings,
 append-only mapping and baseline/snapshot history, administrator attribution
 on hourly evidence, and service-role-only submission RPCs. Applying the
 migration did not insert evidence or change songs, votes, Engine state, hourly
-runs, or publications. The application code changes remain in the local
-worktree and are not deployed to Vercel.
+runs, or publications. The manual-intake application is deployed to Vercel.
+The public-chart XP-share display is a separate application update and must be
+deployed before it appears on the live chart.
 
 ## Data Entry
 
@@ -53,14 +54,22 @@ Manual hourly submissions write append-only evidence and update the
 corresponding observation and coverage projections atomically. They do not
 reconstruct historical votes or synthesize platform measurements.
 
+## Published XP share
+
+The public chart displays an XP share percentage only when an Engine
+publication exists. The percentage is the published `xp` fraction multiplied
+by 100 (`XP_i = C_i / T_C`); it is not the legacy momentum score or an
+independently calculated browser value. Before the first eligible publication,
+the chart retains its existing registry-based display and does not invent an
+XP percentage.
+
 ## Rollout and operation
 
 The approved secure-vote cutover is `2026-11-01T21:00:00Z` (2026-11-02
 00:00 EAT). Before that time, do not reconcile beyond the approved boundary or
-advance Engine state. The local `.env.local` values do not configure Vercel.
-Deploy the application changes and verify production admin/operator
-allowlists, service-role key, cron secret, and cutover setting before making
-the UI available in production. Hourly requests are scheduled by the GitHub
+advance Engine state. The local `.env.local` values do not configure Vercel. Verify production
+admin/operator allowlists, service-role key, and cutover setting. Hourly
+requests are scheduled by the GitHub
 Actions workflow at `15` minutes past each UTC hour because the linked Vercel
 Hobby plan does not support hourly Vercel Cron Jobs. Add the same server-only
 `CRON_SECRET` as a GitHub Actions repository secret before relying on the

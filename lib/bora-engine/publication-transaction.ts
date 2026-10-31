@@ -70,6 +70,7 @@ export interface BoraEnginePublishedChartEntry {
   readonly songId: string;
   readonly lifecycle: 'ACTIVE' | 'VAULT';
   readonly rank: number | null;
+  readonly xp: number | null;
   readonly boraScore: number | null;
   readonly title: string;
   readonly artist: string;

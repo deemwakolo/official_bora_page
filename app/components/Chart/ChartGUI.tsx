@@ -17,6 +17,7 @@ interface Song {
   cover_url: string;
   youtube_id?: string;
   momentum_score?: number;
+  xp?: number;
   yt_rank?: number;
   sp_rank?: number;
 
@@ -274,6 +275,20 @@ export default function ChartGUI({
                       >
                         {displayArtist}
                       </span>
+
+                      {typeof item.xp === 'number' && (
+                        <span
+                          data-bora-ui="public-vote-hero-xp-share"
+                          aria-label={`XP share ${(item.xp * 100).toFixed(1)} percent`}
+                          className="shrink-0 rounded-full border px-2 py-1 text-[8px] font-mono font-bold uppercase tracking-[0.16em]"
+                          style={{
+                            borderColor: 'var(--bora-border-strong)',
+                            color: 'var(--bora-gold)',
+                          }}
+                        >
+                          XP SHARE {(item.xp * 100).toFixed(1)}%
+                        </span>
+                      )}
 
                       {/* LABEL YA CURRENT NUMBER 1 */}
                       {rank === 1 && (

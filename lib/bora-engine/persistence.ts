@@ -777,7 +777,7 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     const { data, error } = await this.client
       .from('bora_engine_publication_head')
       .select(
-        'publication_id, publication:bora_engine_publications(id, reference_hour, published_at, total_active_c, platform_total_youtube, platform_total_spotify, platform_total_boomplay, entries:bora_engine_publication_entries(song_id, lifecycle, rank, bora_score, song:songs(id, title, artist, cover_url, youtube_id))',
+        'publication_id, publication:bora_engine_publications(id, reference_hour, published_at, total_active_c, platform_total_youtube, platform_total_spotify, platform_total_boomplay, entries:bora_engine_publication_entries(song_id, lifecycle, rank, xp, bora_score, song:songs(id, title, artist, cover_url, youtube_id))',
       )
       .eq('singleton', true)
       .maybeSingle();
@@ -830,6 +830,7 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
           songId: raw.song_id,
           lifecycle: 'VAULT' as const,
           rank: null,
+          xp: null,
           boraScore: null,
           title: song.title,
           artist: typeof song.artist === 'string' ? song.artist : '',
@@ -838,11 +839,15 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
             typeof song.youtube_id === 'string' ? song.youtube_id : null,
         };
       }
+      const xp = finiteNumber(raw.xp);
       const boraScore = finiteNumber(raw.bora_score);
       if (
         raw.lifecycle !== 'ACTIVE' ||
         !Number.isSafeInteger(raw.rank) ||
         (raw.rank as number) < 1 ||
+        xp === null ||
+        xp < 0 ||
+        xp > 1 ||
         boraScore === null
       ) {
         throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
@@ -851,6 +856,7 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
         songId: raw.song_id,
         lifecycle: 'ACTIVE' as const,
         rank: raw.rank as number,
+        xp,
         boraScore,
         title: song.title,
         artist: typeof song.artist === 'string' ? song.artist : '',

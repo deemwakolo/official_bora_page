@@ -33,6 +33,7 @@ interface Song {
   momentum_score: number;
   yt_views: number;
   sp_plays: number;
+  xp?: number;
 }
 
 const supabase = createClient();

@@ -13,6 +13,7 @@ interface Song {
   cover_url: string;
   youtube_id?: string;
   momentum_score?: number;
+  xp?: number;
   yt_rank?: number;
   sp_rank?: number;
   previous_rank?: number | null;

@@ -95,11 +95,13 @@ export default async function Home() {
               cover_url: string;
               youtube_id: string | undefined;
               momentum_score: number;
+              xp: number;
             }[]
           >((songs, entry) => {
             if (
               entry.lifecycle === 'ACTIVE' &&
               entry.rank !== null &&
+              entry.xp !== null &&
               entry.boraScore !== null
             ) {
               songs.push({
@@ -110,6 +112,7 @@ export default async function Home() {
                 cover_url: entry.coverUrl,
                 youtube_id: entry.youtubeId ?? undefined,
                 momentum_score: entry.boraScore,
+                xp: entry.xp,
               });
             }
             return songs;
