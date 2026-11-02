@@ -17,6 +17,11 @@ runs, or publications. The manual-intake application is deployed to Vercel.
 The public-chart XP-share display is a separate application update and must be
 deployed before it appears on the live chart.
 
+Migration 0038 (`bora_engine_daily_platform_ranks`) is the next, forward-only
+change for daily platform positions. It has not been applied to production.
+Review and validate its function rewrites against a safe database before
+applying it; do not treat the local migration file as a deployed schema.
+
 ## Data Entry
 
 An authorized administrator can select one of the existing songs and manage
@@ -40,19 +45,46 @@ current session. Sensitive-looking source references are withheld in history.
 Adding a song remains in the existing song-management workflow; the Engine
 Room preserves the existing registry.
 
+## Daily platform positions
+
+The separate Daily platform chart positions form is available to an authorized
+administrator from 20:00 until midnight East Africa Time. Enter a positive
+integer position for every registry song on YouTube, Spotify, and Boomplay;
+position 1 is best and positions must be unique within each platform. Save a
+source evidence reference for each platform and configure a source mapping for
+every song/platform pair first. The effective snapshot date is the next EAT
+calendar date.
+
+Daily snapshots are append-only and attributed to the administrator. A second
+submission for the same effective date requires explicitly selecting the
+current snapshot as a correction; each correction creates a new revision.
+Platform activity is `1 / position`, summed across the latest seven EAT-day
+snapshots and normalized with the existing 30/15/5 YouTube/Spotify/Boomplay
+weights. Daily platform positions do not block hourly processing: hourly
+rollover depends on vote and seed history only. The YouTube API collector
+remains available for separate YouTube data uses; API snapshots do not replace
+the nightly rank-entry workflow.
+
 ## Engine Operations and safety
 
-Engine Operations reads readiness, platform coverage, recent evidence,
+Engine Operations reads readiness, vote/seed coverage, recent evidence,
 processing runs, state head, and publication history. Vote reconciliation is
 an authorized operator action and respects the configured UTC cutover. Hourly
 processing, bootstrap, and publication are not triggered by manual data entry.
 Existing Engine eligibility and publication gates remain authoritative.
 
-Missing, unavailable, invalidated, stale, and unresolved measurements are not
-treated as zero. Each platform remains an independent measurement source.
+The evaluator can score supplied daily-rank history, but the publication
+service currently has no production caller that loads that history and
+publishes a chart. Saving ranks therefore does not publish a chart or activate
+the public XP-share display by itself. Wire and validate that publication path
+separately before treating daily rank scoring as live.
+
+Missing, unavailable, invalidated, stale, and unresolved vote/seed evidence is
+not treated as zero. Each platform remains an independent measurement source.
 Manual hourly submissions write append-only evidence and update the
-corresponding observation and coverage projections atomically. They do not
-reconstruct historical votes or synthesize platform measurements.
+corresponding observation and coverage projections atomically. Daily ranks are
+stored as immutable dated snapshots, with inverse-rank activity projected for
+scoring. Neither workflow reconstructs historical votes.
 
 ## Published XP share
 

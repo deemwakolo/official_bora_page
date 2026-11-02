@@ -58,8 +58,7 @@ export async function GET(request: Request) {
         : result.status === 'not-eligible' ||
             result.status === 'not-ready' ||
             result.status === 'state-hour-mismatch' ||
-            result.status === 'already-claimed' ||
-            result.status === 'source-readiness-blocked'
+            result.status === 'already-claimed'
           ? 409
           : result.status === 'configuration-unavailable' ||
               result.status === 'bootstrap-required' ||

@@ -26,8 +26,8 @@ export type HourlyCoverageInput =
   | 'BOOMPLAY';
 
 /**
- * Coverage for the rollover's exact transition hour and separate platform
- * window. It does not establish the 72-hour evaluation-history requirement.
+ * The snapshot carries all known coverage rows for concurrency checks, but
+ * rollover readiness uses only the exact-hour vote and seed evidence.
  */
 export interface HourlyInputCoverage {
   readonly songId: string;
@@ -182,13 +182,6 @@ export interface RunHourlyRolloverOptions {
   readonly persistence: HourlyRolloverPersistence | null;
 }
 
-const PLATFORM_INPUTS = [
-  'YOUTUBE',
-  'SPOTIFY',
-  'BOOMPLAY',
-] as const;
-const PLATFORM_WINDOW_HOURS = 168;
-
 function coverageEvidenceKind(
   inputType: HourlyCoverageInput,
 ): CoverageInputKind {
@@ -231,15 +224,16 @@ function buildCoverageGaps(
     }
     const item = candidate;
     if (
+      item.inputType === 'YOUTUBE' ||
+      item.inputType === 'SPOTIFY' ||
+      item.inputType === 'BOOMPLAY'
+    ) {
+      continue;
+    }
+    if (
       !knownSongIds.has(item.songId) ||
       !isSafeInteger(item.hourIndex) ||
-      !(
-        item.inputType === 'VOTES' ||
-        item.inputType === 'SEED' ||
-        item.inputType === 'YOUTUBE' ||
-        item.inputType === 'SPOTIFY' ||
-        item.inputType === 'BOOMPLAY'
-      ) ||
+      !(item.inputType === 'VOTES' || item.inputType === 'SEED') ||
       !isCoverageEvidenceRecord(item.evidence) ||
       item.evidence.kind !== coverageEvidenceKind(item.inputType) ||
       item.evidence.songId !== item.songId ||
@@ -277,7 +271,6 @@ function buildCoverageGaps(
     entries.set(key, item);
   }
 
-  const firstPlatformHour = closedHour - (PLATFORM_WINDOW_HOURS - 1);
   for (const songId of activeSongIds) {
     for (const inputType of ['VOTES', 'SEED'] as const) {
       appendCoverageGap(
@@ -287,15 +280,6 @@ function buildCoverageGaps(
         inputType,
         closedHour,
       );
-    }
-    for (
-      let hourIndex = firstPlatformHour;
-      hourIndex <= closedHour;
-      hourIndex++
-    ) {
-      for (const inputType of PLATFORM_INPUTS) {
-        appendCoverageGap(entries, gaps, songId, inputType, hourIndex);
-      }
     }
   }
 

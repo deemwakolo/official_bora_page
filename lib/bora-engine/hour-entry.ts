@@ -8,7 +8,6 @@ import type { HourIndex } from '../../engine/src/engine/types';
 import { createBoraEnginePersistenceFromEnv } from './persistence';
 import { runHourlyRollover } from './hourly-runner';
 import type { HourlyRolloverResult } from './hourly-runner';
-import { getConfiguredPlatformSourceAssessments } from './platform-source-configuration';
 
 const LEASE_DURATION_MS = 120_000;
 
@@ -18,13 +17,6 @@ export type BoraEngineHourEntryResult =
   | { readonly status: 'bootstrap-required' }
   | { readonly status: 'already-completed'; readonly closedHour: number }
   | { readonly status: 'state-hour-mismatch' }
-  | {
-      readonly status: 'source-readiness-blocked';
-      readonly platforms: readonly {
-        readonly platform: string;
-        readonly status: string;
-      }[];
-    }
   | { readonly status: 'persistence-failure' }
   | {
       readonly status: 'completed';
@@ -115,18 +107,6 @@ export async function runBoraEngineHour(input: {
       status: 'not-eligible',
       closedHour: input.closedHour,
       eligibleAtMs,
-    };
-  }
-
-  const unavailablePlatforms = (await getConfiguredPlatformSourceAssessments(
-    new Date(nowMs).toISOString(),
-  ))
-    .filter((assessment) => assessment.status !== 'available')
-    .map(({ platform, status }) => ({ platform, status }));
-  if (unavailablePlatforms.length > 0) {
-    return {
-      status: 'source-readiness-blocked',
-      platforms: unavailablePlatforms,
     };
   }
 

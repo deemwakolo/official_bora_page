@@ -129,6 +129,70 @@ function makeRng(seed: number): () => number {
   };
 }
 
+describe('daily platform rank scoring', () => {
+  it('uses the seven-day inverse-rank shares instead of hourly observations', () => {
+    const result = evaluate({
+      songs: [
+        songAt('a', { platform: { youtube: 1000, spotify: 1, boomplay: 1 } }),
+        songAt('b', { platform: { youtube: 1, spotify: 1000, boomplay: 1 } }),
+      ],
+      referenceHour: H,
+      closedHourC: null,
+      dailyPlatformRankSnapshots: {
+        youtube: [{
+          effectiveDate: '2026-01-01',
+          ranks: [{ songId: 'a', rank: 1 }, { songId: 'b', rank: 2 }],
+        }],
+        spotify: [{
+          effectiveDate: '2026-01-01',
+          ranks: [{ songId: 'a', rank: 2 }, { songId: 'b', rank: 1 }],
+        }],
+        boomplay: [{
+          effectiveDate: '2026-01-01',
+          ranks: [{ songId: 'a', rank: 1 }, { songId: 'b', rank: 2 }],
+        }],
+      },
+    });
+
+    expect(entryOf(result, 'a').platformPerformance.youtube).toBe(20);
+    expect(entryOf(result, 'a').platformPerformance.spotify).toBe(5);
+    expect(entryOf(result, 'a').platformPerformance.boomplay).toBeCloseTo(
+      10 / 3,
+      12,
+    );
+    expect(entryOf(result, 'b').platformPerformance.youtube).toBe(10);
+    expect(entryOf(result, 'b').platformPerformance.spotify).toBe(10);
+    expect(entryOf(result, 'b').platformPerformance.boomplay).toBeCloseTo(
+      5 / 3,
+      12,
+    );
+  });
+
+  it('rejects a rank snapshot with missing active-song coverage', () => {
+    const result = evaluateChart({
+      songs: [songAt('a'), songAt('b')],
+      referenceHour: H,
+      closedHourC: null,
+      dailyPlatformRankSnapshots: {
+        youtube: [{
+          effectiveDate: '2026-01-01',
+          ranks: [{ songId: 'a', rank: 1 }],
+        }],
+        spotify: [{
+          effectiveDate: '2026-01-01',
+          ranks: [{ songId: 'a', rank: 1 }, { songId: 'b', rank: 2 }],
+        }],
+        boomplay: [{
+          effectiveDate: '2026-01-01',
+          ranks: [{ songId: 'a', rank: 1 }, { songId: 'b', rank: 2 }],
+        }],
+      },
+    });
+
+    expect(result).toMatchObject({ ok: false });
+  });
+});
+
 // ───────────────────────────────────────────────────────────────────────────
 
 describe('E-B: basic composition', () => {

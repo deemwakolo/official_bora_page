@@ -36,6 +36,54 @@ export interface ManualPlatformHourInput
   readonly supersedesObservationId?: string;
 }
 
+export interface DailyPlatformRankInput {
+  readonly requestId: string;
+  readonly supersedesSnapshotId?: string;
+  readonly evidenceReferences: Readonly<Record<ManualPlatform, string>>;
+  readonly entries: readonly {
+    readonly songId: string;
+    readonly platform: ManualPlatform;
+    readonly rank: number;
+  }[];
+}
+
+export type DailyPlatformRankActionResult =
+  | {
+      readonly status: 'recorded' | 'already-recorded';
+      readonly snapshotId: string;
+      readonly effectiveDate: string;
+      readonly revision: number;
+    }
+  | {
+      readonly status:
+        | 'unauthorized'
+        | 'configuration-unavailable'
+        | 'invalid-input'
+        | 'idempotency-conflict'
+        | 'outside-entry-window'
+        | 'invalid-or-incomplete-ranks'
+        | 'mapping-required'
+        | 'correction-required'
+        | 'correction-not-allowed'
+        | 'rank-slot-conflict'
+        | 'no-songs'
+        | 'persistence-failed';
+    };
+
+export type DailyPlatformRankSnapshotResult =
+  | {
+      readonly status: 'ready';
+      readonly snapshotId: string;
+      readonly effectiveDate: string;
+      readonly revision: number;
+      readonly entries: readonly {
+        readonly songId: string;
+        readonly platform: ManualPlatform;
+        readonly rank: number;
+      }[];
+    }
+  | { readonly status: 'none' | 'closed-window' | 'unavailable' | 'unauthorized' };
+
 export interface ManualPlatformHistoryItem {
   readonly id: string;
   readonly kind: 'mapping' | 'baseline' | 'snapshot' | 'hourly';

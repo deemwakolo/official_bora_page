@@ -82,6 +82,9 @@ export function toEngineInput(built: BuiltInputLike): EngineInput {
     })),
     referenceHour: built.referenceHour as HourIndex,
     closedHourC: built.closedHourC,
+    ...(built.dailyPlatformRankSnapshots
+      ? { dailyPlatformRankSnapshots: built.dailyPlatformRankSnapshots }
+      : {}),
   };
 }
 

@@ -7,6 +7,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { authorizeBoraAdministrator } from '@/lib/administrator-authorization';
 import { createClient } from '@/lib/supabase/server';
 import type {
+  DailyPlatformRankActionResult,
+  DailyPlatformRankInput,
+  DailyPlatformRankSnapshotResult,
   ManualPlatformActionResult,
   ManualPlatformBaselineInput,
   ManualPlatformHistoryItem,
@@ -23,6 +26,10 @@ const PLATFORMS = ['youtube', 'spotify', 'boomplay'] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_PATTERN.test(value);
 }
 
 function isUtcTimestamp(value: string): boolean {
@@ -271,6 +278,224 @@ export async function submitManualPlatformHour(
       error instanceof Error ? error.message : 'unknown',
     );
     return { status: 'persistence-failed' };
+  }
+}
+
+export async function submitDailyPlatformRanks(
+  input: DailyPlatformRankInput,
+): Promise<DailyPlatformRankActionResult> {
+  if (
+    !input ||
+    !UUID_PATTERN.test(input.requestId) ||
+    (input.supersedesSnapshotId !== undefined &&
+      !UUID_PATTERN.test(input.supersedesSnapshotId)) ||
+    !Array.isArray(input.entries) ||
+    input.entries.length === 0 ||
+    !input.evidenceReferences ||
+    !PLATFORMS.every(
+      (platform) =>
+        typeof input.evidenceReferences[platform] === 'string' &&
+        input.evidenceReferences[platform].trim().length > 0 &&
+        input.evidenceReferences[platform].trim().length <= 2000,
+    )
+  ) {
+    return { status: 'invalid-input' };
+  }
+
+  const songPlatformKeys = new Set<string>();
+  const rankKeys = new Set<string>();
+  for (const entry of input.entries) {
+    if (
+      !entry ||
+      !UUID_PATTERN.test(entry.songId) ||
+      !PLATFORMS.includes(entry.platform) ||
+      !Number.isSafeInteger(entry.rank) ||
+      entry.rank < 1 ||
+      entry.rank > 2_147_483_647
+    ) {
+      return { status: 'invalid-input' };
+    }
+    const songPlatformKey = `${entry.songId}:${entry.platform}`;
+    const rankKey = `${entry.platform}:${entry.rank}`;
+    if (songPlatformKeys.has(songPlatformKey) || rankKeys.has(rankKey)) {
+      return { status: 'invalid-input' };
+    }
+    songPlatformKeys.add(songPlatformKey);
+    rankKeys.add(rankKey);
+  }
+
+  const actor = await getAuthorizedActor();
+  if (actor.status !== 'authorized') return actor;
+  const setup = getServiceClient();
+  if (setup.status !== 'available') return setup;
+
+  try {
+    const { data, error } = await setup.client.rpc(
+      'bora_engine_admin_submit_daily_platform_ranks',
+      {
+        p_request: {
+          ...input,
+          requestId: input.requestId.toLowerCase(),
+          actorUserId: actor.userId,
+          supersedesSnapshotId: input.supersedesSnapshotId ?? '',
+          entries: input.entries.map((entry) => ({
+            ...entry,
+            songId: entry.songId.toLowerCase(),
+          })),
+        },
+      },
+    );
+    if (error) {
+      console.error(
+        '[bora-engine-daily-platform-ranks] RPC failed:',
+        error.code ?? 'unknown',
+      );
+      return { status: 'persistence-failed' };
+    }
+    if (!isRecord(data) || typeof data.status !== 'string') {
+      return { status: 'persistence-failed' };
+    }
+    if (
+      data.status === 'recorded' ||
+      data.status === 'already-recorded'
+    ) {
+      if (
+        !isUuid(data.snapshotId) ||
+        typeof data.effectiveDate !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(data.effectiveDate) ||
+        typeof data.revision !== 'number' ||
+        !Number.isSafeInteger(data.revision)
+      ) {
+        return { status: 'persistence-failed' };
+      }
+      return {
+        status: data.status,
+        snapshotId: data.snapshotId,
+        effectiveDate: data.effectiveDate,
+        revision: data.revision,
+      };
+    }
+
+    const statuses = [
+      'unauthorized',
+      'configuration-unavailable',
+      'invalid-input',
+      'idempotency-conflict',
+      'outside-entry-window',
+      'invalid-or-incomplete-ranks',
+      'mapping-required',
+      'correction-required',
+      'correction-not-allowed',
+      'rank-slot-conflict',
+      'no-songs',
+      'persistence-failed',
+    ] as const;
+    if (statuses.some((status) => status === data.status)) {
+      return {
+        status: data.status as (typeof statuses)[number],
+      };
+    }
+    return { status: 'persistence-failed' };
+  } catch (error) {
+    console.error(
+      '[bora-engine-daily-platform-ranks] action failed:',
+      error instanceof Error ? error.message : 'unknown',
+    );
+    return { status: 'persistence-failed' };
+  }
+}
+
+export async function getDailyPlatformRankSnapshot(): Promise<DailyPlatformRankSnapshotResult> {
+  const actor = await getAuthorizedActor();
+  if (actor.status === 'unauthorized') return { status: 'unauthorized' };
+  if (actor.status !== 'authorized') return { status: 'unavailable' };
+  const setup = getServiceClient();
+  if (setup.status !== 'available') return { status: 'unavailable' };
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Nairobi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(
+    parts.map(({ type, value }) => [type, value]),
+  );
+  const hour = Number(values.hour);
+  if (!Number.isInteger(hour) || hour < 20 || hour > 23) {
+    return { status: 'closed-window' };
+  }
+  const today = `${values.year}-${values.month}-${values.day}`;
+  const effective = new Date(`${today}T00:00:00.000Z`);
+  if (!Number.isFinite(effective.getTime())) return { status: 'unavailable' };
+  effective.setUTCDate(effective.getUTCDate() + 1);
+  const effectiveDate = effective.toISOString().slice(0, 10);
+
+  try {
+    const { data: snapshot, error: snapshotError } = await setup.client
+      .from('bora_engine_daily_platform_rank_snapshots')
+      .select('id, effective_date, revision')
+      .eq('effective_date', effectiveDate)
+      .order('revision', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (snapshotError) throw snapshotError;
+    if (!snapshot) return { status: 'none' };
+    if (
+      !isUuid(snapshot.id) ||
+      snapshot.effective_date !== effectiveDate ||
+      typeof snapshot.revision !== 'number' ||
+      !Number.isSafeInteger(snapshot.revision)
+    ) {
+      throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_SNAPSHOT');
+    }
+
+    const { data: rows, error: entriesError } = await setup.client
+      .from('bora_engine_daily_platform_rank_entries')
+      .select('song_id, platform, rank')
+      .eq('snapshot_id', snapshot.id);
+    if (entriesError) throw entriesError;
+    if (!Array.isArray(rows)) {
+      throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_ENTRIES');
+    }
+    const entries: {
+      readonly songId: string;
+      readonly platform: (typeof PLATFORMS)[number];
+      readonly rank: number;
+    }[] = [];
+    for (const row of rows) {
+      if (
+        !isRecord(row) ||
+        !isUuid(row.song_id) ||
+        !PLATFORMS.includes(row.platform as (typeof PLATFORMS)[number]) ||
+        typeof row.rank !== 'number' ||
+        !Number.isSafeInteger(row.rank) ||
+        row.rank < 1
+      ) {
+        throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_ENTRIES');
+      }
+      entries.push({
+        songId: row.song_id,
+        platform: row.platform as (typeof PLATFORMS)[number],
+        rank: row.rank,
+      });
+    }
+
+    return {
+      status: 'ready',
+      snapshotId: snapshot.id,
+      effectiveDate,
+      revision: snapshot.revision,
+      entries,
+    };
+  } catch (error) {
+    console.error(
+      '[bora-engine-daily-platform-ranks] snapshot read failed:',
+      error instanceof Error ? error.message : 'unknown',
+    );
+    return { status: 'unavailable' };
   }
 }
 

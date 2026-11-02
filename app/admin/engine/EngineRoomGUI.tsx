@@ -24,6 +24,7 @@ import type {
 } from '@/lib/bora-engine/admin-room-read-model';
 import type { ManualPlatform } from '@/lib/bora-engine/manual-platform-types';
 import ManualPlatformEntry from './ManualPlatformEntry';
+import DailyPlatformRankEntry from './DailyPlatformRankEntry';
 import type { PlatformSourceAssessment } from '@/lib/bora-engine/source-readiness';
 import {
   runSecureVoteReconciliation,
@@ -311,7 +312,7 @@ function DataEntryView({
       {songList?.status === 'ready' && (
         <Panel
           title="Manual data entry"
-          description="Map each song independently per platform, then record actual baselines, snapshots, or exact-hour measurements."
+          description="Manage platform identities and supporting measurements. Hourly Engine rollover now uses votes and seed history only."
           icon={Upload}
         >
           <ManualPlatformEntry
@@ -319,6 +320,13 @@ function DataEntryView({
             mappingState={platformMappings}
           />
         </Panel>
+      )}
+
+      {songList?.status === 'ready' && (
+        <DailyPlatformRankEntry
+          songs={songList.songs}
+          mappingState={platformMappings}
+        />
       )}
 
       <Panel

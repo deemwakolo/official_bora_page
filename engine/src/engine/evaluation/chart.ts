@@ -67,10 +67,12 @@ import { updatePersistentKura } from '../kura/persistent';
 import { evaluatePlatformPoints } from '../platform/points';
 import { calculateBoraScore } from '../score/boraScore';
 import { rankSongs } from '../ranking/ranking';
-import { C_MAX } from '../constants';
+import { C_MAX, PLATFORM_IDS } from '../constants';
 import type {
   ActiveWindow,
   HourIndex,
+  PlatformId,
+  PlatformObservation,
   SongLifecycle,
   VoteBucket,
   HourlyCRecord,
@@ -82,6 +84,8 @@ import type {
 import type { ActiveCInput } from '../kura/distribution';
 import type { PlatformPointsEntry } from '../platform/points';
 import type { RankSongInput } from '../ranking/ranking';
+import { sumLatestRankActivity } from '../platform/daily-platform-activity';
+import type { DailyPlatformRankSnapshot } from '../platform/daily-platform-activity';
 
 /**
  * One song's resolved hourly C for a single clock hour.
@@ -204,6 +208,15 @@ export interface EngineSong {
 export interface EngineInput {
   readonly songs: readonly EngineSong[];
 
+  /**
+   * Optional complete daily rank history, keyed by platform. When supplied,
+   * these seven-day inverse-rank activities replace hourly platform
+   * observations for scoring.
+   */
+  readonly dailyPlatformRankSnapshots?: Readonly<
+    Record<PlatformId, readonly DailyPlatformRankSnapshot[]>
+  >;
+
   /** The current clock hour. Never obtained internally. */
   readonly referenceHour: HourIndex;
 
@@ -307,6 +320,22 @@ function validateInput(input: EngineInput): Result<true, EngineError> {
 
   if (!Array.isArray(input.songs)) {
     return reject('INVALID_MEASUREMENT', 'songs must be an array.', {});
+  }
+  if (
+    input.dailyPlatformRankSnapshots !== undefined &&
+    (!input.dailyPlatformRankSnapshots ||
+      typeof input.dailyPlatformRankSnapshots !== 'object' ||
+      Array.isArray(input.dailyPlatformRankSnapshots) ||
+      PLATFORM_IDS.some(
+        (platform) =>
+          !Array.isArray(input.dailyPlatformRankSnapshots?.[platform]),
+      ))
+  ) {
+    return reject(
+      'INVALID_MEASUREMENT',
+      'Daily platform rank history must provide an array for every platform.',
+      {},
+    );
   }
 
   return { ok: true, value: true };
@@ -599,10 +628,49 @@ export function evaluateChart(
   // zero numerator. It does not inflate the platform's activity denominator,
   // because that denominator is driven by measured activity rather than by mere
   // membership of the population. Platform math is unchanged by this note.
-  const platform = evaluatePlatformPoints(
-    activeSongs.map((song) => ({ id: song.songId, observations: song.platform })),
-    input.referenceHour,
-  );
+  let platformPopulation = activeSongs.map((song) => ({
+    id: song.songId,
+    observations: song.platform,
+  }));
+  if (input.dailyPlatformRankSnapshots) {
+    const observationsBySong = new Map<
+      string,
+      Record<PlatformId, PlatformObservation[]>
+    >(
+      activeSongs.map((song) => [
+        song.songId,
+        { youtube: [], spotify: [], boomplay: [] },
+      ]),
+    );
+    for (const platformId of PLATFORM_IDS) {
+      const activities = sumLatestRankActivity(
+        input.dailyPlatformRankSnapshots[platformId],
+        activeSongs.map((song) => song.songId),
+      );
+      if (!activities.ok) {
+        return { ok: false, error: activities.error };
+      }
+      for (const { songId, activity } of activities.value) {
+        observationsBySong.get(songId)?.[platformId].push({
+          hourIndex: input.referenceHour,
+          platform: platformId,
+          value: activity,
+          source: 'EXTERNAL',
+          lifecycle: 'ACTIVE',
+          version: 0,
+        });
+      }
+    }
+    platformPopulation = activeSongs.map((song) => ({
+      id: song.songId,
+      observations: observationsBySong.get(song.songId) ?? {
+        youtube: [],
+        spotify: [],
+        boomplay: [],
+      },
+    }));
+  }
+  const platform = evaluatePlatformPoints(platformPopulation, input.referenceHour);
   if (!platform.ok) {
     return { ok: false, error: platform.error };
   }

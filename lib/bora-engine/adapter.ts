@@ -5,6 +5,7 @@
  * present and valid; explicit empty histories are valid, missing histories are
  * not. No chart-facing metric is used as a substitute for Engine state.
  */
+import type { DailyPlatformRankSnapshot } from '../../engine/src/engine/platform/daily-platform-activity';
 
 type EngineLifecycle = 'ACTIVE' | 'VAULT';
 type HourPhase = 'OPEN' | 'TRANSITION' | 'CLOSED';
@@ -97,10 +98,16 @@ export interface BuiltInputLike {
   readonly songs: EngineSongLike[];
   readonly referenceHour: number;
   readonly closedHourC: number | null;
+  readonly dailyPlatformRankSnapshots?: Readonly<
+    Record<PlatformId, readonly DailyPlatformRankSnapshot[]>
+  >;
 }
 
 export interface BuildEngineInputOptions {
   readonly closedHourC?: number | null;
+  readonly dailyPlatformRankSnapshots?: Readonly<
+    Record<PlatformId, readonly DailyPlatformRankSnapshot[]>
+  >;
 }
 
 export type BuildEngineInputResult =
@@ -466,6 +473,9 @@ export function buildEngineInputFromBackendRows(
       songs: mapped.songs,
       referenceHour: referenceHour as number,
       closedHourC: opts.closedHourC as number | null,
+      ...(opts.dailyPlatformRankSnapshots
+        ? { dailyPlatformRankSnapshots: opts.dailyPlatformRankSnapshots }
+        : {}),
     },
     gaps: allGaps,
     skipped,
