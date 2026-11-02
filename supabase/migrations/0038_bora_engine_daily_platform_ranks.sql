@@ -466,7 +466,7 @@ begin
     v_definition := pg_get_functiondef(v_function.oid);
     v_updated := regexp_replace(
       v_definition,
-      $$or[[:space:]]+\(c\.input_type in \('YOUTUBE', 'SPOTIFY', 'BOOMPLAY'\)[[:space:]]+and[[:space:]]+c\.hour_index between p_closed_hour - 167 and p_closed_hour\)$$,
+      $regex$or[[:space:]]+\(c\.input_type in \('YOUTUBE', 'SPOTIFY', 'BOOMPLAY'\)[[:space:]]+and[[:space:]]+c\.hour_index between p_closed_hour - 167 and p_closed_hour\)$regex$,
       '',
       'g'
     );
@@ -509,7 +509,7 @@ end;
 $$;
 
 create or replace function public.bora_engine_readiness(
-  p_closed_hour bigint
+  p_closed_hour bigint default null
 )
 returns jsonb
 language plpgsql
