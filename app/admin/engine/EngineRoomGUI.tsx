@@ -25,6 +25,7 @@ import type {
 import type { ManualPlatform } from '@/lib/bora-engine/manual-platform-types';
 import ManualPlatformEntry from './ManualPlatformEntry';
 import DailyPlatformRankEntry from './DailyPlatformRankEntry';
+import DailyRankPublicationControl from './DailyRankPublicationControl';
 import type { PlatformSourceAssessment } from '@/lib/bora-engine/source-readiness';
 import {
   runSecureVoteReconciliation,
@@ -968,6 +969,7 @@ function OperationsView({
           description="Persisted publication headers; entries and the active head remain controlled by the atomic publication transaction."
           icon={FileClock}
         >
+          <DailyRankPublicationControl />
           {snapshot.publications.length === 0 ? (
             <p
               className="text-[8px]"
@@ -1267,7 +1269,7 @@ export default function EngineRoomGUI({
           className="mt-5 text-right text-[6px] uppercase tracking-[0.12em]"
           style={{ color: 'var(--bora-text-subtle)' }}
         >
-          Evidence and publication controls remain blocked pending source approval
+          Hourly processing and publication require real, database-verified evidence
         </p>
       </div>
     </main>

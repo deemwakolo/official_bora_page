@@ -1,9 +1,13 @@
 import 'server-only';
 
+import type { ChartEvaluationResult } from '../../engine/src/engine/evaluation/chart';
 import type { EngineEvaluator } from './bridge';
 import { toEngineInput } from './bridge';
+import { buildEngineInputFromBackendRows } from './adapter';
 import {
   assessPublicationGate,
+  hasExpectedPublicationPopulation,
+  isUsablePublicationEvaluation,
   type PublicationGateInput,
 } from './publication-gate';
 import {
@@ -49,12 +53,55 @@ export interface EvaluateAndPublishInput
   readonly expectedCurrentPublication: ExpectedCurrentPublication;
 }
 
+export interface EvaluateAndPublishDailyRankInput {
+  readonly evaluator: EngineEvaluator;
+  readonly requestId: string;
+}
+
+export type EvaluateAndPublishDailyRankResult =
+  | {
+      readonly status: 'not-ready';
+      readonly reason: string;
+      readonly detail?: string;
+    }
+  | {
+      readonly status: 'snapshot-unavailable';
+      readonly reason: 'rpc-failed' | 'invalid-response';
+      readonly errorCode?: string;
+    }
+  | { readonly status: 'persistence-unavailable' }
+  | {
+      readonly status: 'evaluation-failed';
+      readonly reason: 'evaluator-threw' | 'engine-rejected';
+      readonly errorCode?: string;
+      readonly detail?: string;
+    }
+  | {
+      readonly status: 'invalid-publication';
+      readonly reasons: readonly string[];
+    }
+  | {
+      readonly status: 'transaction';
+      readonly outcome: PublicationTransactionOutcome;
+      readonly publicationRequest: PublicationTransactionRequest;
+    };
+
+type PublicationRequestContext = Pick<
+  EvaluateAndPublishInput,
+  | 'requestId'
+  | 'resultIdentity'
+  | 'expectedStateRevision'
+  | 'sourceRevision'
+  | 'expectedCurrentPublication'
+>;
+
 function buildPublicationRequest(
-  input: EvaluateAndPublishInput,
-  gate: Extract<ReturnType<typeof assessPublicationGate>, { status: 'ready' }>,
+  input: PublicationRequestContext,
+  referenceHour: number,
+  evaluation: ChartEvaluationResult,
 ): PublicationTransactionRequest | null {
   const activeEntries: PublicationCandidateEntry[] = [];
-  for (const [index, song] of gate.evaluation.ranked.entries()) {
+  for (const [index, song] of evaluation.ranked.entries()) {
     if (song.rank === null || song.persistentKuraNext === null) return null;
     activeEntries.push({
       position: index,
@@ -74,7 +121,7 @@ function buildPublicationRequest(
       boraScore: song.boraScore,
     });
   }
-  const vaultedSongIds = [...gate.evaluation.excludedVaulted].sort();
+  const vaultedSongIds = [...evaluation.excludedVaulted].sort();
   const vaultEntries: PublicationCandidateEntry[] = vaultedSongIds.map(
     (songId, index) => ({
       position: activeEntries.length + index,
@@ -97,10 +144,10 @@ function buildPublicationRequest(
 
   return {
     requestId: input.requestId,
-    evaluationReferenceHour: gate.referenceHour,
+    evaluationReferenceHour: referenceHour,
     expectedState: {
       revision: input.expectedStateRevision,
-      referenceHour: gate.referenceHour,
+      referenceHour,
     },
     expectedCurrentPublication: input.expectedCurrentPublication,
     sourceSnapshot: {
@@ -110,11 +157,11 @@ function buildPublicationRequest(
     evaluation: {
       resultIdentity: input.resultIdentity,
       validationStatus: 'validated',
-      referenceHour: gate.referenceHour,
-      activeSongIds: gate.evaluation.active.map((song) => song.songId),
+      referenceHour,
+      activeSongIds: evaluation.active.map((song) => song.songId),
       excludedVaultedSongIds: vaultedSongIds,
-      totalActiveC: gate.evaluation.totalActiveC,
-      platformTotals: gate.evaluation.platformTotals,
+      totalActiveC: evaluation.totalActiveC,
+      platformTotals: evaluation.platformTotals,
     },
     entries: [...activeEntries, ...vaultEntries],
   };
@@ -158,7 +205,11 @@ export async function evaluateAndPublishBoraEngineChart(
     return { status: 'gate-rejected', gate };
   }
 
-  const request = buildPublicationRequest(input, gate);
+  const request = buildPublicationRequest(
+    input,
+    gate.referenceHour,
+    gate.evaluation,
+  );
   if (!request) {
     return {
       status: 'invalid-publication',
@@ -176,6 +227,136 @@ export async function evaluateAndPublishBoraEngineChart(
   const setup = createBoraEnginePersistenceFromEnv();
   if (setup.status !== 'available') {
     return { status: 'persistence-unavailable' };
+  }
+
+  const outcome = await setup.persistence.publishChart(validated.request);
+  return {
+    status: 'transaction',
+    outcome,
+    publicationRequest: validated.request,
+  };
+}
+
+export async function evaluateAndPublishDailyRankBoraEngineChart(
+  input: EvaluateAndPublishDailyRankInput,
+): Promise<EvaluateAndPublishDailyRankResult> {
+  const setup = createBoraEnginePersistenceFromEnv();
+  if (setup.status !== 'available') {
+    return { status: 'persistence-unavailable' };
+  }
+
+  const snapshot =
+    await setup.persistence.loadPublicationInputSnapshot();
+  if (snapshot.status === 'not-ready') {
+    return { status: 'not-ready', reason: snapshot.reason };
+  }
+  if (snapshot.status === 'unavailable') {
+    return {
+      status: 'snapshot-unavailable',
+      reason: snapshot.reason,
+      ...(snapshot.errorCode ? { errorCode: snapshot.errorCode } : {}),
+    };
+  }
+
+  const built = buildEngineInputFromBackendRows(
+    snapshot.songs,
+    snapshot.referenceHour,
+    {
+      closedHourC: null,
+      dailyPlatformRankSnapshots: snapshot.dailyPlatformRankSnapshots,
+    },
+  );
+  if (built.status !== 'ready') {
+    const details = built.gaps.map(
+      (gap) => `${gap.field}:${gap.availability}:${gap.reason}`,
+    );
+    if (built.skipped.length > 0) {
+      details.push(`${built.skipped.length} backend rows were skipped`);
+    }
+    return {
+      status: 'not-ready',
+      reason: 'engine-input-not-ready',
+      ...(details.length > 0 ? { detail: details.join('; ') } : {}),
+    };
+  }
+
+  let evaluated: ReturnType<EngineEvaluator>;
+  try {
+    evaluated = input.evaluator(toEngineInput(built.value));
+  } catch (error) {
+    return {
+      status: 'evaluation-failed',
+      reason: 'evaluator-threw',
+      ...(error instanceof Error ? { detail: error.message } : {}),
+    };
+  }
+  if (!evaluated.ok) {
+    return {
+      status: 'evaluation-failed',
+      reason: 'engine-rejected',
+      errorCode: evaluated.error.code,
+      detail: evaluated.error.message,
+    };
+  }
+  if (
+    !isUsablePublicationEvaluation(
+      evaluated.value,
+      snapshot.referenceHour,
+    )
+  ) {
+    return {
+      status: 'invalid-publication',
+      reasons: ['invalid-evaluation-result'],
+    };
+  }
+
+  const activeSongIds = built.value.songs
+    .filter((song) => song.lifecycle === 'ACTIVE')
+    .map((song) => song.songId);
+  const vaultedSongIds = built.value.songs
+    .filter((song) => song.lifecycle === 'VAULT')
+    .map((song) => song.songId);
+  if (
+    !hasExpectedPublicationPopulation(
+      evaluated.value,
+      activeSongIds,
+      vaultedSongIds,
+    )
+  ) {
+    return {
+      status: 'invalid-publication',
+      reasons: ['evaluation-population-mismatch'],
+    };
+  }
+
+  const request = buildPublicationRequest(
+    {
+      requestId: input.requestId,
+      resultIdentity: [
+        'daily-rank',
+        snapshot.referenceHour,
+        snapshot.stateRevision,
+        snapshot.sourceRevision,
+      ].join(':'),
+      expectedStateRevision: snapshot.stateRevision,
+      sourceRevision: snapshot.sourceRevision,
+      expectedCurrentPublication: snapshot.expectedCurrentPublication,
+    },
+    snapshot.referenceHour,
+    evaluated.value,
+  );
+  if (!request) {
+    return {
+      status: 'invalid-publication',
+      reasons: ['missing-or-invalid-entry-values'],
+    };
+  }
+  const validated = validatePublicationRequest(request);
+  if (validated.status !== 'valid') {
+    return {
+      status: 'invalid-publication',
+      reasons: validated.reasons,
+    };
   }
 
   const outcome = await setup.persistence.publishChart(validated.request);

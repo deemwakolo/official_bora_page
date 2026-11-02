@@ -129,7 +129,7 @@ function isEvaluatedSong(value: unknown): value is EvaluatedSong {
   );
 }
 
-function isUsableEvaluation(
+export function isUsablePublicationEvaluation(
   value: unknown,
   referenceHour: number,
 ): value is ChartEvaluationResult {
@@ -195,7 +195,7 @@ function isUsableEvaluation(
   );
 }
 
-function hasExpectedPopulation(
+export function hasExpectedPublicationPopulation(
   value: ChartEvaluationResult,
   activeSongIds: readonly string[],
   vaultedSongIds: readonly string[],
@@ -532,10 +532,19 @@ export function assessPublicationGate(
       }],
     };
   }
-  if (result.ok !== true || !isUsableEvaluation(result.value, referenceHour)) {
+  if (
+    result.ok !== true ||
+    !isUsablePublicationEvaluation(result.value, referenceHour)
+  ) {
     return { status: 'failed', reasons: [{ code: 'invalid-evaluation-result' }] };
   }
-  if (!hasExpectedPopulation(result.value, activeSongIds, vaultedSongIds)) {
+  if (
+    !hasExpectedPublicationPopulation(
+      result.value,
+      activeSongIds,
+      vaultedSongIds,
+    )
+  ) {
     return {
       status: 'failed',
       reasons: [{ code: 'evaluation-population-mismatch' }],

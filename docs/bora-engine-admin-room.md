@@ -17,10 +17,13 @@ runs, or publications. The manual-intake application is deployed to Vercel.
 The public-chart XP-share display is a separate application update and must be
 deployed before it appears on the live chart.
 
-Migration 0038 (`bora_engine_daily_platform_ranks`) is the next, forward-only
-change for daily platform positions. It has not been applied to production.
-Review and validate its function rewrites against a safe database before
-applying it; do not treat the local migration file as a deployed schema.
+Migration 0038 (`bora_engine_daily_platform_ranks`) is applied to production
+as migration `20261102165147`. It adds immutable dated rank history and
+database eligibility checks. Migration 0039 is a separate, forward-only local
+change: it removes the remaining hourly-platform prerequisites from Engine
+snapshots and adds the service-only publication input snapshot. Do not use the
+publication action until 0039 is reviewed, applied, and the matching
+application release is deployed.
 
 ## Data Entry
 
@@ -68,16 +71,14 @@ the nightly rank-entry workflow.
 ## Engine Operations and safety
 
 Engine Operations reads readiness, vote/seed coverage, recent evidence,
-processing runs, state head, and publication history. Vote reconciliation is
-an authorized operator action and respects the configured UTC cutover. Hourly
-processing, bootstrap, and publication are not triggered by manual data entry.
-Existing Engine eligibility and publication gates remain authoritative.
-
-The evaluator can score supplied daily-rank history, but the publication
-service currently has no production caller that loads that history and
-publishes a chart. Saving ranks therefore does not publish a chart or activate
-the public XP-share display by itself. Wire and validate that publication path
-separately before treating daily rank scoring as live.
+processing runs, state head, and publication history. Vote reconciliation and
+daily-rank publication are separate authorized operator actions. Saving ranks
+does not publish a chart. The publication action obtains an atomic database
+snapshot, validates Engine state and daily-rank history, evaluates the chart,
+then delegates the final readiness and state-revision checks to the atomic
+publication transaction. It never bootstraps or advances Engine state, and
+publication is never automatic. The action depends on migration 0039 and must
+remain unused until that migration and its application release are deployed.
 
 Missing, unavailable, invalidated, stale, and unresolved vote/seed evidence is
 not treated as zero. Each platform remains an independent measurement source.

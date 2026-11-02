@@ -21,6 +21,7 @@ import type {
   LoadedHourlyRolloverInput,
 } from './hourly-runner';
 import type { HourIndex } from '../../engine/src/engine/types';
+import type { DailyPlatformRankSnapshot } from '../../engine/src/engine/platform/daily-platform-activity';
 import {
   isCoverageEvidenceAuthority,
   isCoverageEvidenceRecord,
@@ -41,6 +42,7 @@ import {
   unknownPublicationCommit,
   validatePublicationRequest,
   type BoraEnginePublishedChart,
+  type ExpectedCurrentPublication,
   type PublicationNotReadyReason,
   type PublicationRequestProblem,
   type PublicationTransactionOutcome,
@@ -150,11 +152,34 @@ export interface BoraEnginePersistence extends HourlyRolloverPersistence {
   persistYouTubeSnapshot(
     input: YouTubeSnapshotPersistenceInput,
   ): Promise<YouTubeSnapshotPersistenceResult>;
+  loadPublicationInputSnapshot(): Promise<BoraEnginePublicationInputSnapshotResult>;
   publishChart(
     request: PublicationTransactionRequest,
   ): Promise<PublicationTransactionOutcome>;
   readCurrentPublication(): Promise<BoraEnginePublishedChart | null>;
 }
+
+export type BoraEnginePublicationInputSnapshotResult =
+  | {
+      readonly status: 'ready';
+      readonly referenceHour: number;
+      readonly stateRevision: number;
+      readonly sourceRevision: number;
+      readonly expectedCurrentPublication: ExpectedCurrentPublication;
+      readonly songs: readonly unknown[];
+      readonly dailyPlatformRankSnapshots: Readonly<
+        Record<
+          'youtube' | 'spotify' | 'boomplay',
+          readonly DailyPlatformRankSnapshot[]
+        >
+      >;
+    }
+  | { readonly status: 'not-ready'; readonly reason: string }
+  | {
+      readonly status: 'unavailable';
+      readonly reason: 'rpc-failed' | 'invalid-response';
+      readonly errorCode?: string;
+    };
 
 export type BoraEngineReadinessCheck = {
   readonly status:
@@ -287,6 +312,148 @@ function isUuid(value: unknown): value is string {
       value,
     )
   );
+}
+
+function nonNegativeSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && typeof value === 'number' && value >= 0;
+}
+
+function parseDailyPlatformRankSnapshots(
+  value: unknown,
+): DailyPlatformRankSnapshot[] | null {
+  if (!Array.isArray(value)) return null;
+  const snapshots: DailyPlatformRankSnapshot[] = [];
+  const dates = new Set<string>();
+
+  for (const candidate of value) {
+    if (
+      !isRecord(candidate) ||
+      typeof candidate.effectiveDate !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(candidate.effectiveDate) ||
+      !Array.isArray(candidate.ranks)
+    ) {
+      return null;
+    }
+    const date = new Date(`${candidate.effectiveDate}T00:00:00.000Z`);
+    if (
+      !Number.isFinite(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== candidate.effectiveDate ||
+      dates.has(candidate.effectiveDate)
+    ) {
+      return null;
+    }
+
+    const ranks: { songId: string; rank: number }[] = [];
+    const songIds = new Set<string>();
+    const positions = new Set<number>();
+    for (const rank of candidate.ranks) {
+      if (
+        !isRecord(rank) ||
+        !isUuid(rank.songId) ||
+        !nonNegativeSafeInteger(rank.rank) ||
+        rank.rank === 0 ||
+        songIds.has(rank.songId) ||
+        positions.has(rank.rank)
+      ) {
+        return null;
+      }
+      songIds.add(rank.songId);
+      positions.add(rank.rank);
+      ranks.push({ songId: rank.songId, rank: rank.rank });
+    }
+
+    dates.add(candidate.effectiveDate);
+    snapshots.push({
+      effectiveDate: candidate.effectiveDate,
+      ranks,
+    });
+  }
+  return snapshots;
+}
+
+function parsePublicationInputSnapshot(
+  value: unknown,
+): BoraEnginePublicationInputSnapshotResult {
+  if (!isRecord(value)) {
+    return { status: 'unavailable', reason: 'invalid-response' };
+  }
+  if (value.status === 'not-ready') {
+    const eligibility =
+      isRecord(value.eligibility) &&
+      typeof value.eligibility.reason === 'string'
+        ? value.eligibility.reason
+        : null;
+    return {
+      status: 'not-ready',
+      reason: [
+        typeof value.reason === 'string'
+          ? value.reason
+          : 'publication-input-not-ready',
+        ...(eligibility ? [eligibility] : []),
+      ].join(':'),
+    };
+  }
+  if (
+    value.status !== 'ready' ||
+    !nonNegativeSafeInteger(value.referenceHour) ||
+    !nonNegativeSafeInteger(value.stateRevision) ||
+    !nonNegativeSafeInteger(value.sourceRevision) ||
+    !isRecord(value.engineSnapshot) ||
+    value.engineSnapshot.status !== 'ready' ||
+    !isRecord(value.engineSnapshot.state) ||
+    value.engineSnapshot.state.referenceHour !== value.referenceHour ||
+    !Array.isArray(value.engineSnapshot.state.songs) ||
+    value.engineSnapshot.stateRevision !== value.stateRevision ||
+    !isRecord(value.expectedCurrentPublication) ||
+    !isRecord(value.dailyPlatformRankSnapshots)
+  ) {
+    return { status: 'unavailable', reason: 'invalid-response' };
+  }
+
+  let expectedCurrentPublication: ExpectedCurrentPublication;
+  if (value.expectedCurrentPublication.status === 'initial') {
+    expectedCurrentPublication = { status: 'initial' };
+  } else if (
+    value.expectedCurrentPublication.status === 'published' &&
+    isUuid(value.expectedCurrentPublication.publicationId)
+  ) {
+    expectedCurrentPublication = {
+      status: 'published',
+      publicationId: value.expectedCurrentPublication.publicationId,
+    };
+  } else {
+    return { status: 'unavailable', reason: 'invalid-response' };
+  }
+
+  const youtube = parseDailyPlatformRankSnapshots(
+    value.dailyPlatformRankSnapshots.youtube,
+  );
+  const spotify = parseDailyPlatformRankSnapshots(
+    value.dailyPlatformRankSnapshots.spotify,
+  );
+  const boomplay = parseDailyPlatformRankSnapshots(
+    value.dailyPlatformRankSnapshots.boomplay,
+  );
+  if (
+    youtube === null ||
+    spotify === null ||
+    boomplay === null ||
+    youtube.length === 0 ||
+    spotify.length === 0 ||
+    boomplay.length === 0
+  ) {
+    return { status: 'unavailable', reason: 'invalid-response' };
+  }
+
+  return {
+    status: 'ready',
+    referenceHour: value.referenceHour,
+    stateRevision: value.stateRevision,
+    sourceRevision: value.sourceRevision,
+    expectedCurrentPublication,
+    songs: value.engineSnapshot.state.songs,
+    dailyPlatformRankSnapshots: { youtube, spotify, boomplay },
+  };
 }
 
 function asCoverageInput(value: unknown): value is HourlyCoverageInput {
@@ -650,6 +817,20 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
 
   constructor(client: SupabaseClient) {
     this.client = client;
+  }
+
+  async loadPublicationInputSnapshot(): Promise<BoraEnginePublicationInputSnapshotResult> {
+    const { data, error } = await this.client.rpc(
+      'bora_engine_publication_input_snapshot',
+    );
+    if (error) {
+      return {
+        status: 'unavailable',
+        reason: 'rpc-failed',
+        ...(error.code ? { errorCode: error.code } : {}),
+      };
+    }
+    return parsePublicationInputSnapshot(data);
   }
 
   async publishChart(
