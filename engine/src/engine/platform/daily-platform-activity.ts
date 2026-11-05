@@ -26,6 +26,41 @@ function rankError(message: string, context: Record<string, string>) {
   };
 }
 
+function isValidCalendarDate(value: string): boolean {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return false;
+  }
+  if (month < 1 || month > 12 || day < 1) {
+    return false;
+  }
+
+  const leapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const daysInMonth = [
+    31,
+    leapYear ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ][month - 1];
+
+  return day <= daysInMonth;
+}
+
 /**
  * Convert a platform chart position to the positive activity used by the
  * existing per-platform normalizer. Lower positions receive greater shares.
@@ -107,13 +142,11 @@ export function sumLatestRankActivity(
     }
     const parsedDate =
       typeof snapshot.effectiveDate === 'string' &&
-      /^\d{4}-\d{2}-\d{2}$/.test(snapshot.effectiveDate)
-        ? new Date(`${snapshot.effectiveDate}T00:00:00.000Z`)
+      isValidCalendarDate(snapshot.effectiveDate)
+        ? snapshot.effectiveDate
         : null;
     if (
       parsedDate === null ||
-      !Number.isFinite(parsedDate.getTime()) ||
-      parsedDate.toISOString().slice(0, 10) !== snapshot.effectiveDate ||
       dates.has(snapshot.effectiveDate) ||
       !Array.isArray(snapshot.ranks)
     ) {

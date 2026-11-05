@@ -1,4 +1,5 @@
 import type { PlatformId } from '../../engine/src/engine/types';
+import { EPSILON_SUM, KURA_TOTAL } from '../../engine/src/engine/constants';
 
 export interface ActivePublicationEntry {
   readonly position: number;
@@ -72,6 +73,12 @@ export interface BoraEnginePublishedChartEntry {
   readonly rank: number | null;
   readonly xp: number | null;
   readonly boraScore: number | null;
+  readonly scoreComponents: {
+    readonly kura: number;
+    readonly youtube: number;
+    readonly spotify: number;
+    readonly boomplay: number;
+  } | null;
   readonly title: string;
   readonly artist: string;
   readonly coverUrl: string;
@@ -105,6 +112,7 @@ export type PublicationRequestProblem =
   | 'idempotency-key-reused'
   | 'request-record-mismatch'
   | 'incomplete-active-ranks'
+  | 'kura-budget-exceeded'
   | 'missing-or-invalid-entry-values';
 
 export type PublicationNotReadyReason =
@@ -431,6 +439,8 @@ export function validatePublicationRequest(
     reasons.push('empty-candidate');
   } else {
     let activeRank = 0;
+    let activeKuraTotal = 0;
+    let nextActiveKuraTotal = 0;
     let sawVault = false;
     let previousVaultSongId = '';
     const seenSongs = new Set<string>();
@@ -438,6 +448,14 @@ export function validatePublicationRequest(
     value.entries.forEach((entry, position) => {
       const parsed = entryProblems(entry, position, activeRank + 1);
       reasons.push(...parsed.problems);
+      if (parsed.active && isRecord(entry)) {
+        if (isFiniteNonNegative(entry.persistentKuraBefore)) {
+          activeKuraTotal += entry.persistentKuraBefore;
+        }
+        if (isFiniteNonNegative(entry.persistentKuraNext)) {
+          nextActiveKuraTotal += entry.persistentKuraNext;
+        }
+      }
       if (parsed.songId !== null) {
         if (seenSongs.has(parsed.songId)) reasons.push('duplicate-song');
         seenSongs.add(parsed.songId);
@@ -462,6 +480,14 @@ export function validatePublicationRequest(
       }
     });
     if (activeRank === 0) reasons.push('empty-candidate');
+    if (
+      !Number.isFinite(activeKuraTotal) ||
+      activeKuraTotal > KURA_TOTAL + EPSILON_SUM ||
+      !Number.isFinite(nextActiveKuraTotal) ||
+      nextActiveKuraTotal > KURA_TOTAL + EPSILON_SUM
+    ) {
+      reasons.push('kura-budget-exceeded');
+    }
     if (
       !isRecord(evaluation) ||
       !Array.isArray(evaluation.activeSongIds) ||

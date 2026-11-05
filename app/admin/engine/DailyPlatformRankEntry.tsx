@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  getDailyPlatformRankDrafts,
   getDailyPlatformRankSnapshot,
   getSyntheticDailyPlatformRankDates,
   submitDailyPlatformRanks,
@@ -12,6 +13,7 @@ import type {
 } from '@/lib/bora-engine/admin-room-read-model';
 import type {
   DailyPlatformRankActionResult,
+  DailyPlatformRankDraftReadResult,
   DailyPlatformRankSnapshotResult,
   ManualPlatform,
   SyntheticDailyPlatformRankDatesResult,
@@ -69,6 +71,8 @@ export default function DailyPlatformRankEntry({
 }) {
   const [snapshot, setSnapshot] =
     useState<DailyPlatformRankSnapshotResult | null>(null);
+  const [draft, setDraft] =
+    useState<DailyPlatformRankDraftReadResult | null>(null);
   const [syntheticDates, setSyntheticDates] =
     useState<SyntheticDailyPlatformRankDatesResult | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
@@ -93,6 +97,7 @@ export default function DailyPlatformRankEntry({
       setCorrecting(false);
       setEvidenceReferences({ youtube: '', spotify: '', boomplay: '' });
       if (current.status === 'ready') {
+        setDraft(null);
         setRanks(
           Object.fromEntries(
             current.entries.map((entry) => [
@@ -101,7 +106,21 @@ export default function DailyPlatformRankEntry({
             ]),
           ),
         );
+      } else if (current.status === 'none' && !effectiveDate) {
+        const currentDraft = await getDailyPlatformRankDrafts();
+        setDraft(currentDraft);
+        setRanks(
+          currentDraft.status === 'ready'
+            ? Object.fromEntries(
+                currentDraft.entries.map((entry) => [
+                  rankKey(entry.songId, entry.platform),
+                  String(entry.rank),
+                ]),
+              )
+            : {},
+        );
       } else {
+        setDraft(null);
         setRanks({});
       }
     } catch (error) {
@@ -110,6 +129,7 @@ export default function DailyPlatformRankEntry({
         error instanceof Error ? error.message : 'unknown',
       );
       setSnapshot({ status: 'unavailable' });
+      setDraft({ status: 'unavailable' });
     } finally {
       setLoading(false);
     }
@@ -334,6 +354,22 @@ export default function DailyPlatformRankEntry({
             </label>
           ))}
         </div>
+
+        {!selectedDate && snapshot?.status === 'none' && draft?.status === 'ready' && (
+          <p
+            className="border p-3 text-[7px] leading-5"
+            style={{ borderColor: 'var(--bora-border)', color: 'var(--bora-text-muted)' }}
+            role="status"
+          >
+            Song Studio drafts loaded: {new Set(draft.entries.map((entry) => entry.songId)).size} of {songs.length} songs.
+            Draft positions are still unpublished and unverified; review them here and provide the platform evidence references before submission.
+          </p>
+        )}
+        {!selectedDate && snapshot?.status === 'none' && draft?.status === 'unavailable' && (
+          <p className="text-[8px] text-red-400" role="alert">
+            Saved Song Studio drafts could not be loaded. No saved positions were substituted.
+          </p>
+        )}
 
         {snapshot?.status === 'ready' && (
           <label className="flex items-center gap-2 text-[8px]">

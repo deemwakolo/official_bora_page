@@ -247,7 +247,7 @@ describe('E-B: basic composition', () => {
     });
     const a = entryOf(r, 'a');
     expect(a.persistentKuraBefore).toBe(10);
-    const expected = (10 + a.kuraFresh) * (1 - 0.0025);
+    const expected = a.kuraFresh * (1 - 0.0025);
     expect(a.persistentKuraNext).toBeCloseTo(expected, 12);
   });
 
@@ -299,8 +299,8 @@ describe('E-B: basic composition', () => {
     const r = evaluate({
       songs: [
         songAt('low', { persistentKura: 1 }),
-        songAt('high', { persistentKura: 100 }),
-        songAt('mid', { persistentKura: 50 }),
+        songAt('high', { persistentKura: 25 }),
+        songAt('mid', { persistentKura: 24 }),
       ],
       referenceHour: H,
       closedHourC: null,
@@ -339,7 +339,7 @@ describe('E-V: Vault isolation (exclusion, never reset)', () => {
     const r = evaluate({
       songs: [
         songAt('a', { persistentKura: 5 }),
-        songAt('b', { persistentKura: 50 }),
+        songAt('b', { persistentKura: 45 }),
         songAt('whale', { lifecycle: 'VAULT', persistentKura: 1_000_000 }),
       ],
       referenceHour: H,
@@ -809,10 +809,35 @@ describe('E-P: determinism, immutability, and property tests', () => {
     }
   });
 
+  it('rejects an active Kura total above 50 without requiring a Vaulted song', () => {
+    const r = evaluateChart({
+      songs: [
+        songAt('a', { persistentKura: 30 }),
+        songAt('b', { persistentKura: 21 }),
+      ],
+      referenceHour: H,
+      closedHourC: null,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain('ACTIVE Kura allocation');
+  });
+
+  it('excludes Vaulted Kura from the active 50-point total', () => {
+    const r = evaluateChart({
+      songs: [
+        songAt('active', { persistentKura: 50 }),
+        songAt('vault', { lifecycle: 'VAULT', persistentKura: 1000 }),
+      ],
+      referenceHour: H,
+      closedHourC: null,
+    });
+    expect(r.ok).toBe(true);
+  });
+
   it('produces identical output from permuted input', () => {
     const songs = [
       songAt('a', { persistentKura: 5 }),
-      songAt('b', { persistentKura: 50 }),
+      songAt('b', { persistentKura: 45 }),
       songAt('c', { lifecycle: 'VAULT', persistentKura: 999 }),
     ];
     const forward = evaluate({ songs, referenceHour: H, closedHourC: 0 });
@@ -838,7 +863,7 @@ describe('E-P: determinism, immutability, and property tests', () => {
           songAt(`s${i}`, {
             lifecycle: rng() < 0.3 ? 'VAULT' : 'ACTIVE',
             k: Math.floor(rng() * 1000),
-            persistentKura: Math.floor(rng() * 200),
+            persistentKura: (rng() * 50) / size,
             hours: Math.floor(rng() * 20),
             votes: Math.floor(rng() * 8),
             platform: {

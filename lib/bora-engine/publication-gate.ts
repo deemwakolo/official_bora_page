@@ -2,7 +2,11 @@ import type {
   ChartEvaluationResult,
   EvaluatedSong,
 } from '../../engine/src/engine/evaluation/chart';
-import { PLATFORM_WINDOW_HOURS } from '../../engine/src/engine/constants';
+import {
+  EPSILON_SUM,
+  KURA_TOTAL,
+  PLATFORM_WINDOW_HOURS,
+} from '../../engine/src/engine/constants';
 import type { EngineError } from '../../engine/src/engine/types';
 import {
   assessChartEvaluationEligibility,
@@ -135,6 +139,12 @@ function isEvaluatedSong(
   );
 }
 
+function hasPersistentKuraNext(
+  song: EvaluatedSong,
+): song is EvaluatedSong & { readonly persistentKuraNext: number } {
+  return isFiniteNonNegative(song.persistentKuraNext);
+}
+
 export function isUsablePublicationEvaluation(
   value: unknown,
   referenceHour: number,
@@ -150,7 +160,6 @@ export function isUsablePublicationEvaluation(
   ) {
     return false;
   }
-
   const totals = value.platformTotals;
   if (
     !isFiniteNonNegative(totals.youtube) ||
@@ -170,6 +179,27 @@ export function isUsablePublicationEvaluation(
     !ranked.every((song) =>
       isEvaluatedSong(song, expectsPersistentKuraNext),
     )
+  ) {
+    return false;
+  }
+  const activeKuraTotal = active.reduce(
+    (total, song) => total + song.persistentKuraBefore,
+    0,
+  );
+  const activeWithNextKura = active.filter(hasPersistentKuraNext);
+  const nextActiveKuraTotal = expectsPersistentKuraNext
+    ? activeWithNextKura.reduce(
+        (total, song) => total + song.persistentKuraNext,
+        0,
+      )
+    : activeKuraTotal;
+  if (
+    !Number.isFinite(activeKuraTotal) ||
+    activeKuraTotal > KURA_TOTAL + EPSILON_SUM ||
+    (expectsPersistentKuraNext &&
+      (activeWithNextKura.length !== active.length ||
+        !Number.isFinite(nextActiveKuraTotal) ||
+        nextActiveKuraTotal > KURA_TOTAL + EPSILON_SUM))
   ) {
     return false;
   }

@@ -301,16 +301,15 @@ export interface PlatformSeries {
 // ───────────────────────────────────────────────────────────────────────────
 
 /**
- * A1: fresh Kura and persistent Kura are CONCEPTUALLY DIFFERENT STATES and are
- * held separately so neither can silently overwrite the other.
+ * Fresh Kura and the last decayed Kura value are held separately for scoring
+ * and rollover observability.
  *
  *   kuraFresh      — instantaneous, re-derived from XP on every evaluation.
  *                    Normalised: SUM kuraFresh = 50 (A2).
- *   kuraPersistent — the SCORED Kura. Carries across time; decays; receives a
- *                    one-time injection of fresh Kura each hourly cycle.
+ *   kuraPersistent — the last hourly fresh allocation after decay. It never
+ *                    accumulates on top of earlier Kura.
  *
- * A2: SUM kuraPersistent is NOT required to equal 50 and drifts below 50 as
- * decay accumulates. Never assert that invariant.
+ * The active population's kuraPersistent total cannot exceed 50.
  */
 export interface KuraState {
   /**
@@ -322,9 +321,10 @@ export interface KuraState {
   fresh: number;
 
   /**
-   * The persistent balance, and the authoritative Kura input to BORA Score.
+   * The last decayed Kura allocation, and the authoritative Kura input to BORA
+   * Score until the next hourly rollover.
    *
-   * A1 recurrence: `persistent_next = (persistent + fresh) * (1 - D_h)`.
+   * Recurrence: `persistent_next = fresh * (1 - D_h)`.
    * A8: reset to 0 on restore. Never accumulates while Vaulted.
    */
   persistent: number;

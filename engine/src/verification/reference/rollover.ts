@@ -21,8 +21,8 @@
  *     ended, so computing it from the new hour's activity would let a song's
  *     balance decay against activity it had not yet earned.
  *
- *   · Fresh Kura is injected BEFORE decay, so the amount just earned is itself
- *     subject to that cycle's decay.
+ *   · The current fresh Kura allocation is subject to that cycle's decay.
+ *     Prior persistent Kura is not added to the new allocation.
  *
  * ONE HOUR ONLY. A caller needing H → H+3 calls this three times, so each
  * elapsed hour receives its own C and its own decay. Collapsing a multi-hour
@@ -146,7 +146,7 @@ export function refRolloverHour(
       closedHourC: resolved.c,
       freshInjected,
       decayRate,
-      decayed: song.persistentKura + freshInjected - persistentAfter,
+      decayed: freshInjected - persistentAfter,
       persistentBefore: song.persistentKura,
       persistentAfter,
     });

@@ -228,12 +228,3 @@ export const EXACT_COMPARISON_TOLERANCE = 0;
 
 /** Total points the Kura block distributes across the active chart. */
 export const KURA_TOTAL = 50;
-
-/**
- * A1: fresh Kura is injected into the persistent balance with an implicit gain
- * of exactly 1 — `persistent_next = (persistent + fresh) × (1 - D)`.
- *
- * This is NOT a tunable coefficient and must never be exposed as one. Recorded
- * here only so the A1 formula reads as a single named constant.
- */
-export const PERSISTENT_KURA_INJECTION_GAIN = 1;

@@ -336,7 +336,7 @@ describe('A-17.8: rollover attacks', () => {
   it('cannot double-decay by replaying the same hour', () => {
     // A second rollover at the OLD hour is rejected, so the balance cannot be
     // decayed twice for one hour.
-    const first = unwrap(rolloverHour(state([song({ persistentKura: 100 })]), H));
+    const first = unwrap(rolloverHour(state([song({ persistentKura: 50 })]), H));
     const replay = rolloverHour(first.state, H);
     expect(replay.ok).toBe(false);
   });
@@ -426,13 +426,13 @@ describe('A-17.9: repeated evaluation attack', () => {
   });
 
   it('does not decay when evaluation is repeated many times before rollover', () => {
-    const s = song({ persistentKura: 100, buckets: [bucketAt(H)] });
+    const s = song({ persistentKura: 50, buckets: [bucketAt(H)] });
     for (let i = 0; i < 50; i++) {
       const chart = unwrap(evaluateChart({ songs: [toEngineSong(s)], referenceHour: H, closedHourC: 0 }));
-      expect(chart.active[0].persistentKuraBefore).toBe(100);
+      expect(chart.active[0].persistentKuraBefore).toBe(50);
     }
     // Only the rollover commits; the balance is still 100 until then.
-    expect(s.persistentKura).toBe(100);
+    expect(s.persistentKura).toBe(50);
   });
 });
 
@@ -443,8 +443,8 @@ describe('A-17.9: repeated evaluation attack', () => {
 describe('A-17.10: persistent Kura attacks', () => {
   it('decays maximally at C 0 and not at all at C 2', () => {
     // C 2 comes from 5 upvotes; C 0 from an hour with no bucket at all.
-    const maxC = unwrap(rolloverHour(state([song({ persistentKura: 100, buckets: [bucketAt(H)] })]), H));
-    const zeroC = unwrap(rolloverHour(state([song({ persistentKura: 100 })]), H));
+    const maxC = unwrap(rolloverHour(state([song({ persistentKura: 50, buckets: [bucketAt(H)] })]), H));
+    const zeroC = unwrap(rolloverHour(state([song({ persistentKura: 50 })]), H));
 
     const atMax = maxC.steps[0];
     const atZero = zeroC.steps[0];
@@ -463,10 +463,10 @@ describe('A-17.10: persistent Kura attacks', () => {
 
       const step = rolled.steps[0];
       // The step's own before/after pair must be self-consistent with exactly
-      // one injection and one decay: after = (before + fresh) × (1 - D_h),
+      // one fresh allocation and one decay: after = fresh × (1 - D_h),
       // where decayRate is the dimensionless D_h coefficient.
       expect(step.persistentAfter).toBeCloseTo(
-        (step.persistentBefore + step.freshInjected) * (1 - step.decayRate),
+        step.freshInjected * (1 - step.decayRate),
         9,
       );
       // And the committed state equals what the step reported.
@@ -540,7 +540,7 @@ describe('A-17.11: Vault attacks', () => {
     ];
     const r = runSimulation({
       name: 'vault-long',
-      initialState: state([song({ k: 42, persistentKura: 300 })]),
+      initialState: state([song({ k: 42, persistentKura: 50 })]),
       hours: 20,
       events,
     });
@@ -549,7 +549,7 @@ describe('A-17.11: Vault attacks', () => {
       for (const s of r.value.snapshots.slice(1)) {
         const gone = s.vaulted[0];
         expect(gone.k).toBe(42);
-        expect(gone.persistentKura).toBe(300);
+        expect(gone.persistentKura).toBe(50);
         expect(gone.activeC).toBe(0);
         expect(gone.boraScore).toBe(0);
       }
@@ -559,7 +559,7 @@ describe('A-17.11: Vault attacks', () => {
   it('resets persistent Kura to 0 on restore while retaining K and history', () => {
     const r = runSimulation({
       name: 'vault-restore',
-      initialState: state([song({ k: 42, persistentKura: 300, buckets: [bucketAt(H - 1)] })]),
+      initialState: state([song({ k: 42, persistentKura: 50, buckets: [bucketAt(H - 1)] })]),
       hours: 3,
       events: [
         { kind: 'VAULT', songId: 'A', hour: H },

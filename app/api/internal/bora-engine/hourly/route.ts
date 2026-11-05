@@ -1,20 +1,10 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { HOUR_MS } from '@/engine/src/engine/constants';
 import { runBoraEngineThroughHour } from '@/lib/bora-engine/hour-entry';
+import { authorizeScheduledRequest } from '@/lib/bora-engine/scheduled-request-auth';
 
 export const runtime = 'nodejs';
-
-function isAuthorized(request: Request, secret: string): boolean {
-  const authorization = request.headers.get('authorization');
-  if (!authorization) return false;
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const provided = Buffer.from(authorization);
-  return (
-    expected.length === provided.length &&
-    timingSafeEqual(expected, provided)
-  );
-}
 
 function requestIdForHour(secret: string, closedHour: number): string {
   const bytes = createHmac('sha256', secret)
@@ -27,17 +17,27 @@ function requestIdForHour(secret: string, closedHour: number): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export async function GET(request: Request) {
+async function handleRequest(request: Request) {
   const secret = process.env.CRON_SECRET;
+  const authorization = await authorizeScheduledRequest(request);
+  if (!authorization.authorized) {
+    return NextResponse.json(
+      {
+        error:
+          authorization.reason === 'misconfigured'
+            ? 'Hourly worker is not configured.'
+            : 'Unauthorized',
+      },
+      { status: authorization.reason === 'misconfigured' ? 503 : 401 },
+    );
+  }
   if (!secret) {
     return NextResponse.json(
       { error: 'Hourly worker is not configured.' },
       { status: 503 },
     );
   }
-  if (!isAuthorized(request, secret)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+
   const cutoverAt = process.env.BORA_ENGINE_VOTE_CUTOVER_AT;
   if (
     !cutoverAt ||
@@ -91,4 +91,12 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function GET(request: Request) {
+  return handleRequest(request);
+}
+
+export async function POST(request: Request) {
+  return handleRequest(request);
 }

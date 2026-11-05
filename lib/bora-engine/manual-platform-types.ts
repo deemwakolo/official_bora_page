@@ -48,6 +48,31 @@ export interface DailyPlatformRankInput {
   }[];
 }
 
+export interface DailyPlatformRankDraftEntry {
+  readonly songId: string;
+  readonly platform: ManualPlatform;
+  readonly rank: number;
+}
+
+export type DailyPlatformRankDraftReadResult =
+  | {
+      readonly status: 'ready';
+      readonly effectiveDate: string;
+      readonly entries: readonly DailyPlatformRankDraftEntry[];
+    }
+  | { readonly status: 'unauthorized' | 'unavailable' };
+
+export type DailyPlatformRankDraftSaveResult =
+  | { readonly status: 'saved'; readonly effectiveDate: string }
+  | {
+      readonly status:
+        | 'unauthorized'
+        | 'configuration-unavailable'
+        | 'invalid-input'
+        | 'snapshot-exists'
+        | 'persistence-failed';
+    };
+
 export type DailyPlatformRankActionResult =
   | {
       readonly status: 'recorded' | 'already-recorded';

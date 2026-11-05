@@ -1,31 +1,21 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { reconcileSecureVoteDelivery } from '@/lib/bora-engine/vote-event-reconciliation';
+import { authorizeScheduledRequest } from '@/lib/bora-engine/scheduled-request-auth';
 
 export const runtime = 'nodejs';
 
-function isAuthorized(request: Request, secret: string): boolean {
-  const authorization = request.headers.get('authorization');
-  if (!authorization) return false;
-
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const provided = Buffer.from(authorization);
-  return (
-    expected.length === provided.length &&
-    timingSafeEqual(expected, provided)
-  );
-}
-
-export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
+async function handleRequest(request: Request) {
+  const authorization = await authorizeScheduledRequest(request);
+  if (!authorization.authorized) {
     return NextResponse.json(
-      { error: 'Vote reconciliation is not configured.' },
-      { status: 503 },
+      {
+        error:
+          authorization.reason === 'misconfigured'
+            ? 'Vote reconciliation is not configured.'
+            : 'Unauthorized',
+      },
+      { status: authorization.reason === 'misconfigured' ? 503 : 401 },
     );
-  }
-  if (!isAuthorized(request, secret)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const cutoverIso = process.env.BORA_ENGINE_VOTE_CUTOVER_AT;
@@ -78,4 +68,12 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
+}
+
+export async function GET(request: Request) {
+  return handleRequest(request);
+}
+
+export async function POST(request: Request) {
+  return handleRequest(request);
 }

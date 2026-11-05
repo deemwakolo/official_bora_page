@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import ChartAnimation from './ChartAnimation';
 import TapGUI from '../charts/TapGUI';
 import type { SongMetadata } from '../charts/TapOP';
+import type { BoraEnginePublishedChartEntry } from '@/lib/bora-engine/publication-transaction';
 
 import {
   ArrowUp,
@@ -19,6 +20,8 @@ interface Song {
   cover_url: string;
   youtube_id?: string;
   xp?: number | null;
+  boraScore?: number | null;
+  scoreComponents?: BoraEnginePublishedChartEntry['scoreComponents'];
   yt_rank?: number;
   sp_rank?: number;
   upvotes?: number | null;
@@ -183,6 +186,11 @@ export default function ChartGUI({
                 : voteShare !== null
                   ? `Vote share ${voteShare.toFixed(1)} percent`
                   : 'Engine percentage unavailable until real Engine inputs are ready';
+            const hasPublishedScore =
+              typeof item.boraScore === 'number' &&
+              Number.isFinite(item.boraScore) &&
+              item.scoreComponents !== undefined &&
+              item.scoreComponents !== null;
 
             return (
               // CARD NZIMA YA WIMBO MMOJA
@@ -381,51 +389,69 @@ export default function ChartGUI({
                   {/* DESKTOP XP SHARE NA VOTE BUTTONS */}
                   <div className="hidden shrink-0 items-center gap-8 lg:flex">
 
-                    {/* XP SHARE */}
-                    <div className="w-36 -translate-x-2">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span
-                          className="text-[7px] font-mono uppercase tracking-[0.25em]"
-                          style={{
-                            color: 'var(--bora-gold)',
-                          }}
-                        >
-                          {shareLabel}
-                        </span>
-                      </div>
-
-                      <div
-                        className="h-[3px] w-full overflow-hidden"
-                        style={{
-                          backgroundColor: 'var(--bora-border)',
-                        }}
-                      >
+                    <div className="w-44 -translate-x-2">
+                      {hasPublishedScore ? (
                         <div
-                          className="h-full bg-[var(--bora-gold)] transition-all duration-700"
-                          style={{
-                            width: `${sharePercent ?? 0}%`,
-                          }}
-                        />
-                      </div>
-
-                      <div
-                        data-bora-ui="public-vote-hero-xp-share-value"
-                        aria-label={
-                          shareDescription
-                        }
-                        className="relative mt-2 text-right text-4xl font-black leading-none tracking-[-0.06em] tabular-nums text-[var(--bora-gold)] transition-transform duration-500 group-hover:scale-105"
-                      >
-                        {shareValue}
-                      </div>
-                      {sharePercent === null && (
-                        <p
-                          className="mt-1 text-right text-[6px] font-mono uppercase tracking-[0.12em]"
-                          style={{ color: 'var(--bora-text-subtle)' }}
+                          className="text-right"
+                          aria-label={`BORA score ${item.boraScore?.toFixed(2)} points: Kura ${item.scoreComponents?.kura.toFixed(2)}, YouTube ${item.scoreComponents?.youtube.toFixed(2)}, Spotify ${item.scoreComponents?.spotify.toFixed(2)}, Boomplay ${item.scoreComponents?.boomplay.toFixed(2)}`}
                         >
-                          {hasEngineShare
-                            ? 'Awaiting accepted vote events'
-                            : 'Awaiting real Engine inputs'}
-                        </p>
+                          <span
+                            className="text-[7px] font-mono uppercase tracking-[0.2em]"
+                            style={{ color: 'var(--bora-gold)' }}
+                          >
+                            BORA SCORE
+                          </span>
+                          <p
+                            data-bora-ui="public-vote-hero-bora-score"
+                            className="mt-1 text-3xl font-black leading-none tabular-nums text-[var(--bora-gold)]"
+                          >
+                            {item.boraScore?.toFixed(2)}
+                          </p>
+                          <p
+                            data-bora-ui="public-vote-hero-score-components"
+                            className="mt-2 text-[6px] font-mono uppercase leading-4 tracking-[0.04em]"
+                            style={{ color: 'var(--bora-text-muted)' }}
+                          >
+                            Kura {item.scoreComponents?.kura.toFixed(1)} · YT {item.scoreComponents?.youtube.toFixed(1)} · SP {item.scoreComponents?.spotify.toFixed(1)} · BP {item.scoreComponents?.boomplay.toFixed(1)}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="mb-2 flex items-center justify-between">
+                            <span
+                              className="text-[7px] font-mono uppercase tracking-[0.25em]"
+                              style={{ color: 'var(--bora-gold)' }}
+                            >
+                              {shareLabel}
+                            </span>
+                          </div>
+                          <div
+                            className="h-[3px] w-full overflow-hidden"
+                            style={{ backgroundColor: 'var(--bora-border)' }}
+                          >
+                            <div
+                              className="h-full bg-[var(--bora-gold)] transition-all duration-700"
+                              style={{ width: `${sharePercent ?? 0}%` }}
+                            />
+                          </div>
+                          <div
+                            data-bora-ui="public-vote-hero-xp-share-value"
+                            aria-label={shareDescription}
+                            className="relative mt-2 text-right text-4xl font-black leading-none tracking-[-0.06em] tabular-nums text-[var(--bora-gold)] transition-transform duration-500 group-hover:scale-105"
+                          >
+                            {shareValue}
+                          </div>
+                          {sharePercent === null && (
+                            <p
+                              className="mt-1 text-right text-[6px] font-mono uppercase tracking-[0.12em]"
+                              style={{ color: 'var(--bora-text-subtle)' }}
+                            >
+                              {hasEngineShare
+                                ? 'Awaiting accepted vote events'
+                                : 'Awaiting real Engine inputs'}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -484,32 +510,53 @@ export default function ChartGUI({
 
                   {/* MOBILE XP SHARE */}
                   <div className="flex shrink-0 -translate-x-1 flex-col items-end lg:hidden">
-
-                    <span
-                      className="text-[7px] font-mono uppercase tracking-[0.2em]"
-                      style={{
-                        color: 'var(--bora-gold)',
-                      }}
-                    >
-                      {shareLabel}
-                    </span>
-
-                    <span
-                      data-bora-ui="public-vote-hero-xp-share-value-compact"
-                      aria-label={
-                        shareDescription
-                      }
-                      className="mt-1 text-3xl font-black leading-none tracking-[-0.05em] tabular-nums text-[var(--bora-gold)] transition-transform duration-500 group-hover:scale-105"
-                    >
-                      {shareValue}
-                    </span>
-                    {sharePercent === null && (
-                      <span
-                        className="mt-1 text-right text-[5px] font-mono uppercase tracking-[0.08em]"
-                        style={{ color: 'var(--bora-text-subtle)' }}
-                      >
-                        Awaiting real Engine
-                      </span>
+                    {hasPublishedScore ? (
+                      <>
+                        <span
+                          className="text-[6px] font-mono uppercase tracking-[0.1em]"
+                          style={{ color: 'var(--bora-gold)' }}
+                        >
+                          BORA SCORE
+                        </span>
+                        <span
+                          data-bora-ui="public-vote-hero-bora-score-compact"
+                          aria-label={`BORA score ${item.boraScore?.toFixed(2)} points`}
+                          className="mt-1 text-2xl font-black leading-none tracking-[-0.05em] tabular-nums text-[var(--bora-gold)]"
+                        >
+                          {item.boraScore?.toFixed(2)}
+                        </span>
+                        <span
+                          data-bora-ui="public-vote-hero-score-components-compact"
+                          className="mt-1 max-w-[190px] text-right text-[5px] font-mono uppercase leading-3 tracking-[0.02em]"
+                          style={{ color: 'var(--bora-text-muted)' }}
+                        >
+                          Kura {item.scoreComponents?.kura.toFixed(1)} · YT {item.scoreComponents?.youtube.toFixed(1)} · SP {item.scoreComponents?.spotify.toFixed(1)} · BP {item.scoreComponents?.boomplay.toFixed(1)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className="text-[7px] font-mono uppercase tracking-[0.2em]"
+                          style={{ color: 'var(--bora-gold)' }}
+                        >
+                          {shareLabel}
+                        </span>
+                        <span
+                          data-bora-ui="public-vote-hero-xp-share-value-compact"
+                          aria-label={shareDescription}
+                          className="mt-1 text-3xl font-black leading-none tracking-[-0.05em] tabular-nums text-[var(--bora-gold)] transition-transform duration-500 group-hover:scale-105"
+                        >
+                          {shareValue}
+                        </span>
+                        {sharePercent === null && (
+                          <span
+                            className="mt-1 text-right text-[5px] font-mono uppercase tracking-[0.08em]"
+                            style={{ color: 'var(--bora-text-subtle)' }}
+                          >
+                            Awaiting real Engine
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

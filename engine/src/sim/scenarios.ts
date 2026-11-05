@@ -211,7 +211,7 @@ export function scenarioGVaultRestore(hours = 8): SimulationScenario {
     name: 'G-vault-restore',
     initialState: stateAt(1000, [
       plainSong('LIVE', { k: 10, persistentKura: 20 }),
-      plainSong('GONE', { k: 99, persistentKura: 500 }),
+      plainSong('GONE', { k: 99, persistentKura: 30 }),
     ]),
     hours,
     events,
@@ -368,7 +368,7 @@ export function scenarioJLongRun(hours = 168): SimulationScenario {
       plainSong('ALPHA', { k: 100, persistentKura: 10 }),
       plainSong('BETA', { k: 50 }),
       plainSong('GAMMA', { k: 25, seedHours: runwayFrom(1000) }),
-      plainSong('DELTA', { k: 7, persistentKura: 300 }),
+      plainSong('DELTA', { k: 7, persistentKura: 40 }),
     ]),
     hours,
     events,

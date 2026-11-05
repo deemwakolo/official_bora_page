@@ -186,7 +186,7 @@ describe('R-K: persistent Kura commitment and decay', () => {
 
     expect(committed).toBe(step.persistentAfter);
     expect(committed).toBeCloseTo(
-      (step.persistentBefore + step.freshInjected) * (1 - step.decayRate),
+      step.freshInjected * (1 - step.decayRate),
       12,
     );
   });
@@ -194,29 +194,29 @@ describe('R-K: persistent Kura commitment and decay', () => {
   it('decays using the C of the hour that JUST CLOSED', () => {
     // The closed hour H holds 5 upvotes ⇒ C 2, the maximum, so D_H is 0.
     const out = roll(
-      stateAt(H, [song({ songId: 'a', persistentKura: 100, buckets: [bucketAt(H, 5)] })]),
+      stateAt(H, [song({ songId: 'a', persistentKura: 50, buckets: [bucketAt(H, 5)] })]),
       H,
     );
     const step = stepFor(out, 'a');
     expect(step.closedHourC).toBe(C_MAX);
     expect(step.decayRate).toBeCloseTo(0, 12);
-    expect(step.persistentAfter).toBeCloseTo(100 + step.freshInjected, 12);
+    expect(step.persistentAfter).toBeCloseTo(step.freshInjected, 12);
   });
 
   it('applies full decay when the closed hour had no activity', () => {
     // No bucket and no seed at H ⇒ C_H = 0 ⇒ the maximum decay rate.
     const out = roll(
-      stateAt(H, [song({ songId: 'a', persistentKura: 100, buckets: [bucketAt(H - 5, 5)] })]),
+      stateAt(H, [song({ songId: 'a', persistentKura: 50, buckets: [bucketAt(H - 5, 5)] })]),
       H,
     );
     const step = stepFor(out, 'a');
     expect(step.closedHourC).toBe(0);
-    const expected = updatePersistentKura(100, step.freshInjected, 0);
+    const expected = updatePersistentKura(50, step.freshInjected, 0);
     if (!expected.ok) throw new Error(expected.error.message);
     expect(step.persistentAfter).toBeCloseTo(expected.value, 12);
   });
 
-  it('injects fresh Kura BEFORE decay, so fresh is itself decayed', () => {
+  it('decays the current Kura allocation', () => {
     // The closed hour must have sub-maximum C, otherwise D_H = 0 and decay is
     // unobservable. Hour H carries a single upvote ⇒ C 1, so D_H > 0.
     const out = roll(
@@ -229,9 +229,7 @@ describe('R-K: persistent Kura commitment and decay', () => {
     expect(step.closedHourC).toBe(1);
     expect(step.freshInjected).toBeGreaterThan(0);
     expect(step.decayRate).toBeGreaterThan(0);
-    // Ordering proof: decay was applied to (before + fresh), not to `before`
-    // alone. If fresh bypassed decay, persistentAfter would equal before+fresh.
-    expect(step.persistentAfter).toBeLessThan(step.persistentBefore + step.freshInjected);
+    expect(step.persistentAfter).toBeLessThan(step.freshInjected);
   });
 
   it('removes exactly the amount Phase 9 removes', () => {
@@ -251,7 +249,7 @@ describe('R-K: persistent Kura commitment and decay', () => {
     expect(step.decayRate).toBeGreaterThan(0);
     expect(step.decayRate).toBeLessThanOrEqual(0.0025);
     // The amount removed is a separate quantity, derived from the balances.
-    expect(12 + step.freshInjected - step.persistentAfter).toBeCloseTo(
+    expect(step.freshInjected - step.persistentAfter).toBeCloseTo(
       trace.value.decayed,
       12,
     );
@@ -568,7 +566,7 @@ describe('R-D: determinism, immutability, purity', () => {
 
   it('decays once per elapsed hour rather than once per rollover call', () => {
     // Three consecutive hours ⇒ three decay applications, not one.
-    const base = 100;
+    const base = 50;
     let expected = base;
     let state = stateAt(H, [
       song({ songId: 'a', persistentKura: base, buckets: bucketsEndingAt(H, 5, 5) }),
@@ -600,7 +598,7 @@ describe('R-D: determinism, immutability, purity', () => {
             songId: `s${i}`,
             lifecycle: rng() < 0.3 ? 'VAULT' : 'ACTIVE',
             k: Math.floor(rng() * 500),
-            persistentKura: Math.floor(rng() * 100),
+            persistentKura: (rng() * 50) / size,
             buckets: bucketsEndingAt(H, Math.floor(rng() * 12), Math.floor(rng() * 8)),
             seedHours: rng() < 0.4 ? seedRunway(start, SEED_RUNWAY_HOURS, 0.5) : [],
           }),

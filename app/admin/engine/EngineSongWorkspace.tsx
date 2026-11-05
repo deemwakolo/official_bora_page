@@ -11,6 +11,8 @@ import type {
   EngineRoomSong,
   EngineRoomSongEngineInputs,
 } from '@/lib/bora-engine/admin-room-read-model';
+import type { DailyPlatformRankDraftReadResult } from '@/lib/bora-engine/manual-platform-types';
+import DailyPlatformRankDraftEditor from './DailyPlatformRankDraftEditor';
 import ManualPlatformEntry from './ManualPlatformEntry';
 
 function hourLabel(hourIndex: number): string {
@@ -23,12 +25,14 @@ export default function EngineSongWorkspace({
   platformMappings,
   engineInputs,
   currentHourInputs,
+  dailyRankDraft,
   returnCategory,
 }: {
   readonly song: EngineRoomSong;
   readonly platformMappings: EngineRoomPlatformMappings;
   readonly engineInputs: EngineRoomSongEngineInputs;
   readonly currentHourInputs: EngineRoomCurrentHourInputs;
+  readonly dailyRankDraft: DailyPlatformRankDraftReadResult;
   readonly returnCategory: 'songs' | 'premium';
 }) {
   const router = useRouter();
@@ -122,6 +126,7 @@ export default function EngineSongWorkspace({
             {[
               ['#song-details', 'Edit song details'],
               ['#engine-inputs', 'Engine history'],
+              ['#platform-ranks', 'Platform positions'],
               ['#platform-evidence', 'Edit platform evidence'],
             ].map(([href, label]) => (
               <a
@@ -327,6 +332,8 @@ export default function EngineSongWorkspace({
             </p>
           )}
         </section>
+
+        <DailyPlatformRankDraftEditor song={song} draft={dailyRankDraft} />
 
         <section id="platform-evidence" className="scroll-mt-6 border p-4 sm:p-6" style={{ borderColor: 'var(--bora-border)', backgroundColor: 'var(--bora-surface)' }}>
           <div className="mb-4">

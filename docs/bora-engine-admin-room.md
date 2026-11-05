@@ -82,13 +82,19 @@ Room preserves the existing registry.
 
 ## Daily platform positions
 
-The separate Daily platform chart positions form is available to an authorized
-administrator at any time. Enter a positive
-integer position for every registry song on YouTube, Spotify, and Boomplay;
-position 1 is best and positions must be unique within each platform. Save a
-source evidence reference for each platform and configure a source mapping for
-every song/platform pair first. A new snapshot is effective on the next EAT
-calendar date.
+Open a song from the Engine Room roster to enter that song's YouTube, Spotify,
+and Boomplay positions for the next EAT date. These per-song values are editable
+drafts; they are not verified, do not affect the Engine or public chart, and can
+be updated until a snapshot exists for that date. The song's separate Platform
+performance section remains the place to enter source identity, baseline, and
+hourly measurement evidence.
+
+The roster-wide Daily platform chart positions form is the review and
+publication step. It loads saved Song Studio drafts, but requires a positive
+integer position for every registry song on all three platforms; positions must
+be unique within each platform. Provide a source evidence reference for each
+platform and configure a source mapping for every song/platform pair before
+submission. A new snapshot is effective on the next EAT calendar date.
 
 Normal daily snapshots are append-only and attributed to the administrator. A
 second submission for the same effective date requires explicitly selecting

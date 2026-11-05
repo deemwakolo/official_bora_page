@@ -8,7 +8,7 @@
  *      ↓  resolve C_H per ACTIVE song  (actual, else seed, else 0)
  *      ↓  evaluate the chart AT H      (Phase 14, pure)
  *      ↓  obtain fresh Kura            (Phase 8, via the H evaluation)
- *      ↓  persistentNext = (current + fresh) × (1 − D_H)
+ *      ↓  persistentNext = fresh × (1 − D_H)
  *      ↓  COMMIT persistentNext into a NEW state
  *      ↓  advance referenceHour H → H+1
  *      ↓  evaluate the chart AT H+1   (now sees the committed Kura)
@@ -40,8 +40,9 @@
  *      The formula, its inputs, and its position in the sequence are LOCKED and
  *      unchanged by this note.
  *
- *   Fresh Kura is injected BEFORE decay (Phase 9), so newly earned Kura is
- *   itself decayed on the cycle it was earned.
+ *   Fresh Kura is the complete 50-point allocation for this cycle. Prior
+ *   persistent Kura is retained for audit but is not accumulated again.
+ *   The current allocation is reduced by the just-closed hour's decay.
  *
  * ── PURE TRANSITION, NOT A MUTABLE ENGINE ───────────────────────────────────
  *
@@ -548,7 +549,7 @@ export function rolloverHour(
       closedHourC: closedC.value,
       freshInjected: entry.kuraFresh,
       // The D_h coefficient documented on the interface — not the amount
-      // removed, which is `before + fresh − persistentAfter`.
+      // removed, which is `fresh − persistentAfter`.
       decayRate: updated.value.decayRate,
       persistentBefore: song.persistentKura,
       persistentAfter: updated.value.persistentAfter,

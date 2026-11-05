@@ -92,28 +92,18 @@ describe('K-D: decay at every valid lattice value', () => {
 });
 
 describe('K-U: the persistent update, and the locked ordering', () => {
-  it('applies fresh Kura BEFORE decay, not after', () => {
-    // Values chosen so the two orderings differ visibly.
+  it('uses the current allocation and applies the closed-hour decay', () => {
     const persistentCurrent = 100;
     const freshKura = 20;
     const closedHourC = 0; // maximum decay, D_h = 0.0025
 
-    const expected = (persistentCurrent + freshKura) * (1 - 0.0025);
-    const rejected = persistentCurrent * (1 - 0.0025) + freshKura;
-
     expect(nextOf(persistentCurrent, freshKura, closedHourC)).toBeCloseTo(
-      expected,
-      9,
-    );
-    // And the implementation must NOT match the rejected ordering.
-    expect(nextOf(persistentCurrent, freshKura, closedHourC)).not.toBeCloseTo(
-      rejected,
+      freshKura * (1 - 0.0025),
       9,
     );
   });
 
-  it('subjects the injected fresh Kura to decay as well as the balance', () => {
-    // The decisive consequence: fresh Kura is NOT passed through untouched.
+  it('subjects the current fresh Kura allocation to decay', () => {
     const fresh = 10;
     const c = 0;
     const result = nextOf(0, fresh, c);
@@ -122,8 +112,8 @@ describe('K-U: the persistent update, and the locked ordering', () => {
   });
 
   it('matches the locked formula exactly at C_h = 2', () => {
-    // Zero decay ⇒ persistent_next = persistent + fresh, unchanged.
-    expect(nextOf(40, 10, 2)).toBe(50);
+    // Zero decay ⇒ the current fresh allocation is committed unchanged.
+    expect(nextOf(40, 10, 2)).toBe(10);
     expect(nextOf(0, 0, 2)).toBe(0);
   });
 
@@ -136,9 +126,9 @@ describe('K-U: the persistent update, and the locked ordering', () => {
     const t = traceOf(100, 20, 0);
     expect(t.persistentBefore).toBe(100);
     expect(t.freshInjected).toBe(20);
-    expect(t.preDecay).toBe(120); // injected before decay
+    expect(t.preDecay).toBe(20);
     expect(t.decayRate).toBe(0.0025);
-    expect(t.persistentAfter).toBeCloseTo(120 * (1 - 0.0025), 9);
+    expect(t.persistentAfter).toBeCloseTo(20 * (1 - 0.0025), 9);
     expect(t.decayed).toBeCloseTo(t.preDecay - t.persistentAfter, 9);
   });
 
@@ -161,13 +151,11 @@ describe('K-E: zero fresh and zero persistent', () => {
   });
 
   it('still applies decay when fresh Kura is zero', () => {
-    // Decay is a property of the hour, not of the injection.
-    expect(nextOf(100, 0, 0)).toBeCloseTo(100 * (1 - 0.0025), 9);
-    expect(nextOf(100, 0, 0)).toBeLessThan(100);
+    // No current allocation means no persistent Kura is carried forward.
+    expect(nextOf(50, 0, 0)).toBe(0);
     for (const c of LATTICE) {
       const result = nextOf(50, 0, c);
-      expect(result, `C_h=${c}`).toBeLessThanOrEqual(50);
-      if (c === 2) expect(result).toBe(50); // no decay at full activity
+      expect(result, `C_h=${c}`).toBe(0);
     }
   });
 
@@ -285,9 +273,8 @@ describe('K-P: numerical properties', () => {
   it('equals the pre-decay total exactly at C_h = 2', () => {
     const rng = makeRng(99);
     for (let i = 0; i < 200; i++) {
-      const p = rng() * 100;
       const f = rng() * 50;
-      if (p + f > 0) expect(nextOf(p, f, 2), `p=${p} f=${f}`).toBeCloseTo(p + f, 12);
+      expect(nextOf(rng() * 100, f, 2), `f=${f}`).toBeCloseTo(f, 12);
     }
   });
 
@@ -322,10 +309,8 @@ describe('K-P: numerical properties', () => {
     for (let h = 0; h < 72; h++) {
       persistent = nextOf(persistent, 0, 0);
     }
-    expect(persistent).toBeLessThan(before);
-    expect(persistent).toBeGreaterThanOrEqual(0);
-    // (1 - 0.0025)^72 ≈ 0.8351 — about 16.5% lost across one window.
-    expect(persistent).toBeCloseTo(before * Math.pow(1 - 0.0025, 72), 6);
+    expect(before).toBe(50);
+    expect(persistent).toBe(0);
   });
 });
 
@@ -358,11 +343,9 @@ describe('K-I: immutability, determinism, and purity', () => {
   });
 
   it('applies decay exactly once per call — never compounded within a call', () => {
-    // A single call applies D_h once. Applying it twice would give
-    // (1 - 0.0025)^2, which must NOT be the result.
-    const result = nextOf(100, 0, 0);
-    expect(result).toBeCloseTo(100 * (1 - 0.0025), 12);
-    expect(result).not.toBeCloseTo(100 * Math.pow(1 - 0.0025, 2), 6);
+    const result = nextOf(100, 20, 0);
+    expect(result).toBeCloseTo(20 * (1 - 0.0025), 12);
+    expect(result).not.toBeCloseTo(20 * Math.pow(1 - 0.0025, 2), 6);
   });
 
   it('contains no clock, randomness, score, ranking, platform, or seed logic', async () => {

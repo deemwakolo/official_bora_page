@@ -171,6 +171,13 @@ export default async function Home() {
               cover_url: string;
               youtube_id: string | undefined;
               xp: number;
+              boraScore: number;
+              scoreComponents: {
+                kura: number;
+                youtube: number;
+                spotify: number;
+                boomplay: number;
+              };
               upvotes: number | null;
               voteShare: number | null;
               metadata: SongMetadata;
@@ -179,7 +186,9 @@ export default async function Home() {
             if (
               entry.lifecycle === 'ACTIVE' &&
               entry.rank !== null &&
-              entry.xp !== null
+              entry.xp !== null &&
+              entry.boraScore !== null &&
+              entry.scoreComponents !== null
             ) {
               songs.push({
                 id: entry.songId,
@@ -189,6 +198,8 @@ export default async function Home() {
                 cover_url: entry.coverUrl,
                 youtube_id: entry.youtubeId ?? undefined,
                 xp: entry.xp,
+                boraScore: entry.boraScore,
+                scoreComponents: entry.scoreComponents,
                 upvotes: readTotalUpvotes(
                   registrySongsById.get(entry.songId)?.upvotes,
                 ),
@@ -203,15 +214,9 @@ export default async function Home() {
             }
             return songs;
           }, [])
-          .sort(
-            (left, right) =>
-              right.xp - left.xp ||
-              left.engineRank - right.engineRank ||
-              left.id.localeCompare(right.id),
-          )
-          .map(({ engineRank: _engineRank, ...song }, index) => ({
+          .map(({ engineRank, ...song }) => ({
             ...song,
-            slot_number: index + 1,
+            slot_number: engineRank,
           }))
       : null;
   const liveVoteSongsById = new Map(

@@ -12,6 +12,7 @@ import {
 } from '@/lib/supabase/secure-vote';
 
 import { ingestAcceptedVoteEvent } from '@/app/actions';
+import type { BoraEnginePublishedChartEntry } from '@/lib/bora-engine/publication-transaction';
 
 import { useMasterSound } from './components-themes/haptics/MasterSound';
 import { useMasterHaptics } from './components-themes/haptics/MasterHaptics';
@@ -34,6 +35,8 @@ interface Song {
   yt_views: number;
   sp_plays: number;
   xp?: number | null;
+  boraScore?: number | null;
+  scoreComponents?: BoraEnginePublishedChartEntry['scoreComponents'];
   upvotes?: number | null;
   voteShare?: number | null;
   metadata?: SongMetadata;

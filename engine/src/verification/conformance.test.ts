@@ -378,41 +378,35 @@ describe('C4 distribution conformance', () => {
 describe('C5 persistent Kura conformance', () => {
   it('decay rate agrees with D_h = 0.0025 * (1 - C_h / 2)', () => {
     for (const c of [0, 0.5, 1, 1.5, 2]) {
-      const engine = updatePersistentKura(100, 0, c);
+      const engine = updatePersistentKura(0, 50, c);
       expect(engine.ok).toBe(true);
       // Recover the rate the engine actually applied from its own outputs.
       const after = (engine as { value: number }).value;
-      const implied = 1 - after / 100;
+      const implied = 1 - after / 50;
       expect(Math.abs(implied - refDecayRate(c))).toBeLessThan(1e-12);
     }
   });
 
-  it('fresh Kura is injected BEFORE decay, never after', () => {
-    // At C = 2 the decay rate is zero, so the accepted and rejected forms
-    // COINCIDE: (110) * (1 - 0) === 110 * (1 - 0) + 10 === 110. Only hours
-    // with a non-zero decay rate can distinguish the two orderings, so that is
-    // what this loop ranges over. Pinning the C = 2 coincidence separately
-    // keeps the degenerate case from being mistaken for evidence either way.
+  it('decays the current allocation, independent of the prior balance', () => {
     for (const c of [0, 0.5, 1, 1.5]) {
-      const engine = updatePersistentKura(100, 10, c);
+      const engine = updatePersistentKura(20, 10, c);
       expect(engine.ok).toBe(true);
       const accepted = (engine as { value: number }).value;
-      const rejected = 100 * (1 - refDecayRate(c)) + 10;
-      expect(accepted).not.toBeCloseTo(rejected, 10);
-      expect(accepted).toBeCloseTo(refPersistentNext(100, 10, c), 12);
+      expect(accepted).toBeCloseTo(refPersistentNext(20, 10, c), 12);
+      expect(accepted).toBeCloseTo(refPersistentNext(40, 10, c), 12);
     }
   });
 
   it('at C = 2 both decay orderings coincide, because decay is zero', () => {
-    const engine = updatePersistentKura(100, 10, 2);
+    const engine = updatePersistentKura(20, 10, 2);
     expect(engine.ok).toBe(true);
-    expect((engine as { value: number }).value).toBe(110);
+    expect((engine as { value: number }).value).toBe(10);
     expect(refDecayRate(2)).toBe(0);
   });
 
   it('a full C = 2 hour produces zero decay', () => {
     expect(refDecayRate(2)).toBe(0);
-    expect(refPersistentNext(37, 13, 2)).toBe(50);
+    expect(refPersistentNext(37, 13, 2)).toBe(13);
   });
 
   it('every Kura case in the corpus conforms', () => {
@@ -828,7 +822,7 @@ describe('C11 rollover conformance', () => {
       referenceHour: H,
       closedHourC: null,
       songs: [{
-        id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 100,
+        id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 50,
         buckets: [{ hour: H - 1, up: 5, down: 0 }, { hour: H, up: 0, down: 0 }],
         seed: [], youtube: [], spotify: [], boomplay: [],
       }],
@@ -1262,7 +1256,7 @@ describe('D-002 seed provenance in rollover', () => {
     referenceHour: H,
     closedHourC: null,
     songs: [{
-      id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 100,
+      id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 50,
       buckets: [],
       seed: [{ hour: H, c: 2, source: 'ACTUAL', archived: false }],
       youtube: [], spotify: [], boomplay: [],
@@ -1288,19 +1282,11 @@ describe('D-002 seed provenance in rollover', () => {
     const step = engine.steps.find((s) => s.songId === 'a')!;
 
     // There is no activity anywhere in this scenario: the only record is an
-    // ACTUAL-source C record, which is not a seed, so active C is 0, T_C is 0,
-    // and freshInjected is 0. The committed balance is therefore 100 under two
-    // different decay rates:
-    //
-    //   C_H = 0  ->  D = 0.0025  ->  (100 + 0) * 0.9975 = 99.75   <- correct
-    //   C_H = 2  ->  D = 0       ->  (100 + 0) * 1       = 100     <- the bug
-    //
-    // Before the repair the engine produced 100 here, decaying the song by
-    // nothing at all on the strength of activity the chart had already ruled
-    // out.
+    // ACTUAL-source C record, which is not a seed. The zero fresh allocation
+    // therefore commits zero; the trace still proves C_H resolved to zero.
     expect(step.freshInjected).toBe(0);
-    expect(step.persistentAfter).toBeCloseTo(99.75, 9);
-    expect(step.persistentAfter).not.toBeCloseTo(100, 6);
+    expect(step.decayRate).toBeCloseTo(refDecayRate(0), 12);
+    expect(step.persistentAfter).toBe(0);
   });
 
   it('the reference model agrees with the repaired engine', () => {
@@ -1315,7 +1301,7 @@ describe('D-002 seed provenance in rollover', () => {
       referenceHour: H,
       closedHourC: null,
       songs: [{
-        id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 100,
+        id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 50,
         buckets: [],
         seed: [{ hour: H, c: 2, source: 'SEED', archived: false }],
         youtube: [], spotify: [], boomplay: [],
@@ -1326,10 +1312,9 @@ describe('D-002 seed provenance in rollover', () => {
     const engine = runEngineRollover(realSeed);
     const step = engine.steps.find((s) => s.songId === 'a')!;
     expect(step.closedHourC).toBe(2);
-    // C = 2 means no decay at all, and fresh Kura is the full 50 because the
-    // seed IS honoured here, so (100 + 50) * 1 = 150.
+    // C = 2 means no decay, and the fresh Kura is the full 50-point allocation.
     expect(step.freshInjected).toBeCloseTo(50, 9);
-    expect(step.persistentAfter).toBeCloseTo(150, 9);
+    expect(step.persistentAfter).toBeCloseTo(50, 9);
     expectConforms(realSeed);
   });
 
@@ -1340,7 +1325,7 @@ describe('D-002 seed provenance in rollover', () => {
       referenceHour: H,
       closedHourC: null,
       songs: [{
-        id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 100,
+        id: 'a', lifecycle: 'ACTIVE', k: 0, persistentKura: 50,
         buckets: [{ hour: H, up: 1, down: 0 }],
         seed: [{ hour: H, c: 2, source: 'ACTUAL', archived: false }],
         youtube: [], spotify: [], boomplay: [],

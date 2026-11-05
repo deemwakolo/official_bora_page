@@ -8,6 +8,9 @@ import { authorizeBoraAdministrator } from '@/lib/administrator-authorization';
 import { createClient } from '@/lib/supabase/server';
 import type {
   DailyPlatformRankActionResult,
+  DailyPlatformRankDraftEntry,
+  DailyPlatformRankDraftReadResult,
+  DailyPlatformRankDraftSaveResult,
   DailyPlatformRankInput,
   DailyPlatformRankSnapshotResult,
   ManualPlatformActionResult,
@@ -407,6 +410,162 @@ export async function submitDailyPlatformRanks(
   }
 }
 
+function getNextEATDate(): string | null {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Nairobi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(
+    parts.map(({ type, value }) => [type, value]),
+  );
+  const today = `${values.year}-${values.month}-${values.day}`;
+  const effective = new Date(`${today}T00:00:00.000Z`);
+  if (!Number.isFinite(effective.getTime())) return null;
+  effective.setUTCDate(effective.getUTCDate() + 1);
+  return effective.toISOString().slice(0, 10);
+}
+
+export async function getDailyPlatformRankDrafts(
+  songId?: string,
+): Promise<DailyPlatformRankDraftReadResult> {
+  const actor = await getAuthorizedActor();
+  if (actor.status === 'unauthorized') return { status: 'unauthorized' };
+  if (actor.status !== 'authorized') return { status: 'unavailable' };
+  if (songId !== undefined && !UUID_PATTERN.test(songId)) {
+    return { status: 'unavailable' };
+  }
+  const setup = getServiceClient();
+  if (setup.status !== 'available') return { status: 'unavailable' };
+  const effectiveDate = getNextEATDate();
+  if (!effectiveDate) return { status: 'unavailable' };
+
+  try {
+    const { data, error } = await setup.client
+      .from('bora_engine_daily_platform_rank_drafts')
+      .select('song_id, platform, rank')
+      .eq('effective_date', effectiveDate)
+      .order('song_id')
+      .order('platform');
+    if (error) throw error;
+    if (!Array.isArray(data)) {
+      throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_DRAFTS');
+    }
+
+    const entries: DailyPlatformRankDraftEntry[] = [];
+    for (const row of data) {
+      if (
+        !isRecord(row) ||
+        !isUuid(row.song_id) ||
+        !PLATFORMS.includes(row.platform as (typeof PLATFORMS)[number]) ||
+        typeof row.rank !== 'number' ||
+        !Number.isSafeInteger(row.rank) ||
+        row.rank < 1
+      ) {
+        throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_DRAFT');
+      }
+      if (!songId || row.song_id === songId.toLowerCase()) {
+        entries.push({
+          songId: row.song_id,
+          platform: row.platform as (typeof PLATFORMS)[number],
+          rank: row.rank,
+        });
+      }
+    }
+    return { status: 'ready', effectiveDate, entries };
+  } catch (error) {
+    console.error(
+      '[bora-engine-daily-platform-ranks] draft read failed:',
+      error instanceof Error ? error.message : 'unknown',
+    );
+    return { status: 'unavailable' };
+  }
+}
+
+export async function saveSongDailyPlatformRankDraft(input: {
+  readonly songId: string;
+  readonly entries: readonly {
+    readonly platform: (typeof PLATFORMS)[number];
+    readonly rank: number;
+  }[];
+}): Promise<DailyPlatformRankDraftSaveResult> {
+  if (
+    !input ||
+    !UUID_PATTERN.test(input.songId) ||
+    !Array.isArray(input.entries) ||
+    input.entries.length !== PLATFORMS.length
+  ) {
+    return { status: 'invalid-input' };
+  }
+
+  const seenPlatforms = new Set<string>();
+  for (const entry of input.entries) {
+    if (
+      !entry ||
+      !PLATFORMS.includes(entry.platform) ||
+      !Number.isSafeInteger(entry.rank) ||
+      entry.rank < 1 ||
+      entry.rank > 2_147_483_647 ||
+      seenPlatforms.has(entry.platform)
+    ) {
+      return { status: 'invalid-input' };
+    }
+    seenPlatforms.add(entry.platform);
+  }
+  if (seenPlatforms.size !== PLATFORMS.length) {
+    return { status: 'invalid-input' };
+  }
+
+  const actor = await getAuthorizedActor();
+  if (actor.status !== 'authorized') return actor;
+  const setup = getServiceClient();
+  if (setup.status !== 'available') return setup;
+
+  try {
+    const { data, error } = await setup.client.rpc(
+      'bora_engine_admin_save_daily_platform_rank_draft',
+      {
+        p_request: {
+          songId: input.songId.toLowerCase(),
+          actorUserId: actor.userId,
+          entries: input.entries,
+        },
+      },
+    );
+    if (error) {
+      console.error(
+        '[bora-engine-daily-platform-ranks] draft save RPC failed:',
+        error.code ?? 'unknown',
+      );
+      return { status: 'persistence-failed' };
+    }
+    if (!isRecord(data) || typeof data.status !== 'string') {
+      return { status: 'persistence-failed' };
+    }
+    if (
+      data.status === 'saved' &&
+      typeof data.effectiveDate === 'string' &&
+      isDateOnly(data.effectiveDate)
+    ) {
+      return { status: 'saved', effectiveDate: data.effectiveDate };
+    }
+    if (data.status === 'snapshot-exists') {
+      return { status: 'snapshot-exists' };
+    }
+    if (data.status === 'invalid-input') {
+      return { status: 'invalid-input' };
+    }
+    return { status: 'persistence-failed' };
+  } catch (error) {
+    console.error(
+      '[bora-engine-daily-platform-ranks] draft save failed:',
+      error instanceof Error ? error.message : 'unknown',
+    );
+    return { status: 'persistence-failed' };
+  }
+}
+
 export async function getDailyPlatformRankSnapshot(
   requestedEffectiveDate?: string,
 ): Promise<DailyPlatformRankSnapshotResult> {
@@ -419,20 +578,8 @@ export async function getDailyPlatformRankSnapshot(
   let effectiveDate = requestedEffectiveDate;
   if (effectiveDate && !isDateOnly(effectiveDate)) return { status: 'unavailable' };
   if (!effectiveDate) {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Africa/Nairobi',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(new Date());
-    const values = Object.fromEntries(
-      parts.map(({ type, value }) => [type, value]),
-    );
-    const today = `${values.year}-${values.month}-${values.day}`;
-    const effective = new Date(`${today}T00:00:00.000Z`);
-    if (!Number.isFinite(effective.getTime())) return { status: 'unavailable' };
-    effective.setUTCDate(effective.getUTCDate() + 1);
-    effectiveDate = effective.toISOString().slice(0, 10);
+    effectiveDate = getNextEATDate() ?? undefined;
+    if (!effectiveDate) return { status: 'unavailable' };
   }
 
   try {

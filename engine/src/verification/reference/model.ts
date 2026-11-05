@@ -363,12 +363,11 @@ export function refDecayRate(closedHourC: number): number {
 }
 
 /**
- * persistent_next = (persistent_current + fresh_for_cycle) * (1 - D_h)
+ * persistent_next = fresh_for_cycle * (1 - D_h)
  *
- * THE ORDERING IS THE POINT. Fresh Kura is injected BEFORE decay, so the newly
- * injected amount is itself subject to that cycle's decay. The rejected form,
- * persistent * (1 - D) + fresh, would let a song's fresh Kura bypass decay on
- * the very cycle it was earned - precisely what A1 exists to prevent.
+ * The fresh allocation is the complete 50-point Kura budget for the cycle;
+ * prior Kura is retained as state for auditing but is not accumulated again.
+ * Fresh Kura is still subject to the just-closed hour's decay.
  */
 export function refPersistentNext(
   persistentBefore: number,
@@ -376,7 +375,8 @@ export function refPersistentNext(
   closedHourC: number,
 ): number {
   const decay = refDecayRate(closedHourC);
-  return (persistentBefore + freshKura) * (1 - decay);
+  void persistentBefore;
+  return freshKura * (1 - decay);
 }
 // ============================================================ REF-PLATFORM
 // Contract 18-21, A4.

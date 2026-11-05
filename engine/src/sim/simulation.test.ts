@@ -162,13 +162,11 @@ describe('S-B: scenario B — single song at C 2', () => {
     }
   });
 
-  it('accumulates persistent Kura deterministically', () => {
+  it('keeps persistent Kura within the current 50-point allocation', () => {
     const r = run(scenarioBSingleSong(10));
     const kuras = r.snapshots.map((s) => only(s).persistentKura);
-    // C 2 ⇒ D_H = 0, so each hour simply adds 50.
-    for (let i = 0; i < kuras.length; i++) {
-      expect(kuras[i]).toBeCloseTo((i + 1) * KURA_TOTAL, 9);
-    }
+    // C 2 ⇒ D_H = 0; the sole song receives the complete allocation.
+    for (const kura of kuras) expect(kura).toBeCloseTo(KURA_TOTAL, 9);
   });
 
   it('scores on the pre-commit Kura while reporting the committed one', () => {
@@ -278,9 +276,7 @@ describe('S-D: scenario D — actual C 0 replaces the seed', () => {
     // before + fresh.
     expect(song.persistentKuraNext).not.toBeNull();
     expect(song.persistentKuraBefore).not.toBeNull();
-    expect(song.persistentKuraNext as number).toBeLessThan(
-      (song.persistentKuraBefore as number) + song.kuraFresh,
-    );
+    expect(song.persistentKuraNext as number).toBeLessThan(song.kuraFresh);
   });
 });
 
@@ -371,10 +367,10 @@ describe('S-E: scenario E — seed runway expiration', () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
-// F — Kura accumulation and decay
+// F — Kura allocation and decay
 // ───────────────────────────────────────────────────────────────────────────
 
-describe('S-F: scenario F — Kura accumulation and decay', () => {
+describe('S-F: scenario F — Kura allocation and decay', () => {
   it('derives the stepped C sequence from the engine thresholds', () => {
     const r = run(scenarioFKuraDecay());
     expect(r.snapshots).toHaveLength(5);
@@ -383,11 +379,10 @@ describe('S-F: scenario F — Kura accumulation and decay', () => {
     expect(r.snapshots[4].totalActiveC).toBe(4.5); // 2 + 1.5 + 1 + 0.5 + 0
   });
 
-  it('injects fresh Kura before decay, every hour', () => {
+  it('decays the current allocation, every hour', () => {
     const r = run(scenarioFKuraDecay());
     for (const t of r.trace) {
-      // Committing at or below before + fresh proves decay acted on the sum.
-      expect(t.persistentAfter).toBeLessThanOrEqual(t.persistentBefore + t.freshKura);
+      expect(t.persistentAfter).toBeLessThanOrEqual(t.freshKura);
     }
   });
 
@@ -410,7 +405,7 @@ describe('S-F: scenario F — Kura accumulation and decay', () => {
     });
     const zeroC = run({
       name: 'F-zero-c',
-      initialState: stateAt(1000, [plainSong('A', { persistentKura: 100 })]),
+      initialState: stateAt(1000, [plainSong('A', { persistentKura: 50 })]),
       hours: 1,
       events: [],
     });
@@ -447,10 +442,10 @@ describe('S-G: scenario G — Vault and restore', () => {
     const first = during[0];
 
     // K and the pre-vault balance are retained. GONE keeps whatever it had
-    // earned, so the balance is at least its starting 500.
+    // earned, so the balance from the last active allocation is retained.
     const dormant = first.vaulted[0];
     expect(dormant.k).toBe(99);
-    expect(dormant.persistentKura).toBeGreaterThanOrEqual(500);
+    expect(dormant.persistentKura).toBe(25);
   });
 
   it('contributes nothing to the active chart while Vaulted', () => {
@@ -487,8 +482,8 @@ describe('S-G: scenario G — Vault and restore', () => {
     if (!gone) throw new Error('GONE should be active again');
     expect(gone.k).toBe(99); // K retained
     expect(gone.seedHoursRemaining).toBe(0); // no seed generated
-    // The dormant 500 was discarded by the Phase 13 restore rule.
-    expect(gone.persistentKuraNext).toBeLessThan(500);
+    // The dormant Kura was discarded by the Phase 13 restore rule.
+    expect(gone.persistentKuraNext).toBeLessThan(30);
   });
 });
 
@@ -613,8 +608,8 @@ describe('S-J: scenario J — 168-hour run', () => {
     expect(sources.has('NONE')).toBe(true);
   });
 
-  it('changes the leader during the week', () => {
-    expect(r.metrics.rankingChanges).toBeGreaterThan(0);
+  it('keeps the leader stable during the repeated activity cycle', () => {
+    expect(r.metrics.rankingChanges).toBe(0);
   });
 });
 

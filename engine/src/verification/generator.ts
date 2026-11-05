@@ -458,13 +458,13 @@ export function buildRemainingCorpus(): SpecScenario[] {
     ['zero', 0],
     ['small', 0.5],
     ['medium', 42],
-    ['large', 100000],
+    ['maximum', 50],
   ] as const) {
     for (const [cl, closed] of [['no-cycle', null], ['cycle-0', 0], ['cycle-1', 1], ['cycle-2', 2]] as const) {
       cases.push(
         scenario(`kura/${label}-${cl}`, [
-          songWithC('a', 3, 7, kura),
-          songWithC('b', 5, 9, kura),
+          songWithC('a', 3, 7, kura / 2),
+          songWithC('b', 5, 9, kura / 2),
         ], closed),
       );
     }
@@ -654,7 +654,7 @@ export function buildRandomCorpus(seed: number, count: number): SpecScenario[] {
         song(`s${s}`, {
           lifecycle: rngInt(rng, 5) === 0 ? 'VAULT' : 'ACTIVE',
           k: rngInt(rng, 1000),
-          persistentKura: rngInt(rng, 20) * 5,
+          persistentKura: (rngInt(rng, 11) * 5) / songCount,
           buckets,
           seed: seedRecords,
           youtube: distinctObservations(),

@@ -67,7 +67,7 @@ import { updatePersistentKura } from '../kura/persistent';
 import { evaluatePlatformPoints } from '../platform/points';
 import { calculateBoraScore } from '../score/boraScore';
 import { rankSongs } from '../ranking/ranking';
-import { C_MAX, PLATFORM_IDS } from '../constants';
+import { C_MAX, EPSILON_SUM, KURA_TOTAL, PLATFORM_IDS } from '../constants';
 import type {
   ActiveWindow,
   HourIndex,
@@ -587,6 +587,24 @@ export function evaluateChart(
         'than treated as Vault, since silently excluding a corrupt record ' +
         'would hide the defect.',
       { songId: song.songId, lifecycle: String(song.lifecycle) },
+    );
+  }
+
+  const activeKuraTotal = activeSongs.reduce(
+    (total, song) => total + song.persistentKura,
+    0,
+  );
+  if (
+    !Number.isFinite(activeKuraTotal) ||
+    activeKuraTotal > KURA_TOTAL + EPSILON_SUM
+  ) {
+    return reject(
+      'INVALID_MEASUREMENT',
+      `The ACTIVE Kura allocation must not exceed ${KURA_TOTAL} points.`,
+      {
+        activeKuraTotal: String(activeKuraTotal),
+        kuraMaximum: String(KURA_TOTAL),
+      },
     );
   }
 

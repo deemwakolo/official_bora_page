@@ -7,6 +7,7 @@ import {
   getEngineRoomSongEngineInputs,
   getEngineRoomSongList,
 } from '@/lib/bora-engine/admin-room-read-model';
+import { getDailyPlatformRankDrafts } from '@/lib/bora-engine/manual-platform-actions';
 import { authorizeBoraAdministrator } from '@/lib/administrator-authorization';
 
 export const dynamic = 'force-dynamic';
@@ -24,11 +25,12 @@ export default async function EngineSongPage({
     redirect('/admin/engine');
   }
 
-  const [songList, platformMappings, engineInputs, currentHourInputs] = await Promise.all([
+  const [songList, platformMappings, engineInputs, currentHourInputs, dailyRankDraft] = await Promise.all([
     getEngineRoomSongList(),
     getEngineRoomPlatformMappings(),
     getEngineRoomSongEngineInputs(params.songId),
     getEngineRoomCurrentHourInputs(),
+    getDailyPlatformRankDrafts(params.songId),
   ]);
   if (songList.status !== 'ready') {
     return (
@@ -51,6 +53,7 @@ export default async function EngineSongPage({
         platformMappings={platformMappings}
         engineInputs={engineInputs}
         currentHourInputs={currentHourInputs}
+        dailyRankDraft={dailyRankDraft}
         returnCategory={returnCategory}
       />
       <EngineRoomNavbar

@@ -2,23 +2,17 @@
  * BORA Engine — persistent Kura and hourly decay
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * PHASE 9. The persistent-Kura half of the Kura model (A1).
+ * PHASE 9. Apply hourly freshness decay to the current 50-point Kura allocation.
  *
  *   D_h = 0.25% × (1 − C_h / 2)
- *   persistent_next = (persistent_current + fresh_for_cycle) × (1 − D_h)
+ *   persistent_next = fresh_for_cycle × (1 − D_h)
  *
- * ── THE ORDERING IS THE WHOLE POINT (A1, locked) ─────────────────────────
+ * ── KURA BUDGET ────────────────────────────────────────────────────────────
  *
- *   Fresh Kura is injected BEFORE decay, so the newly injected amount is
- *   itself subject to that cycle's decay:
- *
- *       persistent_next = (persistent + fresh) × (1 − D_h)      ✓ locked
- *       persistent_next = persistent × (1 − D_h) + fresh        ✗ rejected
- *
- *   The two differ whenever D_h ≠ 0. The second form would let a song's fresh
- *   Kura bypass decay entirely on the cycle it was earned, which is precisely
- *   the mechanism A1 exists to prevent. A dedicated test proves the
- *   implementation does not compute the rejected form.
+ *   `freshKura` is XP × 50, and the fresh allocations across ACTIVE songs sum
+ *   to at most 50. The next Kura value is that allocation after decay; the
+ *   previous value is diagnostic state, not an additional source of points.
+ *   This keeps the Kura component within its 50-point chart budget.
  *
  * ── DECAY IS APPLIED EXACTLY ONCE (A3) ────────────────────────────────────
  *
@@ -132,15 +126,14 @@ export function calculateDecay(
 // ───────────────────────────────────────────────────────────────────────────
 
 /**
- * One hourly persistent-Kura update (A1, A3).
+ * One hourly Kura refresh (A3).
  *
- *   persistent_next = (persistent_current + fresh_for_cycle) × (1 − D_h)
+ *   persistent_next = fresh_for_cycle × (1 − D_h)
  *
- * Injection happens BEFORE decay, so `freshKura` is itself decayed by this
- * cycle's D_h. Both inputs are non-negative, so the result is non-negative
- * and can never exceed `persistentCurrent + freshKura`.
+ * `persistentCurrent` is retained in the trace for auditability but is not
+ * added to the current XP × 50 allocation.
  *
- * @param persistentCurrent The existing persistent balance, >= 0.
+ * @param persistentCurrent The prior Kura value, retained for the trace, >= 0.
  * @param freshKura         Fresh Kura injected this cycle, >= 0.
  * @param closedHourC       C of the just-closed hour, in [0, C_MAX].
  * @returns The next persistent balance, or INVALID_MEASUREMENT.
@@ -162,16 +155,14 @@ export function updatePersistentKura(
 }
 
 /**
- * The full-cycle trace for one song, for observability (Contract Phase 48).
+ * The hourly Kura trace for one song, for observability.
  *
- * Returns the intermediate values the single-step function computes
- * internally, so the formula inspector can show the work instead of asking a
- * reader to trust a bare number.
+ * Returns the prior value, current allocation, and decay result.
  */
 export interface PersistentKuraStep {
   readonly persistentBefore: number;
   readonly freshInjected: number;
-  /** persistentBefore + freshInjected, before any decay. */
+  /** Current XP × 50 allocation, before any decay. */
   readonly preDecay: number;
   readonly decayRate: number;
   readonly persistentAfter: number;
@@ -180,7 +171,7 @@ export interface PersistentKuraStep {
 }
 
 /**
- * The same update as `updatePersistentKura`, returning the full breakdown.
+ * The same refresh as `updatePersistentKura`, returning the full breakdown.
  *
  * Exactly equivalent — `updatePersistentKura` delegates here — so a caller can
  * never obtain two different answers from the two APIs.
@@ -211,7 +202,7 @@ export function updatePersistentKuraWithTrace(
     return { ok: false, error: decay.error };
   }
 
-  const preDecay = persistentCurrent + freshKura;
+  const preDecay = freshKura;
   const persistentAfter = preDecay * (1 - decay.value);
 
   return {

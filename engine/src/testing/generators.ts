@@ -103,7 +103,7 @@ export function randomSong(
     // A mix, so Vault exclusion is exercised by generated populations too.
     lifecycle: rng.chance(0.25) ? 'VAULT' : 'ACTIVE',
     k: rng.int(0, 1000),
-    persistentKura: rng.int(0, 500),
+    persistentKura: rng.int(0, 50),
     buckets,
     seedHours: rng.chance(0.3)
       ? seedRunwayOrEmpty(rng, referenceHour)
@@ -168,7 +168,21 @@ export function randomState(rng: DeterministicRng, size?: number): EngineState {
     songs.push(randomSong(rng, `s${i}`, referenceHour));
   }
 
-  return { referenceHour, songs };
+  const activeKuraTotal = songs.reduce(
+    (total, song) =>
+      total + (song.lifecycle === 'ACTIVE' ? song.persistentKura : 0),
+    0,
+  );
+  const normalization =
+    activeKuraTotal > 50 ? 50 / activeKuraTotal : 1;
+  return {
+    referenceHour,
+    songs: songs.map((song) =>
+      song.lifecycle === 'ACTIVE'
+        ? { ...song, persistentKura: song.persistentKura * normalization }
+        : song,
+    ),
+  };
 }
 
 /**

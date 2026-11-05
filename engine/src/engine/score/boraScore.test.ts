@@ -5,7 +5,7 @@
  * Coverage map:
  *   S-0  zero values and single-component combinations
  *   S-E  the full-component example
- *   S-B  structural bounds (no artificial cap)
+ *   S-B  structural bounds and the 50-point Kura limit
  *   S-A  additivity: each component moves the score by exactly its delta
  *   S-K  K is NOT an input
  *   S-V  validation
@@ -103,7 +103,7 @@ describe('S-E: the full-component example', () => {
   });
 });
 
-describe('S-B: structural bounds, with no artificial cap', () => {
+describe('S-B: structural bounds', () => {
   it('is never below persistent Kura', () => {
     expect(score(20, 0, 0, 0)).toBeGreaterThanOrEqual(20);
     expect(score(20, 1, 2, 3)).toBeGreaterThanOrEqual(20);
@@ -116,15 +116,8 @@ describe('S-B: structural bounds, with no artificial cap', () => {
     expect(score(20, 30, 15, 5) - 20).toBe(MAX_PLATFORM_CONTRIBUTION);
   });
 
-  it('does NOT cap a large persistent Kura at 100', () => {
-    // Persistent Kura accumulates across hourly cycles with no ceiling, so a
-    // score may legitimately exceed 100. A Math.min(score, 100) would hide it.
-    expect(score(500, 30, 15, 5)).toBe(550);
-    expect(score(500, 30, 15, 5)).toBeGreaterThan(100);
-  });
-
-  it('lets persistent Kura grow without limit', () => {
-    expect(score(1_000_000, 0, 0, 0)).toBe(1_000_000);
+  it('reaches 100 at the combined component limits', () => {
+    expect(score(50, 30, 15, 5)).toBe(100);
   });
 });
 
@@ -146,8 +139,8 @@ describe('S-A: additivity — each component moves the score by its delta', () =
   });
 
   it('applies every delta simultaneously and independently', () => {
-    const before = score(100, 20, 10, 5);
-    const after = score(100 + 5, 20 + 3, 10 + 2, 5 + 1);
+    const before = score(40, 20, 10, 5);
+    const after = score(45, 20 + 3, 10 + 2, 5 + 1);
     expect(after - before).toBe(5 + 3 + 2 + 1);
     expect(after - before).toBe(11);
   });
@@ -155,7 +148,7 @@ describe('S-A: additivity — each component moves the score by its delta', () =
   it('does not let one component alter another coefficient', () => {
     // Adding a large Kura must not change the marginal value of a platform
     // point, and vice versa.
-    for (const kura of [0, 1, 50, 10_000]) {
+    for (const kura of [0, 1, 25, 50]) {
       const marginal = score(kura, 20, 10, 5) - score(kura, 17, 10, 5);
       expect(marginal, `kura=${kura}`).toBe(3);
     }
@@ -227,6 +220,10 @@ describe('S-V: validation', () => {
     expect(errOf(Number.POSITIVE_INFINITY, 0, 0, 0)).toBe('INVALID_MEASUREMENT');
   });
 
+  it('rejects persistent Kura above its 50-point component budget', () => {
+    expect(errOf(50.01, 0, 0, 0)).toBe('INVALID_MEASUREMENT');
+  });
+
   it('rejects negative platform points', () => {
     expect(errOf(10, -1, 0, 0)).toBe('INVALID_MEASUREMENT');
     expect(errOf(10, 0, -1, 0)).toBe('INVALID_MEASUREMENT');
@@ -275,7 +272,7 @@ describe('S-P: property tests over generated components', () => {
   it('is always >= 0 and >= persistent Kura', () => {
     const rng = makeRng(11);
     for (let i = 0; i < 500; i++) {
-      const kura = rng() * 1000;
+      const kura = rng() * 50;
       const value = score(
         kura,
         rng() * PLATFORM_WEIGHTS.youtube,
@@ -290,7 +287,7 @@ describe('S-P: property tests over generated components', () => {
   it('never exceeds persistent Kura + 50', () => {
     const rng = makeRng(22);
     for (let i = 0; i < 500; i++) {
-      const kura = rng() * 1000;
+      const kura = rng() * 50;
       const value = score(
         kura,
         rng() * PLATFORM_WEIGHTS.youtube,
@@ -306,7 +303,7 @@ describe('S-P: property tests over generated components', () => {
   it('satisfies score - kura = yt + sp + bp within 1e-9', () => {
     const rng = makeRng(33);
     for (let i = 0; i < 500; i++) {
-      const kura = rng() * 1000;
+      const kura = rng() * 50;
       const yt = rng() * 30;
       const sp = rng() * 15;
       const bp = rng() * 5;
@@ -318,7 +315,7 @@ describe('S-P: property tests over generated components', () => {
   it('satisfies score(a + delta) = score(a) + delta for each component', () => {
     const rng = makeRng(44);
     for (let i = 0; i < 300; i++) {
-      const kura = rng() * 500;
+      const kura = rng() * 45;
       const yt = rng() * 30;
       const sp = rng() * 15;
       const bp = rng() * 5;
@@ -334,7 +331,7 @@ describe('S-P: property tests over generated components', () => {
   it('never produces NaN or Infinity for valid input', () => {
     const rng = makeRng(55);
     for (let i = 0; i < 300; i++) {
-      const value = score(rng() * 1e6, rng() * 30, rng() * 15, rng() * 5);
+      const value = score(rng() * 50, rng() * 30, rng() * 15, rng() * 5);
       expect(Number.isFinite(value)).toBe(true);
     }
   });
@@ -374,7 +371,7 @@ describe('S-PU: determinism, immutability, and no normalisation', () => {
     // A chart-wide normaliser would make one song's score depend on the rest.
     const alone = score(10, 20, 5, 2);
     const withOthers = calculateChartScores([
-      { songId: 'a', persistentKura: 999, platformPoints: points(30, 15, 5) },
+      { songId: 'a', persistentKura: 50, platformPoints: points(30, 15, 5) },
       { songId: 'b', persistentKura: 10, platformPoints: points(20, 5, 2) },
     ]);
     expect(withOthers.ok).toBe(true);
@@ -398,7 +395,7 @@ describe('S-PU: determinism, immutability, and no normalisation', () => {
     );
     expect(body).not.toMatch(/\bMath\s*\.\s*random\b|\bfetch\s*\(/);
     expect(body).not.toMatch(/\bglobalThis\b|\blocalStorage\b/);
-    // No normalisation and no artificial cap.
+    // No normalisation or final-score clamp; component budgets bound the sum.
     expect(body).not.toMatch(/Math\s*\.\s*min|Math\s*\.\s*max/);
     expect(body).not.toMatch(/\/\s*(100|KURA_TOTAL)\b/);
     // No ranking, ordering, or lifecycle.

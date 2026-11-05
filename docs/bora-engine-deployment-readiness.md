@@ -39,7 +39,9 @@ credentials, or user IDs.
 | Variable | Purpose |
 | --- | --- |
 | `BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY` | Private credential used by `lib/bora-engine/persistence.ts` for privileged Engine RPCs. It must remain server-only and must never be included in a client bundle. |
-| `CRON_SECRET` | Private bearer secret used to authorize the scheduled `/api/internal/bora-engine/hourly` route. Keep it server-only. |
+| `CRON_SECRET` | Private bearer secret retained for GitHub Actions manual recovery and stable hourly request IDs. Keep it server-only. |
+| `QSTASH_CURRENT_SIGNING_KEY` | Private QStash signing key used by internal Engine routes to verify scheduled deliveries. Keep it server-only. |
+| `QSTASH_NEXT_SIGNING_KEY` | QStash's second signing key, accepted during key rotation. Keep it server-only and update both keys from the QStash console when rotating. |
 | `BORA_ENGINE_OPERATOR_USER_IDS` | Server-only comma-separated allowlist of explicitly approved Supabase user IDs. `lib/bora-engine/operator-authorization.ts` matches the verified `auth.getUser()` identity against this list. Missing or malformed configuration fails closed. |
 | `BORA_ADMIN_USER_IDS` | Server-only comma-separated allowlist of Supabase user UUIDs authorized as **site administrators**. `lib/administrator-authorization.ts` matches the verified `auth.getUser()` identity against this list. This is a **distinct scope** from `BORA_ENGINE_OPERATOR_USER_IDS` (Engine operators and site administrators are not automatically equated) and must contain the same administrator identities that carry the database `app_metadata.role = 'bora_administrator'` claim (see section 6). Missing or malformed configuration fails closed. |
 | `BORA_YOUTUBE_API_KEY` | Private key used by the server-only YouTube Data API v3 client. It is required for provider requests and must never be exposed to browser code, responses, or logs. |
@@ -97,7 +99,8 @@ coverage.
 | Bootstrap and state-head initialization | Bootstrap validation/RPC call exists in `persistence.ts`; SQL proposal is in `0015`, with the state head defined by `0014`. It requires explicit approval metadata, matching persisted state/coverage, and an uninitialized head. | Not initialized or operationally verified. No automatic default state is created. |
 | Hourly claim, lease, and atomic commit | `hourly-runner.ts` and the service-role adapter in `persistence.ts` call the `0014` atomic operations. The runner uses the existing Engine rollover logic. | Migrations through `0036` are recorded in the live history (verified 2026-10-31). Execution remains blocked by missing source readiness and uninitialized state/history; deployment invocation is not verified. |
 | Bootstrap/readiness check | `scripts/bora-engine-stage-5-check.mjs` reads the readiness and bootstrap-check RPCs for an explicit closed hour, including persisted evidence metadata and the current three-platform assessments. | Read-only helper only. It does not seed synthetic evidence, initialize state, or advance an hour. It has not been run against an isolated database. |
-| Hourly invocation | `hour-entry.ts` validates one explicit closed hour; `/api/internal/bora-engine/hourly` protects the call with `CRON_SECRET` and derives a stable retry UUID per closed hour. `vercel.json` schedules it at minute 15, after the 10-minute transition grace. | Source configuration only. Deployment, secret provisioning, migration availability, and worker behavior remain unverified. |
+| Scheduled invocation | `/api/internal/bora-engine/scheduled-cycle` reconciles accepted votes, verifies the reconciliation completed, then invokes `/api/internal/bora-engine/hourly`. The worker routes also retain bearer-authenticated GETs for GitHub Actions recovery. The hourly route derives a stable retry UUID per closed hour. | Schedule only the sequential cycle endpoint in QStash; configure and verify it before GitHub's periodic schedule is removed. |
+| Worker freshness | `/api/internal/bora-engine/worker-health` reports the persisted Engine head and returns HTTP 503 when it is uninitialized, unavailable, or more than two closed hours behind. | Schedule this endpoint hourly in QStash and inspect failed deliveries in its console/dead-letter queue; it does not send an email or external notification. |
 | Platform source readiness and evaluation eligibility | `source-readiness.ts` defines source states, interval coverage outcomes, and the deterministic all-platform gate. `publication-service.ts` evaluates only after that gate succeeds. | No source currently has an established `available` assessment for the Engine's required hourly measurements. No collector or connected trusted server-side song-to-video mapping is activated. |
 | Platform collectors/provider credentials | Pure observation validation exists; a server-only YouTube Data API client and cumulative snapshot/derivation contracts are implemented. | No activated collector or connected trusted server-side song-to-video mapping source exists. YouTube API key configuration remains outstanding. No Spotify or Boomplay collectors or credentials are established. |
 | Chart publication integration | Migration `0033` defines source-revision tracking and an atomic service-role publication RPC. `publication-service.ts` applies the evidence gate and validates candidates; `publication-reader.ts` reads the current head for the server-rendered public chart. | Migration `0033` is recorded as applied. The all-three-platform evidence policy is approved, but current source assessments remain unavailable; legitimate evaluation and publication are blocked. The public page falls back to registry chart data until an Engine publication exists. |
@@ -112,9 +115,46 @@ The Stage 5 read-only check can be run with
 the private Supabase URL and service-role key. Run it only against the intended
 disposable or approved database; it never initializes or advances state.
 
-The repository's `vercel.json` keeps Git deployments disabled and declares the
-hourly cron. This is source configuration only; it does not prove the status
-of any external deployment or provide an operating worker.
+The repository's `vercel.json` keeps Git deployments disabled and declares no
+cron. The temporary periodic schedule is in
+`.github/workflows/bora-engine-hourly.yml`; it should remain enabled until
+QStash has delivered and verified all configured schedules.
+
+### QStash scheduled execution
+
+The internal routes use the official `@upstash/qstash` `Receiver` to verify
+the raw request body, destination URL, and `Upstash-Signature`. Production
+verification explicitly disables QStash development signing keys. Configure
+`QSTASH_CURRENT_SIGNING_KEY` and `QSTASH_NEXT_SIGNING_KEY` as protected
+production environment variables in Vercel, then redeploy. Never paste either
+key into chat or commit them. QStash's API token is only needed in the QStash
+console to manage schedules; it is not required by the application.
+See the official [signature verification](https://upstash.com/docs/qstash/howto/signature),
+[schedule](https://upstash.com/docs/qstash/features/schedules), and
+[retry](https://upstash.com/docs/qstash/features/retry) documentation.
+
+Create these QStash schedules with method `POST` and an empty JSON body (`{}`):
+
+| Destination path | UTC cron | Purpose |
+| --- | --- | --- |
+| `/api/internal/bora-engine/scheduled-cycle` | `*/15 * * * *` | Reconcile accepted votes first, then advance/catch up the Engine. The worker processes at most four closed hours per delivery. |
+| `/api/internal/bora-engine/worker-health` | `10 * * * *` | Check that the persisted Engine head is no more than two closed hours behind. |
+
+Use the production URL and do not add a bearer `Authorization` header to these
+schedules; QStash supplies the signature. Do not schedule the reconciliation
+and hourly routes separately; that could allow the two operations to overlap.
+Non-2xx worker responses are retried
+by QStash and remain visible in its delivery history/dead-letter queue.
+Readiness-blocked 409 responses therefore appear as failed deliveries; resolve
+the reported input blocker rather than treating a retry as a successful cycle.
+The hourly and vote operations are designed to be idempotent under repeated
+deliveries.
+
+Keep the GitHub Actions periodic trigger until the QStash schedules have each
+delivered successfully and the freshness route reports `fresh`. Then remove
+only the GitHub workflow's `schedule` trigger; retain `workflow_dispatch` for
+manual recovery. The freshness check exposes status through QStash delivery
+history but does not send email or an external alert.
 
 ### YouTube-specific source status
 
@@ -183,10 +223,12 @@ All gates are **pending** based on repository evidence:
    an approved trusted invocation. Confirm bootstrap, vote/seed coverage, and
    each platform's source authorization/readiness and 168-hour coverage;
    resolve all missing, failed, invalid, unauthorized, or unavailable inputs.
-6. [ ] **Establish controlled hourly invocation.** Provision `CRON_SECRET`,
-   confirm migration availability, then verify the protected route and
-   scheduled execution in a disposable environment. The source schedule is
-   minute 15 UTC, after the 10-minute transition grace.
+6. [ ] **Establish controlled hourly invocation.** Provision `CRON_SECRET`
+   and both QStash signing keys in protected configuration, confirm migration
+   availability, then verify signed QStash deliveries for the sequential
+   Engine cycle and freshness monitoring. Keep GitHub's periodic trigger until
+   these deliveries succeed; then disable only that trigger and retain manual
+   dispatch.
 7. [ ] **Verify a complete hourly run.** Use trustworthy evidence and validate
    the atomic claim/lease/commit lifecycle, state head, closure rows, and
    completed run in a disposable environment. Retry the same closed hour and

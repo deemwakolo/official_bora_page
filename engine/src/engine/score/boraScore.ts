@@ -29,14 +29,8 @@
  *   Platform weights (30/15/5) were already applied in Phase 10 and are NOT
  *   applied again here — doing so would double-weight them.
  *
- *   Because persistent Kura accumulates across hourly cycles and may exceed 50
- *   on its own, the score has NO fixed ceiling. The only structural bound is:
- *
- *     persistentKura <= boraScore <= persistentKura + 50
- *
- *   where 50 = PLATFORM_TOTAL is the total current platform contribution.
- *   A score below the Kura value would be impossible, and one more than 50
- *   above it would be impossible, for any valid input.
+ *   Kura is at most 50 and platform points are at most 50, so every valid
+ *   BORA Score is within the chart's 100-point budget.
  *
  * ── ZERO VALUES ARE VALID ──────────────────────────────────────────────────
  *
@@ -47,7 +41,7 @@
  * no network, no caching, no global state.
  */
 
-import { PLATFORM_TOTAL } from '../constants';
+import { KURA_TOTAL, PLATFORM_TOTAL } from '../constants';
 import type { Result, EngineError } from '../types';
 import type { PlatformPointsEntry } from '../platform/points';
 
@@ -60,6 +54,17 @@ import type { PlatformPointsEntry } from '../platform/points';
  */
 function isNonNegativeFinite(value: number): boolean {
   return Number.isFinite(value) && value >= 0;
+}
+
+function invalidKuraBudget(value: number): Result<number, EngineError> {
+  return {
+    ok: false,
+    error: {
+      code: 'INVALID_MEASUREMENT',
+      message: `persistentKura must not exceed the ${KURA_TOTAL}-point Kura budget.`,
+      context: { persistentKura: String(value), kuraMaximum: String(KURA_TOTAL) },
+    },
+  };
 }
 
 function invalidScoreComponent(
@@ -99,6 +104,9 @@ export function calculateBoraScore(
 ): Result<number, EngineError> {
   if (!isNonNegativeFinite(persistentKura)) {
     return invalidScoreComponent('persistentKura', persistentKura);
+  }
+  if (persistentKura > KURA_TOTAL) {
+    return invalidKuraBudget(persistentKura);
   }
   if (!isNonNegativeFinite(platformPoints.yt)) {
     return invalidScoreComponent('platformPoints.yt', platformPoints.yt);

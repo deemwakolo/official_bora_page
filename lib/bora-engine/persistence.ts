@@ -1095,7 +1095,7 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     const { data, error } = await this.client
       .from('bora_engine_publication_head')
       .select(
-        'publication_id, publication:bora_engine_publications(id, reference_hour, published_at, total_active_c, platform_total_youtube, platform_total_spotify, platform_total_boomplay, evaluation_run:bora_engine_evaluation_runs!bora_engine_publications_evaluation_run_id_fkey(publication_request), entries:bora_engine_publication_entries(song_id, lifecycle, rank, xp, bora_score, song:songs(id, title, artist, cover_url, youtube_id)))',
+        'publication_id, publication:bora_engine_publications(id, reference_hour, published_at, total_active_c, platform_total_youtube, platform_total_spotify, platform_total_boomplay, evaluation_run:bora_engine_evaluation_runs!bora_engine_publications_evaluation_run_id_fkey(publication_request), entries:bora_engine_publication_entries(song_id, lifecycle, rank, xp, persistent_kura_before, platform_youtube, platform_spotify, platform_boomplay, bora_score, song:songs(id, title, artist, cover_url, youtube_id)))',
       )
       .eq('singleton', true)
       .maybeSingle();
@@ -1163,6 +1163,7 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
           rank: null,
           xp: null,
           boraScore: null,
+          scoreComponents: null,
           title: song.title,
           artist: typeof song.artist === 'string' ? song.artist : '',
           coverUrl: typeof song.cover_url === 'string' ? song.cover_url : '',
@@ -1171,6 +1172,10 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
         };
       }
       const xp = finiteNumber(raw.xp);
+      const kura = finiteNumber(raw.persistent_kura_before);
+      const platformYoutube = finiteNumber(raw.platform_youtube);
+      const platformSpotify = finiteNumber(raw.platform_spotify);
+      const platformBoomplay = finiteNumber(raw.platform_boomplay);
       const boraScore = finiteNumber(raw.bora_score);
       if (
         raw.lifecycle !== 'ACTIVE' ||
@@ -1179,6 +1184,17 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
         xp === null ||
         xp < 0 ||
         xp > 1 ||
+        kura === null ||
+        kura < 0 ||
+        platformYoutube === null ||
+        platformYoutube < 0 ||
+        platformYoutube > 30 ||
+        platformSpotify === null ||
+        platformSpotify < 0 ||
+        platformSpotify > 15 ||
+        platformBoomplay === null ||
+        platformBoomplay < 0 ||
+        platformBoomplay > 5 ||
         boraScore === null
       ) {
         throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
@@ -1189,6 +1205,12 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
         rank: raw.rank as number,
         xp,
         boraScore,
+        scoreComponents: {
+          kura,
+          youtube: platformYoutube,
+          spotify: platformSpotify,
+          boomplay: platformBoomplay,
+        },
         title: song.title,
         artist: typeof song.artist === 'string' ? song.artist : '',
         coverUrl: typeof song.cover_url === 'string' ? song.cover_url : '',
