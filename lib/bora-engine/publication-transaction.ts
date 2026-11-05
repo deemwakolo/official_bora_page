@@ -82,6 +82,7 @@ export interface BoraEnginePublishedChart {
   readonly publicationId: string;
   readonly referenceHour: number;
   readonly publishedAt: string;
+  readonly isSyntheticDemo: boolean;
   readonly totalActiveC: number;
   readonly platformTotals: Readonly<Record<PlatformId, number>>;
   readonly entries: readonly BoraEnginePublishedChartEntry[];

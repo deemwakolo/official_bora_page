@@ -1,5 +1,6 @@
 import EngineRoomGUI from './EngineRoomGUI';
 import {
+  getEngineRoomCurrentHourInputs,
   getEngineRoomPlatformMappings,
   getEngineRoomOperationsSnapshot,
   getEngineRoomSongList,
@@ -39,16 +40,20 @@ export default async function EngineRoomPage() {
         songList={null}
         platformMappings={{ status: 'unavailable' }}
         sourceAssessments={sourceAssessments}
+        currentHourInputs={null}
       />
     );
   }
 
-  const [operations, songList, platformMappings] = await Promise.all([
+  const [operations, songList, platformMappings, currentHourInputs] = await Promise.all([
     isOperator ? getEngineRoomOperationsSnapshot() : Promise.resolve(null),
     isAdministrator ? getEngineRoomSongList() : Promise.resolve(null),
     isAdministrator
       ? getEngineRoomPlatformMappings()
       : Promise.resolve<EngineRoomPlatformMappings>({ status: 'unavailable' }),
+    isAdministrator
+      ? getEngineRoomCurrentHourInputs()
+      : Promise.resolve(null),
   ]);
 
   return (
@@ -62,6 +67,7 @@ export default async function EngineRoomPage() {
       songList={songList}
       platformMappings={platformMappings}
       sourceAssessments={sourceAssessments}
+      currentHourInputs={currentHourInputs}
     />
   );
 }

@@ -2,7 +2,7 @@ name: BORA Engine hourly processing
 
 on:
   schedule:
-    - cron: '15 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -32,6 +32,22 @@ jobs:
           response="$(curl --silent --show-error --max-time 120 \
             --write-out $'\n%{http_code}' \
             --header "Authorization: Bearer ${CRON_SECRET}" \
+            "https://deemwakolo-officialborapage.vercel.app/api/internal/bora-engine/reconcile-votes")"
+          http_status="${response##*$'\n'}"
+          response_body="${response%$'\n'*}"
+          reconcile_status="$(jq -r '.status // empty' <<< "$response_body")"
+          stop_reason="$(jq -r '.stopReason // empty' <<< "$response_body")"
+          event_errors="$(jq -r '[.counts.invalidInput, .counts.conflictingIdentity, .counts.persistenceFailure, .counts.commitUnknown] | add // 0' <<< "$response_body")"
+
+          if [[ "$http_status:$reconcile_status:$stop_reason:$event_errors" != "200:completed:source-exhausted:0" ]]; then
+            echo "::error::Vote reconciliation did not complete (HTTP ${http_status}, status ${reconcile_status:-unknown}, stop ${stop_reason:-unknown}, event errors ${event_errors:-unknown})."
+            exit 1
+          fi
+          echo "Vote reconciliation completed; scanned $(jq -r '.sourceRowsScanned // 0' <<< "$response_body") source events."
+
+          response="$(curl --silent --show-error --max-time 120 \
+            --write-out $'\n%{http_code}' \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
             "https://deemwakolo-officialborapage.vercel.app/api/internal/bora-engine/hourly")"
           http_status="${response##*$'\n'}"
           response_body="${response%$'\n'*}"
@@ -41,11 +57,11 @@ jobs:
             200:completed|200:already-completed)
               echo "Hourly Engine run completed: ${engine_status}."
               ;;
-            409:not-ready|409:not-eligible|409:already-claimed|409:state-hour-mismatch|409:source-readiness-blocked|503:bootstrap-required)
-              echo "Hourly Engine run deferred by readiness: ${engine_status}."
+            200:catching-up)
+              echo "Hourly Engine catch-up batch completed; more closed hours remain."
               ;;
             *)
-              echo "::error::Hourly Engine request failed (HTTP ${http_status}, status ${engine_status:-unknown})."
+              echo "::error::Hourly Engine run did not complete (HTTP ${http_status}, status ${engine_status:-unknown})."
               exit 1
               ;;
           esac

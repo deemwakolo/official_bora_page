@@ -87,7 +87,7 @@ export default async function ControlRoomPage() {
         <ControlRoomShell
           top10={
             <section className="w-full pt-8 md:pt-12">
-              <ChartWrapper songs={rankedSongs} />
+              <ChartWrapper songs={rankedSongs} isSyntheticDemo={false} />
             </section>
           }
         />

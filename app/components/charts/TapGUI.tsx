@@ -178,6 +178,17 @@ export default function TapGUI({
         <div className="mt-5 flex flex-col gap-2">
 
           <MetaRow
+            label="TOTAL UP VOTES"
+            value={
+              typeof song.totalUpvotes === 'number' &&
+              Number.isSafeInteger(song.totalUpvotes) &&
+              song.totalUpvotes >= 0
+                ? song.totalUpvotes.toLocaleString()
+                : '—'
+            }
+          />
+
+          <MetaRow
             label="FEATURE"
             value={metadata.feature}
           />

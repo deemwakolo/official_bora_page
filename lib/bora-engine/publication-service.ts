@@ -102,7 +102,7 @@ function buildPublicationRequest(
 ): PublicationTransactionRequest | null {
   const activeEntries: PublicationCandidateEntry[] = [];
   for (const [index, song] of evaluation.ranked.entries()) {
-    if (song.rank === null || song.persistentKuraNext === null) return null;
+    if (song.rank === null) return null;
     activeEntries.push({
       position: index,
       songId: song.songId,
@@ -112,7 +112,9 @@ function buildPublicationRequest(
       xp: song.xp,
       kuraFresh: song.kuraFresh,
       persistentKuraBefore: song.persistentKuraBefore,
-      persistentKuraNext: song.persistentKuraNext,
+      // Without a closed-hour cycle, the persisted Kura balance is unchanged.
+      persistentKuraNext:
+        song.persistentKuraNext ?? song.persistentKuraBefore,
       platformPerformance: {
         youtube: song.platformPerformance.youtube,
         spotify: song.platformPerformance.spotify,
@@ -302,6 +304,7 @@ export async function evaluateAndPublishDailyRankBoraEngineChart(
     !isUsablePublicationEvaluation(
       evaluated.value,
       snapshot.referenceHour,
+      built.value.closedHourC,
     )
   ) {
     return {
@@ -333,7 +336,7 @@ export async function evaluateAndPublishDailyRankBoraEngineChart(
     {
       requestId: input.requestId,
       resultIdentity: [
-        'daily-rank',
+        snapshot.isSyntheticDemo ? 'synthetic-demo' : 'daily-rank',
         snapshot.referenceHour,
         snapshot.stateRevision,
         snapshot.sourceRevision,

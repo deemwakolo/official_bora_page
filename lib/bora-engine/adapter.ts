@@ -50,6 +50,7 @@ export interface EngineSongLike {
 
 export interface BackendSongRow {
   readonly id?: unknown;
+  readonly songId?: unknown;
   readonly k?: unknown;
   readonly persistent_kura?: unknown;
   readonly persistentKura?: unknown;
@@ -254,9 +255,13 @@ export function mapBackendSongsToEngineSongs(
       return;
     }
 
-    const songId = asNonEmptyString(raw.id);
+    const songId =
+      asNonEmptyString(raw.id) ?? asNonEmptyString(raw.songId);
     if (songId === null) {
-      const availability = hasOwn(raw, 'id') ? 'invalid' : 'unavailable';
+      const availability =
+        hasOwn(raw, 'id') || hasOwn(raw, 'songId')
+          ? 'invalid'
+          : 'unavailable';
       const reason = `Row ${index} has ${availability === 'invalid' ? 'an invalid' : 'no'} song id.`;
       gaps.push(makeGap('songId', availability, reason));
       skipped.push({ index, songId: null, reason });

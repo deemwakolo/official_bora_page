@@ -38,6 +38,7 @@ export interface ManualPlatformHourInput
 
 export interface DailyPlatformRankInput {
   readonly requestId: string;
+  readonly effectiveDate?: string;
   readonly supersedesSnapshotId?: string;
   readonly evidenceReferences: Readonly<Record<ManualPlatform, string>>;
   readonly entries: readonly {
@@ -60,7 +61,6 @@ export type DailyPlatformRankActionResult =
         | 'configuration-unavailable'
         | 'invalid-input'
         | 'idempotency-conflict'
-        | 'outside-entry-window'
         | 'invalid-or-incomplete-ranks'
         | 'mapping-required'
         | 'correction-required'
@@ -76,13 +76,18 @@ export type DailyPlatformRankSnapshotResult =
       readonly snapshotId: string;
       readonly effectiveDate: string;
       readonly revision: number;
+      readonly isSynthetic: boolean;
       readonly entries: readonly {
         readonly songId: string;
         readonly platform: ManualPlatform;
         readonly rank: number;
       }[];
     }
-  | { readonly status: 'none' | 'closed-window' | 'unavailable' | 'unauthorized' };
+  | { readonly status: 'none' | 'not-correctable' | 'unavailable' | 'unauthorized' };
+
+export type SyntheticDailyPlatformRankDatesResult =
+  | { readonly status: 'ready'; readonly dates: readonly string[] }
+  | { readonly status: 'unavailable' | 'unauthorized' };
 
 export interface ManualPlatformHistoryItem {
   readonly id: string;

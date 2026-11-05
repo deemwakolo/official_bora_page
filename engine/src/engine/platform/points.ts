@@ -198,12 +198,19 @@ export function evaluatePlatformPoints(
   for (const platform of PLATFORM_IDS) {
     for (const value of activities[platform].values()) {
       activityTotals[platform] += value;
+      if (!Number.isFinite(activityTotals[platform])) {
+        return {
+          ok: false,
+          error: {
+            code: 'INVALID_MEASUREMENT',
+            message: `Total ${platform} activity must remain finite.`,
+            context: { platform },
+          },
+        };
+      }
     }
-  }
-  for (const e of entries) {
-    allocatedTotals.youtube += e.yt;
-    allocatedTotals.spotify += e.sp;
-    allocatedTotals.boomplay += e.bp;
+    allocatedTotals[platform] =
+      activityTotals[platform] > 0 ? PLATFORM_WEIGHTS[platform] : 0;
   }
 
   return {

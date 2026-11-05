@@ -16,6 +16,7 @@ import type {
   ManualPlatformHistoryResult,
   ManualPlatformHourInput,
   ManualPlatformMappingInput,
+  SyntheticDailyPlatformRankDatesResult,
 } from './manual-platform-types';
 
 const UUID_PATTERN =
@@ -287,6 +288,8 @@ export async function submitDailyPlatformRanks(
   if (
     !input ||
     !UUID_PATTERN.test(input.requestId) ||
+    (input.effectiveDate !== undefined &&
+      !isDateOnly(input.effectiveDate)) ||
     (input.supersedesSnapshotId !== undefined &&
       !UUID_PATTERN.test(input.supersedesSnapshotId)) ||
     !Array.isArray(input.entries) ||
@@ -381,7 +384,6 @@ export async function submitDailyPlatformRanks(
       'configuration-unavailable',
       'invalid-input',
       'idempotency-conflict',
-      'outside-entry-window',
       'invalid-or-incomplete-ranks',
       'mapping-required',
       'correction-required',
@@ -405,38 +407,38 @@ export async function submitDailyPlatformRanks(
   }
 }
 
-export async function getDailyPlatformRankSnapshot(): Promise<DailyPlatformRankSnapshotResult> {
+export async function getDailyPlatformRankSnapshot(
+  requestedEffectiveDate?: string,
+): Promise<DailyPlatformRankSnapshotResult> {
   const actor = await getAuthorizedActor();
   if (actor.status === 'unauthorized') return { status: 'unauthorized' };
   if (actor.status !== 'authorized') return { status: 'unavailable' };
   const setup = getServiceClient();
   if (setup.status !== 'available') return { status: 'unavailable' };
 
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Nairobi',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(
-    parts.map(({ type, value }) => [type, value]),
-  );
-  const hour = Number(values.hour);
-  if (!Number.isInteger(hour) || hour < 20 || hour > 23) {
-    return { status: 'closed-window' };
+  let effectiveDate = requestedEffectiveDate;
+  if (effectiveDate && !isDateOnly(effectiveDate)) return { status: 'unavailable' };
+  if (!effectiveDate) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Nairobi',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(
+      parts.map(({ type, value }) => [type, value]),
+    );
+    const today = `${values.year}-${values.month}-${values.day}`;
+    const effective = new Date(`${today}T00:00:00.000Z`);
+    if (!Number.isFinite(effective.getTime())) return { status: 'unavailable' };
+    effective.setUTCDate(effective.getUTCDate() + 1);
+    effectiveDate = effective.toISOString().slice(0, 10);
   }
-  const today = `${values.year}-${values.month}-${values.day}`;
-  const effective = new Date(`${today}T00:00:00.000Z`);
-  if (!Number.isFinite(effective.getTime())) return { status: 'unavailable' };
-  effective.setUTCDate(effective.getUTCDate() + 1);
-  const effectiveDate = effective.toISOString().slice(0, 10);
 
   try {
     const { data: snapshot, error: snapshotError } = await setup.client
       .from('bora_engine_daily_platform_rank_snapshots')
-      .select('id, effective_date, revision')
+      .select('id, effective_date, revision, is_synthetic')
       .eq('effective_date', effectiveDate)
       .order('revision', { ascending: false })
       .limit(1)
@@ -447,9 +449,13 @@ export async function getDailyPlatformRankSnapshot(): Promise<DailyPlatformRankS
       !isUuid(snapshot.id) ||
       snapshot.effective_date !== effectiveDate ||
       typeof snapshot.revision !== 'number' ||
-      !Number.isSafeInteger(snapshot.revision)
+      !Number.isSafeInteger(snapshot.revision) ||
+      typeof snapshot.is_synthetic !== 'boolean'
     ) {
       throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_SNAPSHOT');
+    }
+    if (requestedEffectiveDate && !snapshot.is_synthetic) {
+      return { status: 'not-correctable' };
     }
 
     const { data: rows, error: entriesError } = await setup.client
@@ -488,6 +494,7 @@ export async function getDailyPlatformRankSnapshot(): Promise<DailyPlatformRankS
       snapshotId: snapshot.id,
       effectiveDate,
       revision: snapshot.revision,
+      isSynthetic: snapshot.is_synthetic,
       entries,
     };
   } catch (error) {
@@ -497,6 +504,57 @@ export async function getDailyPlatformRankSnapshot(): Promise<DailyPlatformRankS
     );
     return { status: 'unavailable' };
   }
+}
+
+export async function getSyntheticDailyPlatformRankDates(): Promise<SyntheticDailyPlatformRankDatesResult> {
+  const actor = await getAuthorizedActor();
+  if (actor.status === 'unauthorized') return { status: 'unauthorized' };
+  if (actor.status !== 'authorized') return { status: 'unavailable' };
+  const setup = getServiceClient();
+  if (setup.status !== 'available') return { status: 'unavailable' };
+
+  try {
+    const { data, error } = await setup.client
+      .from('bora_engine_daily_platform_rank_snapshots')
+      .select('effective_date, revision, is_synthetic')
+      .order('effective_date', { ascending: false })
+      .order('revision', { ascending: false });
+    if (error) throw error;
+    if (!Array.isArray(data)) {
+      throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_DATE_LIST');
+    }
+
+    const seenDates = new Set<string>();
+    const dates: string[] = [];
+    for (const row of data) {
+      if (
+        !isRecord(row) ||
+        typeof row.effective_date !== 'string' ||
+        !isDateOnly(row.effective_date) ||
+        typeof row.revision !== 'number' ||
+        !Number.isSafeInteger(row.revision) ||
+        typeof row.is_synthetic !== 'boolean'
+      ) {
+        throw new Error('BORA_ENGINE_INVALID_DAILY_RANK_DATE_LIST');
+      }
+      if (seenDates.has(row.effective_date)) continue;
+      seenDates.add(row.effective_date);
+      if (row.is_synthetic) dates.push(row.effective_date);
+    }
+    return { status: 'ready', dates };
+  } catch (error) {
+    console.error(
+      '[bora-engine-daily-platform-ranks] synthetic date read failed:',
+      error instanceof Error ? error.message : 'unknown',
+    );
+    return { status: 'unavailable' };
+  }
+}
+
+function isDateOnly(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function safeHistoryReference(value: string | null): string | null {

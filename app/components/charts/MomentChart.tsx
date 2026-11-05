@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 
-import TapGUI from './TapGUI';
 import { SongMetadata } from './TapOP';
 
 export type MovementKind = 'up' | 'down' | 'same' | 'new';
 export interface Movement { kind: MovementKind; delta?: number; }
-export interface MomentSong { rank: number; movement: Movement; metadata: SongMetadata; }
+export interface MomentSong { rank: number; movement: Movement; metadata: SongMetadata; songId?: string; }
 export interface MomentChartData {
   title: string; periodLabel: string; date: string;
   badge?: string; songs: MomentSong[];
@@ -66,10 +65,7 @@ function Artwork({ src, className, radius = '0.65rem' }: { src: string; classNam
 }
 
 export default function MomentChart({ data, paneKey }: MomentChartProps) {
-  const [tapIndex, setTapIndex] = useState<number | null>(null);
   const songs = data.songs;
-  const selected = tapIndex !== null ? songs[tapIndex] ?? null : null;
-  const closeTap = () => setTapIndex(null);
   return (
     <div
       data-bora-ui="public-chart-body"
@@ -77,6 +73,7 @@ export default function MomentChart({ data, paneKey }: MomentChartProps) {
     >
       <div
         data-bora-ui="public-chart-list"
+        role="list"
         className="px-1 sm:px-2"
       >
           <div
@@ -85,15 +82,12 @@ export default function MomentChart({ data, paneKey }: MomentChartProps) {
             style={{ color: 'var(--bora-text-subtle)' }}
           >Top 10</div>
           {songs.map((s) => {
-            const i = songs.indexOf(s);
             return (
-              <button
+              <div
                 key={s.rank}
                 data-bora-ui="public-chart-row"
-                type="button"
-                onClick={() => setTapIndex(i)}
-                aria-label={'Open ' + s.metadata.title}
-                className="flex w-full items-center gap-3 px-3 py-3.5 text-left transition-opacity active:opacity-70"
+                role="listitem"
+                className="flex w-full items-center gap-3 px-3 py-3.5 text-left"
                 style={{ borderBottom: '1px solid var(--bora-border)' }}
               >
                 <span
@@ -118,11 +112,10 @@ export default function MomentChart({ data, paneKey }: MomentChartProps) {
                   >{s.metadata.artist}</span>
                 </span>
                 <MovementBadge movement={s.movement} />
-              </button>
+              </div>
             );
           })}
       </div>
-      <TapGUI song={selected ? { rank: selected.rank, metadata: selected.metadata } : null} onClose={closeTap} />
     </div>
   );
 }

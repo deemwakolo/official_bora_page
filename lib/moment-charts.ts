@@ -135,6 +135,7 @@ export function toMomentSong(
 ): MomentSong {
   return {
     rank: row.rank,
+    ...(row.song_id ? { songId: row.song_id } : {}),
 
     movement:
       row.movement_delta === null ||

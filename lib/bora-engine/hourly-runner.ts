@@ -33,6 +33,7 @@ export interface HourlyInputCoverage {
   readonly songId: string;
   readonly inputType: HourlyCoverageInput;
   readonly hourIndex: number;
+  readonly status: 'COMPLETE';
   readonly evidence: CoverageEvidenceRecord;
   readonly authority: CoverageEvidenceAuthority;
 }
@@ -83,6 +84,13 @@ export type HourlyCommitResult =
  * these operations, and the application persistence adapter implements them.
  */
 export interface HourlyRolloverPersistence {
+  readHourlyReferenceHour(): Promise<number | null>;
+
+  reconcileHourlyCoverage(input: {
+    readonly closedHour: HourIndex;
+    readonly cutoverAt: string;
+  }): Promise<HourlyCoverageReconciliationResult>;
+
   claimHour(input: {
     readonly closedHour: HourIndex;
     /** Stable across retries of this claim request. */
@@ -112,6 +120,23 @@ export interface HourlyRolloverPersistence {
     readonly commit: HourlyRolloverCommit;
   }): Promise<HourlyCommitResult>;
 }
+
+export type HourlyCoverageReconciliationResult =
+  | {
+      readonly status: 'ready';
+      readonly processedActiveSongCount: number;
+      readonly reconciledVoteEventCount: number;
+    }
+  | {
+      readonly status: 'not-ready';
+      readonly reason:
+        | 'reference-hour-mismatch'
+        | 'unreconciled-votes'
+        | 'vote-bucket-mismatch'
+        | 'no-active-songs';
+      readonly mismatchCount?: number;
+      readonly referenceHour?: number;
+    };
 
 export type HourlyCoverageGap = {
   readonly songId?: string;
@@ -234,6 +259,7 @@ function buildCoverageGaps(
       !knownSongIds.has(item.songId) ||
       !isSafeInteger(item.hourIndex) ||
       !(item.inputType === 'VOTES' || item.inputType === 'SEED') ||
+      item.status !== 'COMPLETE' ||
       !isCoverageEvidenceRecord(item.evidence) ||
       item.evidence.kind !== coverageEvidenceKind(item.inputType) ||
       item.evidence.songId !== item.songId ||

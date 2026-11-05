@@ -454,11 +454,11 @@ export const BORA_UI_CHILD_TARGETS: readonly Phase2AChild[] = [
     motionDuration('hero-title-duration', 'Duration'),
   ]),
   child('public-vote-hero-artist', 'Artist', 'Artist name'),
-  child('public-vote-hero-score', 'Power Score', 'Momentum score'),
+  child('public-vote-hero-xp-share-value', 'XP Share', 'Engine XP percentage'),
   child(
-    'public-vote-hero-score-compact',
-    'Power Score Compact',
-    'Momentum score (compact layout)'
+    'public-vote-hero-xp-share-value-compact',
+    'XP Share Compact',
+    'Engine XP percentage (compact layout)'
   ),
 
   /* CHARTS */

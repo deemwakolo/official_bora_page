@@ -9,7 +9,9 @@
     "lint": "next lint",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "engine:typecheck": "tsc -p engine/tsconfig.engine-test.json --noEmit",
-    "engine:test": "cd engine && set \"NODE_PATH=F:/coding/bora-engine/node_modules\" && node F:/coding/bora-engine/node_modules/vitest/vitest.mjs run --config vitest.engine.config.ts"
+    "engine:test": "cd engine && set \"NODE_PATH=F:/coding/bora-engine/node_modules\" && node F:/coding/bora-engine/node_modules/vitest/vitest.mjs run --config vitest.engine.config.ts",
+    "bora:check": "playwright test --config bora-checker/playwright.config.ts",
+    "bora:check:verify": "node bora-checker/verify-chain.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -35,6 +37,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

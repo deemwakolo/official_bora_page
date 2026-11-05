@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ChartAnimation from './ChartAnimation';
+import TapGUI from '../charts/TapGUI';
+import type { SongMetadata } from '../charts/TapOP';
 
 import {
   ArrowUp,
@@ -16,10 +18,12 @@ interface Song {
   artist?: string;
   cover_url: string;
   youtube_id?: string;
-  momentum_score?: number;
-  xp?: number;
+  xp?: number | null;
   yt_rank?: number;
   sp_rank?: number;
+  upvotes?: number | null;
+  voteShare?: number | null;
+  metadata?: SongMetadata;
 
   // NAFASI YA WIMBO KWENYE CHART YA AWALI
   previous_rank?: number | null;
@@ -42,6 +46,41 @@ export default function ChartGUI({
   songs,
   onVote,
 }: ChartGUIProps) {
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerOrigin = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressTimer.current !== null) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    pointerOrigin.current = null;
+  };
+
+  useEffect(() => clearLongPress, []);
+
+  const startLongPress = (song: Song, event: React.PointerEvent) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    clearLongPress();
+    pointerOrigin.current = { x: event.clientX, y: event.clientY };
+    longPressTimer.current = setTimeout(() => {
+      longPressTimer.current = null;
+      pointerOrigin.current = null;
+      setSelectedSong(song);
+    }, 2000);
+  };
+
+  const moveLongPress = (event: React.PointerEvent) => {
+    const origin = pointerOrigin.current;
+    if (
+      origin &&
+      Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10
+    ) {
+      clearLongPress();
+    }
+  };
+
   return (
     // SECTION NZIMA YA CHART
     <section
@@ -111,25 +150,39 @@ export default function ChartGUI({
                 ? titleParts.slice(1).join(' - ')
                 : item.artist || 'Bongo Flava Industry';
 
-            // KUTENGENEZA YOUTUBE THUMBNAIL KAMA YOUTUBE ID IPO
-            const finalCover = item.youtube_id
-              ? `https://img.youtube.com/vi/${item.youtube_id}/maxresdefault.jpg`
-              : item.cover_url || '/placeholder.jpg';
+            const finalCover =
+              typeof item.cover_url === 'string'
+                ? item.cover_url.trim()
+                : '';
 
-            // KUBADILISHA MOMENTUM SCORE KUWA NUMBER
-            const score = Math.floor(
-              Number(item.momentum_score) || 0
-            );
-
-            // THEME YA POWER SCORE KULINGANA NA RANK
-            const scoreTheme =
-              rank === 1
-                ? 'text-[var(--bora-gold)] drop-shadow-[0_0_18px_rgba(212,175,55,0.35)]'
-                : rank === 2
-                  ? 'text-[#CD7F32] drop-shadow-[0_0_16px_rgba(205,127,50,0.28)]'
-                  : rank === 3
-                    ? 'text-red-500 drop-shadow-[0_0_16px_rgba(239,68,68,0.22)]'
-                    : 'text-[var(--bora-text)] opacity-90';
+            const engineShare =
+              typeof item.xp === 'number' &&
+              Number.isFinite(item.xp) &&
+              item.xp >= 0 &&
+              item.xp <= 1
+                ? item.xp * 100
+                : null;
+            const hasEngineShare = item.xp !== undefined;
+            const voteShare =
+              typeof item.voteShare === 'number' &&
+              Number.isFinite(item.voteShare) &&
+              item.voteShare >= 0 &&
+              item.voteShare <= 1
+                ? item.voteShare * 100
+                : null;
+            const sharePercent = hasEngineShare ? engineShare : voteShare;
+            const shareLabel =
+              hasEngineShare ? 'ENGINE SHARE' : 'VOTE SHARE';
+            const shareValue =
+              sharePercent === null ? '—' : `${sharePercent.toFixed(1)}%`;
+            const shareDescription =
+              hasEngineShare
+                ? engineShare !== null
+                  ? `Engine share ${engineShare.toFixed(1)} percent`
+                  : 'Engine share unavailable: no accepted vote events recorded for this song in the current evaluation window'
+                : voteShare !== null
+                  ? `Vote share ${voteShare.toFixed(1)} percent`
+                  : 'Engine percentage unavailable until real Engine inputs are ready';
 
             return (
               // CARD NZIMA YA WIMBO MMOJA
@@ -161,6 +214,20 @@ export default function ChartGUI({
 
                 {/* ROW KUU YA TAARIFA ZA WIMBO */}
                 <div className="relative flex items-center gap-3 md:gap-10">
+                  <button
+                    type="button"
+                    aria-label={`Press and hold for two seconds to view ${displayTitle} details`}
+                    onPointerDown={(event) => startLongPress(item, event)}
+                    onPointerMove={moveLongPress}
+                    onPointerUp={clearLongPress}
+                    onPointerLeave={clearLongPress}
+                    onPointerCancel={clearLongPress}
+                    onContextMenu={(event) => event.preventDefault()}
+                    onClick={(event) => {
+                      if (event.detail === 0) setSelectedSong(item);
+                    }}
+                    className="relative flex min-w-0 flex-1 items-center gap-3 text-left md:gap-10"
+                  >
 
                   {/* COVER NA RANK */}
                   <div className="relative shrink-0">
@@ -179,11 +246,21 @@ export default function ChartGUI({
                       }}
                     >
                       {/* PICHA YA ALBUM / WIMBO */}
-                      <img
-                        src={finalCover}
-                        alt={displayTitle}
-                        className="h-full w-full object-cover brightness-[0.78] transition-all duration-500 group-hover:brightness-100"
-                      />
+                      {finalCover ? (
+                        <img
+                          src={finalCover}
+                          alt={displayTitle}
+                          className="h-full w-full object-cover brightness-[0.78] transition-all duration-500 group-hover:brightness-100"
+                        />
+                      ) : (
+                        <span
+                          aria-label={`Artwork unavailable for ${displayTitle}`}
+                          className="flex h-full w-full items-center justify-center font-cinzel text-3xl"
+                          style={{ color: 'var(--bora-gold)' }}
+                        >
+                          ♪
+                        </span>
+                      )}
 
                       {/* DARK GRADIENT JUU YA COVER */}
                       <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/30" />
@@ -276,20 +353,6 @@ export default function ChartGUI({
                         {displayArtist}
                       </span>
 
-                      {typeof item.xp === 'number' && (
-                        <span
-                          data-bora-ui="public-vote-hero-xp-share"
-                          aria-label={`XP share ${(item.xp * 100).toFixed(1)} percent`}
-                          className="shrink-0 rounded-full border px-2 py-1 text-[8px] font-mono font-bold uppercase tracking-[0.16em]"
-                          style={{
-                            borderColor: 'var(--bora-border-strong)',
-                            color: 'var(--bora-gold)',
-                          }}
-                        >
-                          XP SHARE {(item.xp * 100).toFixed(1)}%
-                        </span>
-                      )}
-
                       {/* LABEL YA CURRENT NUMBER 1 */}
                       {rank === 1 && (
                         <span
@@ -313,69 +376,57 @@ export default function ChartGUI({
                     </div>
                   </div>
 
-                  {/* DESKTOP POWER INDEX NA VOTE BUTTONS */}
+                  </button>
+
+                  {/* DESKTOP XP SHARE NA VOTE BUTTONS */}
                   <div className="hidden shrink-0 items-center gap-8 lg:flex">
 
-                    {/* POWER INDEX */}
-                    <div className="w-32 -translate-x-2">
-
-                      {/* POWER NA POINTS LABEL */}
+                    {/* XP SHARE */}
+                    <div className="w-36 -translate-x-2">
                       <div className="mb-2 flex items-center justify-between">
                         <span
                           className="text-[7px] font-mono uppercase tracking-[0.25em]"
                           style={{
-                            color: 'var(--bora-text)',
-                            opacity: 0.25,
+                            color: 'var(--bora-gold)',
                           }}
                         >
-                          POWER
-                        </span>
-
-                        <span
-                          className="text-[8px] font-mono"
-                          style={{
-                            color: 'var(--bora-text)',
-                            opacity: 0.25,
-                          }}
-                        >
-                          PTS
+                          {shareLabel}
                         </span>
                       </div>
 
-                      {/* POWER BAR */}
                       <div
                         className="h-[3px] w-full overflow-hidden"
                         style={{
-                          backgroundColor:
-                            'var(--bora-border)',
+                          backgroundColor: 'var(--bora-border)',
                         }}
                       >
                         <div
-                          className={`h-full transition-all duration-700 ${
-                            rank === 1
-                              ? 'bg-[var(--bora-gold)]'
-                              : rank === 2
-                                ? 'bg-slate-300'
-                                : rank === 3
-                                  ? 'bg-red-500'
-                                  : 'bg-[var(--bora-text)]/40'
-                          }`}
+                          className="h-full bg-[var(--bora-gold)] transition-all duration-700"
                           style={{
-                            width: `${Math.min(
-                              100,
-                              Math.max(0, score)
-                            )}%`,
+                            width: `${sharePercent ?? 0}%`,
                           }}
                         />
                       </div>
 
-                      {/* POWER SCORE KUBWA */}
                       <div
-                        data-bora-ui="public-vote-hero-score"
-                        className={`relative mt-1 -translate-x-1 overflow-visible text-right text-5xl font-black italic leading-none tracking-[-0.08em] tabular-nums transition-all duration-500 group-hover:-translate-x-2 group-hover:scale-105 ${scoreTheme}`}
+                        data-bora-ui="public-vote-hero-xp-share-value"
+                        aria-label={
+                          shareDescription
+                        }
+                        className="relative mt-2 text-right text-4xl font-black leading-none tracking-[-0.06em] tabular-nums text-[var(--bora-gold)] transition-transform duration-500 group-hover:scale-105"
                       >
-                        {score}
+                        {shareValue}
                       </div>
+                      {sharePercent === null && (
+                        <p
+                          className="mt-1 text-right text-[6px] font-mono uppercase tracking-[0.12em]"
+                          style={{ color: 'var(--bora-text-subtle)' }}
+                        >
+                          {hasEngineShare
+                            ? 'Awaiting accepted vote events'
+                            : 'Awaiting real Engine inputs'}
+                        </p>
+                      )}
                     </div>
 
                     {/* DESKTOP BUTTONS ZA KUPANDISHA NA KUSHUSHA WIMBO */}
@@ -431,27 +482,35 @@ export default function ChartGUI({
                     </div>
                   </div>
 
-                  {/* MOBILE POWER SCORE */}
+                  {/* MOBILE XP SHARE */}
                   <div className="flex shrink-0 -translate-x-1 flex-col items-end lg:hidden">
 
-                    {/* POWER LABEL */}
                     <span
                       className="text-[7px] font-mono uppercase tracking-[0.2em]"
                       style={{
-                        color: 'var(--bora-text)',
-                        opacity: 0.25,
+                        color: 'var(--bora-gold)',
                       }}
                     >
-                      POWER
+                      {shareLabel}
                     </span>
 
-                    {/* POWER SCORE YA MOBILE */}
                     <span
-                      data-bora-ui="public-vote-hero-score-compact"
-                      className={`mt-1 text-4xl font-black italic leading-none tracking-[-0.07em] tabular-nums transition-all duration-500 group-hover:scale-110 ${scoreTheme}`}
+                      data-bora-ui="public-vote-hero-xp-share-value-compact"
+                      aria-label={
+                        shareDescription
+                      }
+                      className="mt-1 text-3xl font-black leading-none tracking-[-0.05em] tabular-nums text-[var(--bora-gold)] transition-transform duration-500 group-hover:scale-105"
                     >
-                      {score}
+                      {shareValue}
                     </span>
+                    {sharePercent === null && (
+                      <span
+                        className="mt-1 text-right text-[5px] font-mono uppercase tracking-[0.08em]"
+                        style={{ color: 'var(--bora-text-subtle)' }}
+                      >
+                        Awaiting real Engine
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -516,6 +575,30 @@ export default function ChartGUI({
           })}
         </div>
       </div>
+
+      <TapGUI
+        song={
+          selectedSong
+            ? {
+                rank: songs.indexOf(selectedSong) + 1,
+                metadata: selectedSong.metadata ?? {
+                  title: selectedSong.title,
+                  artist: selectedSong.artist ?? '',
+                  feature: '-',
+                  producer: '-',
+                  releaseDate: '',
+                  genre: '',
+                  artwork: selectedSong.cover_url,
+                  youtube: '',
+                  spotify: '',
+                  boomplay: '',
+                },
+                totalUpvotes: selectedSong.upvotes,
+              }
+            : null
+        }
+        onClose={() => setSelectedSong(null)}
+      />
 
       <style jsx>{`
         @keyframes boraPandishaBorder {

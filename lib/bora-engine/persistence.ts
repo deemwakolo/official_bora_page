@@ -13,6 +13,7 @@ import type {
 import type {
   HourlyCoverageGap,
   HourlyCoverageInput,
+  HourlyCoverageReconciliationResult,
   HourlyInputCoverage,
   HourClaimResult,
   HourlyCommitResult,
@@ -110,13 +111,7 @@ export type YouTubeSnapshotPersistenceResult =
     };
 
 export interface BoraEnginePersistence extends HourlyRolloverPersistence {
-  checkBootstrap(closedHour: HourIndex): Promise<
-    | { readonly status: 'ready' }
-    | { readonly status: 'missing' }
-    | { readonly status: 'not-ready' }
-    | { readonly status: 'reference-hour-mismatch' }
-    | { readonly status: 'already-completed' }
-  >;
+  loadLiveVoteEngineInputSnapshot(): Promise<LiveVoteEngineInputSnapshotResult>;
   readiness(closedHour: number | null): Promise<BoraEngineReadiness>;
   /**
    * Phase 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Publication readiness RPC. Determines whether a closed hour's
@@ -167,6 +162,7 @@ export type BoraEnginePublicationInputSnapshotResult =
       readonly sourceRevision: number;
       readonly expectedCurrentPublication: ExpectedCurrentPublication;
       readonly songs: readonly unknown[];
+      readonly isSyntheticDemo: boolean;
       readonly dailyPlatformRankSnapshots: Readonly<
         Record<
           'youtube' | 'spotify' | 'boomplay',
@@ -178,6 +174,30 @@ export type BoraEnginePublicationInputSnapshotResult =
   | {
       readonly status: 'unavailable';
       readonly reason: 'rpc-failed' | 'invalid-response';
+      readonly errorCode?: string;
+    };
+
+export type LiveVoteEngineInputSnapshotResult =
+  | {
+      readonly status: 'ready';
+      readonly referenceHour: number;
+      readonly songs: readonly {
+        readonly songId: string;
+        readonly lifecycle: 'ACTIVE' | 'VAULT';
+      }[];
+      readonly votes: readonly {
+        readonly songId: string;
+        readonly hourIndex: number;
+        readonly voteType: 'up' | 'down';
+      }[];
+    }
+  | {
+      readonly status: 'unavailable';
+      readonly reason:
+        | 'state-read-failed'
+        | 'vote-read-failed'
+        | 'state-changed-during-read'
+        | 'invalid-response';
       readonly errorCode?: string;
     };
 
@@ -404,6 +424,7 @@ function parsePublicationInputSnapshot(
     value.engineSnapshot.state.referenceHour !== value.referenceHour ||
     !Array.isArray(value.engineSnapshot.state.songs) ||
     value.engineSnapshot.stateRevision !== value.stateRevision ||
+    typeof value.isSyntheticDemo !== 'boolean' ||
     !isRecord(value.expectedCurrentPublication) ||
     !isRecord(value.dailyPlatformRankSnapshots)
   ) {
@@ -452,6 +473,7 @@ function parsePublicationInputSnapshot(
     sourceRevision: value.sourceRevision,
     expectedCurrentPublication,
     songs: value.engineSnapshot.state.songs,
+    isSyntheticDemo: value.isSyntheticDemo,
     dailyPlatformRankSnapshots: { youtube, spotify, boomplay },
   };
 }
@@ -476,6 +498,7 @@ function parseCoverage(value: unknown): HourlyInputCoverage[] | null {
       item.songId.trim().length === 0 ||
       !asCoverageInput(item.inputType) ||
       !Number.isSafeInteger(item.hourIndex) ||
+      item.status !== 'COMPLETE' ||
       !isCoverageEvidenceRecord(item.evidence) ||
       !isCoverageEvidenceAuthority(item.authority) ||
       item.evidence.songId !== item.songId ||
@@ -495,6 +518,7 @@ function parseCoverage(value: unknown): HourlyInputCoverage[] | null {
       songId: item.songId,
       inputType: item.inputType,
       hourIndex: item.hourIndex as number,
+      status: 'COMPLETE',
       evidence: item.evidence,
       authority: item.authority,
     });
@@ -819,6 +843,119 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     this.client = client;
   }
 
+  async loadLiveVoteEngineInputSnapshot(): Promise<LiveVoteEngineInputSnapshotResult> {
+    const { data: head, error: headError } = await this.client
+      .from('bora_engine_hourly_state_head')
+      .select('reference_hour,revision')
+      .eq('singleton', true)
+      .maybeSingle();
+    if (headError) {
+      return {
+        status: 'unavailable',
+        reason: 'state-read-failed',
+        ...(headError.code ? { errorCode: headError.code } : {}),
+      };
+    }
+    if (
+      !head ||
+      typeof head.reference_hour !== 'number' ||
+      !Number.isSafeInteger(head.reference_hour) ||
+      head.reference_hour < 71 ||
+      typeof head.revision !== 'number' ||
+      !Number.isSafeInteger(head.revision)
+    ) {
+      return { status: 'unavailable', reason: 'invalid-response' };
+    }
+
+    const firstHour = head.reference_hour - 71;
+    const [stateResult, voteResult] = await Promise.all([
+      this.client
+        .from('bora_engine_song_state')
+        .select('song_id,lifecycle')
+        .order('song_id', { ascending: true }),
+      this.client
+        .from('bora_engine_vote_events')
+        .select('song_id,hour_index,vote_type')
+        .gte('hour_index', firstHour)
+        .lte('hour_index', head.reference_hour),
+    ]);
+
+    if (stateResult.error) {
+      return {
+        status: 'unavailable',
+        reason: 'state-read-failed',
+        ...(stateResult.error.code ? { errorCode: stateResult.error.code } : {}),
+      };
+    }
+    if (voteResult.error) {
+      return {
+        status: 'unavailable',
+        reason: 'vote-read-failed',
+        ...(voteResult.error.code ? { errorCode: voteResult.error.code } : {}),
+      };
+    }
+
+    const { data: verifiedHead, error: verifiedHeadError } = await this.client
+      .from('bora_engine_hourly_state_head')
+      .select('reference_hour,revision')
+      .eq('singleton', true)
+      .maybeSingle();
+    if (verifiedHeadError) {
+      return {
+        status: 'unavailable',
+        reason: 'state-read-failed',
+        ...(verifiedHeadError.code ? { errorCode: verifiedHeadError.code } : {}),
+      };
+    }
+    if (
+      !verifiedHead ||
+      verifiedHead.reference_hour !== head.reference_hour ||
+      verifiedHead.revision !== head.revision
+    ) {
+      return { status: 'unavailable', reason: 'state-changed-during-read' };
+    }
+
+    const songs = stateResult.data;
+    const votes = voteResult.data;
+    if (
+      !songs ||
+      songs.length === 0 ||
+      !songs.every(
+        (song) =>
+          typeof song.song_id === 'string' &&
+          song.song_id.length > 0 &&
+          (song.lifecycle === 'ACTIVE' || song.lifecycle === 'VAULT'),
+      ) ||
+      !votes ||
+      !votes.every(
+        (vote) =>
+          typeof vote.song_id === 'string' &&
+          vote.song_id.length > 0 &&
+          typeof vote.hour_index === 'number' &&
+          Number.isSafeInteger(vote.hour_index) &&
+          vote.hour_index >= firstHour &&
+          vote.hour_index <= head.reference_hour &&
+          (vote.vote_type === 'up' || vote.vote_type === 'down'),
+      )
+    ) {
+      return { status: 'unavailable', reason: 'invalid-response' };
+    }
+
+    return {
+      status: 'ready',
+      referenceHour: head.reference_hour,
+      songs: songs.map((song) => ({
+        songId: song.song_id,
+        lifecycle: song.lifecycle as 'ACTIVE' | 'VAULT',
+      })),
+      votes: votes.map((vote) => ({
+        songId: vote.song_id,
+        hourIndex: vote.hour_index,
+        voteType: vote.vote_type as 'up' | 'down',
+      })),
+    };
+  }
+
   async loadPublicationInputSnapshot(): Promise<BoraEnginePublicationInputSnapshotResult> {
     const { data, error } = await this.client.rpc(
       'bora_engine_publication_input_snapshot',
@@ -958,7 +1095,7 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     const { data, error } = await this.client
       .from('bora_engine_publication_head')
       .select(
-        'publication_id, publication:bora_engine_publications(id, reference_hour, published_at, total_active_c, platform_total_youtube, platform_total_spotify, platform_total_boomplay, entries:bora_engine_publication_entries(song_id, lifecycle, rank, xp, bora_score, song:songs(id, title, artist, cover_url, youtube_id))',
+        'publication_id, publication:bora_engine_publications(id, reference_hour, published_at, total_active_c, platform_total_youtube, platform_total_spotify, platform_total_boomplay, evaluation_run:bora_engine_evaluation_runs!bora_engine_publications_evaluation_run_id_fkey(publication_request), entries:bora_engine_publication_entries(song_id, lifecycle, rank, xp, bora_score, song:songs(id, title, artist, cover_url, youtube_id)))',
       )
       .eq('singleton', true)
       .maybeSingle();
@@ -975,6 +1112,19 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       !Number.isSafeInteger(publication.reference_hour) ||
       typeof publication.published_at !== 'string' ||
       !Array.isArray(publication.entries)
+    ) {
+      throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
+    }
+    const evaluationRun = relatedRecord(publication.evaluation_run);
+    const publicationRequest = evaluationRun?.publication_request;
+    const evaluation =
+      isRecord(publicationRequest) && isRecord(publicationRequest.evaluation)
+        ? publicationRequest.evaluation
+        : null;
+    if (
+      !evaluation ||
+      typeof evaluation.resultIdentity !== 'string' ||
+      evaluation.resultIdentity.length === 0
     ) {
       throw new Error('BORA_ENGINE_INVALID_PUBLICATION_SNAPSHOT');
     }
@@ -1064,32 +1214,84 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
       publicationId: publication.id,
       referenceHour: publication.reference_hour as number,
       publishedAt: publication.published_at,
+      isSyntheticDemo: evaluation.resultIdentity.startsWith('synthetic-demo:'),
       totalActiveC,
       platformTotals: { youtube, spotify, boomplay },
       entries: [...activeEntries, ...vaultEntries],
     };
   }
 
-  async checkBootstrap(closedHour: HourIndex) {
-    const { data, error } = await this.client.rpc('bora_engine_check_hour', {
-      p_closed_hour: closedHour,
-    });
-    if (error) throw new Error('BORA_ENGINE_BOOTSTRAP_CHECK_FAILED');
-    if (!isRecord(data)) throw new Error('BORA_ENGINE_INVALID_SNAPSHOT');
-    if (data.status === 'ready') return { status: 'ready' as const };
-    if (data.status === 'bootstrap-required') {
-      return { status: 'missing' as const };
+  async readHourlyReferenceHour(): Promise<number | null> {
+    const { data, error } = await this.client
+      .from('bora_engine_hourly_state_head')
+      .select('reference_hour')
+      .eq('singleton', true)
+      .maybeSingle();
+    if (error) throw new Error('BORA_ENGINE_STATE_HEAD_READ_FAILED');
+    if (!data) return null;
+    if (!Number.isSafeInteger(data.reference_hour) || data.reference_hour < 0) {
+      throw new Error('BORA_ENGINE_INVALID_STATE_HEAD');
     }
-    if (data.status === 'reference-hour-mismatch') {
-      return { status: 'reference-hour-mismatch' as const };
+    return data.reference_hour;
+  }
+
+  async reconcileHourlyCoverage(input: {
+    readonly closedHour: HourIndex;
+    readonly cutoverAt: string;
+  }): Promise<HourlyCoverageReconciliationResult> {
+    const { data, error } = await this.client.rpc(
+      'bora_engine_reconcile_hour_coverage',
+      {
+        p_closed_hour: input.closedHour,
+        p_cutover_at: input.cutoverAt,
+      },
+    );
+    if (error) throw new Error('BORA_ENGINE_HOURLY_COVERAGE_RECONCILIATION_FAILED');
+    if (!isRecord(data) || typeof data.status !== 'string') {
+      throw new Error('BORA_ENGINE_INVALID_COVERAGE_RECONCILIATION');
     }
-    if (data.status === 'already-completed') {
-      return { status: 'already-completed' as const };
+    if (data.status === 'ready') {
+      if (
+        data.closedHour !== input.closedHour ||
+        !Number.isSafeInteger(data.processedActiveSongCount) ||
+        !Number.isSafeInteger(data.reconciledVoteEventCount)
+      ) {
+        throw new Error('BORA_ENGINE_INVALID_COVERAGE_RECONCILIATION');
+      }
+      return {
+        status: 'ready',
+        processedActiveSongCount: data.processedActiveSongCount as number,
+        reconciledVoteEventCount: data.reconciledVoteEventCount as number,
+      };
     }
     if (data.status === 'not-ready') {
-      return { status: 'not-ready' as const };
+      const reasons = [
+        'reference-hour-mismatch',
+        'unreconciled-votes',
+        'vote-bucket-mismatch',
+        'no-active-songs',
+      ] as const;
+      if (!reasons.includes(data.reason as (typeof reasons)[number])) {
+        throw new Error('BORA_ENGINE_INVALID_COVERAGE_RECONCILIATION');
+      }
+      if (
+        data.reason === 'reference-hour-mismatch' &&
+        !Number.isSafeInteger(data.referenceHour)
+      ) {
+        throw new Error('BORA_ENGINE_INVALID_COVERAGE_RECONCILIATION');
+      }
+      return {
+        status: 'not-ready',
+        reason: data.reason as (typeof reasons)[number],
+        ...(Number.isSafeInteger(data.mismatchCount)
+          ? { mismatchCount: data.mismatchCount as number }
+          : {}),
+        ...(Number.isSafeInteger(data.referenceHour)
+          ? { referenceHour: data.referenceHour as number }
+          : {}),
+      };
     }
-    throw new Error('BORA_ENGINE_INVALID_SNAPSHOT');
+    throw new Error('BORA_ENGINE_INVALID_COVERAGE_RECONCILIATION');
   }
 
   async readiness(closedHour: number | null): Promise<BoraEngineReadiness> {
@@ -1732,8 +1934,11 @@ export function createBoraEnginePersistenceFromEnv(): BoraEnginePersistenceSetup
       missing: !url ? 'NEXT_PUBLIC_SUPABASE_URL' : 'BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY',
     };
   }
+  const noStoreFetch: typeof fetch = (input, init) =>
+    fetch(input, { ...init, cache: 'no-store' });
   const client = createSupabaseClient(url, key, {
     auth: { persistSession: false },
+    global: { fetch: noStoreFetch },
   });
   return {
     status: 'available',

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 import VoteAlert from './VoteAlert';
 import ChartGUI from './ChartGUI';
+import type { SongMetadata } from '../charts/TapOP';
 
 interface Song {
   id?: string | number;
@@ -12,11 +13,13 @@ interface Song {
   artist?: string;
   cover_url: string;
   youtube_id?: string;
-  momentum_score?: number;
-  xp?: number;
+  xp?: number | null;
   yt_rank?: number;
   sp_rank?: number;
   previous_rank?: number | null;
+  upvotes?: number | null;
+  voteShare?: number | null;
+  metadata?: SongMetadata;
 }
 
 interface KuraProps {

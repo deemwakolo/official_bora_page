@@ -106,10 +106,16 @@ function isFiniteNonNegative(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
-function isEvaluatedSong(value: unknown): value is EvaluatedSong {
+function isEvaluatedSong(
+  value: unknown,
+  expectsPersistentKuraNext: boolean,
+): value is EvaluatedSong {
   if (!isRecord(value)) return false;
   const performance = value.platformPerformance;
   if (!isRecord(performance)) return false;
+  const persistentKuraNextIsValid = expectsPersistentKuraNext
+    ? isFiniteNonNegative(value.persistentKuraNext)
+    : value.persistentKuraNext === null;
   return (
     typeof value.songId === 'string' &&
     value.songId.length > 0 &&
@@ -117,7 +123,7 @@ function isEvaluatedSong(value: unknown): value is EvaluatedSong {
     isFiniteNonNegative(value.xp) &&
     isFiniteNonNegative(value.kuraFresh) &&
     isFiniteNonNegative(value.persistentKuraBefore) &&
-    isFiniteNonNegative(value.persistentKuraNext) &&
+    persistentKuraNextIsValid &&
     isFiniteNonNegative(performance.youtube) &&
     isFiniteNonNegative(performance.spotify) &&
     isFiniteNonNegative(performance.boomplay) &&
@@ -132,6 +138,7 @@ function isEvaluatedSong(value: unknown): value is EvaluatedSong {
 export function isUsablePublicationEvaluation(
   value: unknown,
   referenceHour: number,
+  closedHourC: number | null,
 ): value is ChartEvaluationResult {
   if (!isRecord(value) || value.referenceHour !== referenceHour) return false;
   if (
@@ -155,7 +162,15 @@ export function isUsablePublicationEvaluation(
 
   const active = value.active;
   const ranked = value.ranked;
-  if (!active.every(isEvaluatedSong) || !ranked.every(isEvaluatedSong)) {
+  const expectsPersistentKuraNext = closedHourC !== null;
+  if (
+    !active.every((song) =>
+      isEvaluatedSong(song, expectsPersistentKuraNext),
+    ) ||
+    !ranked.every((song) =>
+      isEvaluatedSong(song, expectsPersistentKuraNext),
+    )
+  ) {
     return false;
   }
   if (
@@ -534,7 +549,11 @@ export function assessPublicationGate(
   }
   if (
     result.ok !== true ||
-    !isUsablePublicationEvaluation(result.value, referenceHour)
+    !isUsablePublicationEvaluation(
+      result.value,
+      referenceHour,
+      input.input.value.closedHourC,
+    )
   ) {
     return { status: 'failed', reasons: [{ code: 'invalid-evaluation-result' }] };
   }

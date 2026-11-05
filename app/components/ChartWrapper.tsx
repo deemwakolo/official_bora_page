@@ -15,6 +15,7 @@ import { ingestAcceptedVoteEvent } from '@/app/actions';
 
 import { useMasterSound } from './components-themes/haptics/MasterSound';
 import { useMasterHaptics } from './components-themes/haptics/MasterHaptics';
+import type { SongMetadata } from './charts/TapOP';
 
 /**
  * Secure voting is the default now that the production RPC, serialization
@@ -30,18 +31,24 @@ interface Song {
   title: string;
   artist: string;
   cover_url: string;
-  momentum_score: number;
   yt_views: number;
   sp_plays: number;
-  xp?: number;
+  xp?: number | null;
+  upvotes?: number | null;
+  voteShare?: number | null;
+  metadata?: SongMetadata;
 }
 
 const supabase = createClient();
 
 export default function ChartWrapper({
   songs,
+  isSyntheticDemo,
+  dataNotice,
 }: {
   songs: Song[];
+  isSyntheticDemo: boolean;
+  dataNotice?: string;
 }) {
   const { playVotePing, playShushaPing } = useMasterSound();
   const { voteHaptic, shushaHaptic } = useMasterHaptics();
@@ -163,5 +170,30 @@ export default function ChartWrapper({
     }
   };
 
-  return <Chart songs={songs} onVote={handleVote} />;
+  return (
+    <>
+      {isSyntheticDemo && (
+        <p
+          className="mb-3 text-center text-[8px] font-bold uppercase tracking-[0.12em]"
+          style={{ color: 'var(--bora-text-muted)' }}
+        >
+          Synthetic starting data
+        </p>
+      )}
+      {dataNotice && (
+        <p
+          className="mx-auto mb-3 max-w-4xl border px-4 py-3 text-center text-[8px] font-bold uppercase leading-5 tracking-[0.12em]"
+          style={{
+            borderColor: 'var(--bora-border)',
+            color: 'var(--bora-text-muted)',
+            backgroundColor: 'var(--bora-surface)',
+          }}
+          role="status"
+        >
+          {dataNotice}
+        </p>
+      )}
+      <Chart songs={songs} onVote={handleVote} />
+    </>
+  );
 }

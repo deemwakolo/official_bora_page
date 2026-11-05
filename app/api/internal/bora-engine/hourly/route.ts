@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { HOUR_MS } from '@/engine/src/engine/constants';
-import { runBoraEngineHour } from '@/lib/bora-engine/hour-entry';
+import { runBoraEngineThroughHour } from '@/lib/bora-engine/hour-entry';
 
 export const runtime = 'nodejs';
 
@@ -38,6 +38,18 @@ export async function GET(request: Request) {
   if (!isAuthorized(request, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const cutoverAt = process.env.BORA_ENGINE_VOTE_CUTOVER_AT;
+  if (
+    !cutoverAt ||
+    !Number.isFinite(Date.parse(cutoverAt)) ||
+    !/Z$/i.test(cutoverAt) ||
+    Date.parse(cutoverAt) > Date.now()
+  ) {
+    return NextResponse.json(
+      { error: 'Vote reconciliation cutover is not configured.' },
+      { status: 503 },
+    );
+  }
 
   const closedHour = Math.floor(Date.now() / HOUR_MS) - 1;
   if (!Number.isSafeInteger(closedHour) || closedHour < 0) {
@@ -48,9 +60,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await runBoraEngineHour({
-      closedHour,
-      claimRequestId: requestIdForHour(secret, closedHour),
+    const result = await runBoraEngineThroughHour({
+      targetClosedHour: closedHour,
+      cutoverAt,
+      claimRequestIdForHour: (hour) => requestIdForHour(secret, hour),
     });
     const status =
       result.status === 'invalid-request'
@@ -60,6 +73,8 @@ export async function GET(request: Request) {
             result.status === 'state-hour-mismatch' ||
             result.status === 'already-claimed'
           ? 409
+          : result.status === 'catching-up'
+            ? 200
           : result.status === 'configuration-unavailable' ||
               result.status === 'bootstrap-required' ||
               result.status === 'persistence-failure'

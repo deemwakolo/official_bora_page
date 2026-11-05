@@ -243,9 +243,9 @@ describe('Q-I: cross-platform independence', () => {
 
   it('keeps every platform allocation at exactly its own weight', () => {
     const c = chart([songAt('A', 5, 900, 3), songAt('B', 700, 20, 400), songAt('C', 1, 1, 1)]);
-    expect(Math.abs(c.allocatedTotals.youtube - 30)).toBeLessThanOrEqual(EPSILON_SUM);
-    expect(Math.abs(c.allocatedTotals.spotify - 15)).toBeLessThanOrEqual(EPSILON_SUM);
-    expect(Math.abs(c.allocatedTotals.boomplay - 5)).toBeLessThanOrEqual(EPSILON_SUM);
+    expect(c.allocatedTotals.youtube).toBe(30);
+    expect(c.allocatedTotals.spotify).toBe(15);
+    expect(c.allocatedTotals.boomplay).toBe(5);
   });
 });
 

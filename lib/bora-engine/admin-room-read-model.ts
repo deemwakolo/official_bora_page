@@ -342,6 +342,10 @@ export interface EngineRoomSong {
   readonly title: string;
   readonly artist: string;
   readonly youtubeId: string | null;
+  readonly coverUrl: string;
+  readonly youtubeViews: number;
+  readonly spotifyPlays: number;
+  readonly momentumScore: number;
 }
 
 export interface EngineRoomPlatformMapping {
@@ -364,6 +368,202 @@ export type EngineRoomPlatformMappings =
 export type EngineRoomSongList =
   | { readonly status: 'ready'; readonly songs: readonly EngineRoomSong[] }
   | { readonly status: 'unavailable' };
+
+export type EngineRoomSongEngineInputs =
+  | {
+      readonly status: 'ready';
+      readonly referenceHour: number;
+      readonly lifecycle: 'ACTIVE' | 'VAULT';
+      readonly k: string;
+      readonly persistentKura: string;
+      readonly seedHours: readonly {
+        readonly hourIndex: number;
+        readonly c: string;
+        readonly source: string;
+        readonly lifecycle: string;
+      }[];
+    }
+  | { readonly status: 'unavailable' };
+
+export type EngineRoomCurrentHourInputs =
+  | {
+      readonly status: 'ready';
+      readonly referenceHour: number;
+      readonly songs: readonly {
+        readonly songId: string;
+        readonly lifecycle: 'ACTIVE' | 'VAULT';
+        readonly seedC: number | null;
+        readonly seedProvenance: string | null;
+        readonly upvotes: number;
+        readonly downvotes: number;
+      }[];
+    }
+  | { readonly status: 'unavailable' };
+
+export async function getEngineRoomCurrentHourInputs(): Promise<EngineRoomCurrentHourInputs> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return { status: 'unavailable' };
+
+  const client = createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  try {
+    const { data: head, error: headError } = await client
+      .from('bora_engine_hourly_state_head')
+      .select('reference_hour')
+      .eq('singleton', true)
+      .maybeSingle();
+    if (headError || !head || typeof head.reference_hour !== 'number') {
+      throw headError ?? new Error('Engine hour is unavailable.');
+    }
+
+    const [stateResult, seedResult, coverageResult, voteResult] =
+      await Promise.all([
+        client
+          .from('bora_engine_song_state')
+          .select('song_id,lifecycle')
+          .order('song_id', { ascending: true })
+          .limit(500),
+        client
+          .from('bora_engine_seed_hours')
+          .select('song_id,c')
+          .eq('hour_index', head.reference_hour)
+          .limit(500),
+        client
+          .from('bora_engine_hourly_input_coverage')
+          .select('song_id,source_identity,currentness')
+          .eq('input_type', 'SEED')
+          .eq('hour_index', head.reference_hour)
+          .limit(500),
+        client
+          .from('bora_engine_vote_events')
+          .select('song_id,vote_type')
+          .eq('hour_index', head.reference_hour)
+          .limit(10_000),
+      ]);
+    for (const result of [stateResult, seedResult, coverageResult, voteResult]) {
+      if (result.error) throw result.error;
+    }
+    if (!stateResult.data || !seedResult.data || !coverageResult.data || !voteResult.data) {
+      throw new Error('Engine input query returned no result.');
+    }
+
+    const seeds = new Map(
+      seedResult.data.map((seed) => [
+        seed.song_id,
+        Number.isFinite(Number(seed.c)) && Number(seed.c) >= 0 && Number(seed.c) <= 2
+          ? Number(seed.c)
+          : null,
+      ]),
+    );
+    const provenance = new Map(
+      coverageResult.data.map((coverage) => [
+        coverage.song_id,
+        coverage.currentness === 'current' ? coverage.source_identity : null,
+      ]),
+    );
+    const voteCounts = new Map<string, { upvotes: number; downvotes: number }>();
+    for (const vote of voteResult.data) {
+      const current = voteCounts.get(vote.song_id) ?? { upvotes: 0, downvotes: 0 };
+      if (vote.vote_type === 'up') current.upvotes += 1;
+      if (vote.vote_type === 'down') current.downvotes += 1;
+      voteCounts.set(vote.song_id, current);
+    }
+
+    return {
+      status: 'ready',
+      referenceHour: head.reference_hour,
+      songs: stateResult.data.flatMap((song) => {
+        if (song.lifecycle !== 'ACTIVE' && song.lifecycle !== 'VAULT') return [];
+        const votes = voteCounts.get(song.song_id);
+        return [{
+          songId: song.song_id,
+          lifecycle: song.lifecycle,
+          seedC: seeds.get(song.song_id) ?? null,
+          seedProvenance: provenance.get(song.song_id) ?? null,
+          upvotes: votes?.upvotes ?? 0,
+          downvotes: votes?.downvotes ?? 0,
+        }];
+      }),
+    };
+  } catch (error) {
+    console.error(
+      '[bora-engine-admin-room] current-hour inputs failed to load:',
+      error instanceof Error ? error.message : 'unknown error',
+    );
+    return { status: 'unavailable' };
+  }
+}
+
+export async function getEngineRoomSongEngineInputs(
+  songId: string,
+): Promise<EngineRoomSongEngineInputs> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.BORA_ENGINE_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return { status: 'unavailable' };
+
+  const client = createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  try {
+    const [stateResult, seedResult, headResult] = await Promise.all([
+      client
+        .from('bora_engine_song_state')
+        .select('lifecycle,k,persistent_kura')
+        .eq('song_id', songId)
+        .maybeSingle(),
+      client
+        .from('bora_engine_seed_hours')
+        .select('hour_index,c,source,lifecycle')
+        .eq('song_id', songId)
+        .order('hour_index', { ascending: false })
+        .limit(72),
+      client
+        .from('bora_engine_hourly_state_head')
+        .select('reference_hour')
+        .eq('singleton', true)
+        .maybeSingle(),
+    ]);
+
+    if (
+      stateResult.error ||
+      seedResult.error ||
+      headResult.error ||
+      !stateResult.data ||
+      (stateResult.data.lifecycle !== 'ACTIVE' &&
+        stateResult.data.lifecycle !== 'VAULT') ||
+      !headResult.data ||
+      typeof headResult.data.reference_hour !== 'number'
+    ) {
+      throw stateResult.error ?? seedResult.error ?? headResult.error ?? new Error('Invalid Engine input snapshot.');
+    }
+
+    return {
+      status: 'ready',
+      referenceHour: headResult.data.reference_hour,
+      lifecycle: stateResult.data.lifecycle,
+      k: String(stateResult.data.k),
+      persistentKura: String(stateResult.data.persistent_kura),
+      seedHours: (seedResult.data ?? []).map((seed) => ({
+        hourIndex: seed.hour_index,
+        c: String(seed.c),
+        source: seed.source,
+        lifecycle: seed.lifecycle,
+      })),
+    };
+  } catch (error) {
+    console.error(
+      '[bora-engine-admin-room] song Engine inputs failed to load:',
+      error instanceof Error ? error.message : 'unknown error',
+    );
+    return { status: 'unavailable' };
+  }
+}
 
 export async function getEngineRoomPlatformMappings(): Promise<EngineRoomPlatformMappings> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -423,7 +623,9 @@ export async function getEngineRoomSongList(): Promise<EngineRoomSongList> {
   });
   const { data, error } = await client
     .from('songs')
-    .select('id, slot_number, title, artist, youtube_id')
+    .select(
+      'id, slot_number, title, artist, youtube_id, cover_url, yt_views, sp_plays, momentum_score',
+    )
     .order('title', { ascending: true })
     .limit(200);
   if (error) {
@@ -442,6 +644,10 @@ export async function getEngineRoomSongList(): Promise<EngineRoomSongList> {
       title: song.title ?? '',
       artist: song.artist ?? '',
       youtubeId: song.youtube_id,
+      coverUrl: song.cover_url ?? '',
+      youtubeViews: Number(song.yt_views ?? 0),
+      spotifyPlays: Number(song.sp_plays ?? 0),
+      momentumScore: Number(song.momentum_score ?? 0),
     })),
   };
 }

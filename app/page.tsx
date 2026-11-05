@@ -13,8 +13,11 @@ import PublicShell from './components/workflow/PublicShell';
 import { getRegistry } from '../lib/admin-actions';
 
 import { getCurrentBoraEnginePublication } from '../lib/bora-engine/publication-reader';
+import { getLiveVoteEngineEvaluation } from '../lib/bora-engine/live-vote-evaluation';
 
 import { getTrending } from '../lib/trending';
+import { getLatestMomentCharts } from '../lib/moment-charts-actions';
+import type { SongMetadata } from './components/charts/TapOP';
 
 import { resolveBoraUIConfig } from '../lib/ui-config';
 
@@ -63,23 +66,96 @@ export default async function Home() {
 
   // CHUKUA DATA YA NYIMBO KUTOKA KWENYE REGISTRY
 
-  const [registryData, enginePublication] = await Promise.all([
+  const [
+    registryData,
+    enginePublication,
+    liveVoteEvaluation,
+    momentCharts,
+  ] = await Promise.all([
     getRegistry(),
     getCurrentBoraEnginePublication(),
+    getLiveVoteEngineEvaluation(),
+    getLatestMomentCharts(),
   ]);
 
-  // PANGA NYIMBO KWA MOMENTUM SCORE NA CHUKUA TOP 15
+  const registrySongsById = new Map<string, { upvotes?: unknown }>(
+    (registryData ?? []).map((song: { id: string; upvotes?: unknown }) => [
+      song.id,
+      song,
+    ]),
+  );
+  const momentMetadataBySongId = new Map<string, SongMetadata>();
+  for (const song of [
+    ...(momentCharts.monthly?.songs ?? []),
+    ...(momentCharts.weekly?.songs ?? []),
+  ]) {
+    if (song.songId) momentMetadataBySongId.set(song.songId, song.metadata);
+  }
+
+  const readTotalUpvotes = (value: unknown): number | null => {
+    const count =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string' && value.trim()
+          ? Number(value)
+          : NaN;
+    return Number.isSafeInteger(count) && count >= 0 ? count : null;
+  };
+  const totalRecordedUpvotes = (registryData ?? []).reduce(
+    (total: number, song: { upvotes?: unknown }) =>
+      total + (readTotalUpvotes(song.upvotes) ?? 0),
+    0,
+  );
+
+  const buildSongMetadata = (
+    songId: string,
+    title: string,
+    artist: string,
+    artwork: string,
+  ): SongMetadata => {
+    const momentMetadata = momentMetadataBySongId.get(songId);
+    const [titleFromRegistry, ...artistFromTitle] = title.split(' - ');
+    return {
+      title: momentMetadata?.title || titleFromRegistry || title,
+      artist:
+        momentMetadata?.artist ||
+        (artistFromTitle.length > 0
+          ? artistFromTitle.join(' - ')
+          : artist),
+      feature: momentMetadata?.feature || '-',
+      producer: momentMetadata?.producer || '-',
+      releaseDate: momentMetadata?.releaseDate || '',
+      genre: momentMetadata?.genre || '',
+      artwork: artwork || momentMetadata?.artwork || '',
+      youtube: momentMetadata?.youtube || '',
+      spotify: momentMetadata?.spotify || '',
+      boomplay: momentMetadata?.boomplay || '',
+    };
+  };
+
+  // Keep real registry songs visible until an Engine publication exists.
 
   const registryRankedSongs = (registryData || [])
     .map((item: any) => ({
       ...item,
       rank: item.slot_number ?? 0,
-      momentum_score: item.momentum_score ?? 100,
+      xp: undefined,
+      upvotes: readTotalUpvotes(item.upvotes),
+      voteShare:
+        totalRecordedUpvotes > 0
+          ? (readTotalUpvotes(item.upvotes) ?? 0) / totalRecordedUpvotes
+          : null,
+      metadata: buildSongMetadata(
+        String(item.id),
+        item.title ?? '',
+        item.artist ?? '',
+        item.cover_url ?? '',
+      ),
     }))
     .sort(
       (a, b) =>
-        Number(b.momentum_score) -
-        Number(a.momentum_score)
+        (b.upvotes ?? 0) - (a.upvotes ?? 0) ||
+        Number(a.rank) - Number(b.rank),
     )
     .slice(0, 15);
 
@@ -89,36 +165,113 @@ export default async function Home() {
           .reduce<
             {
               id: string;
-              slot_number: number;
+              engineRank: number;
               title: string;
               artist: string;
               cover_url: string;
               youtube_id: string | undefined;
-              momentum_score: number;
               xp: number;
+              upvotes: number | null;
+              voteShare: number | null;
+              metadata: SongMetadata;
             }[]
           >((songs, entry) => {
             if (
               entry.lifecycle === 'ACTIVE' &&
               entry.rank !== null &&
-              entry.xp !== null &&
-              entry.boraScore !== null
+              entry.xp !== null
             ) {
               songs.push({
                 id: entry.songId,
-                slot_number: entry.rank,
+                engineRank: entry.rank,
                 title: entry.title,
                 artist: entry.artist,
                 cover_url: entry.coverUrl,
                 youtube_id: entry.youtubeId ?? undefined,
-                momentum_score: entry.boraScore,
                 xp: entry.xp,
+                upvotes: readTotalUpvotes(
+                  registrySongsById.get(entry.songId)?.upvotes,
+                ),
+                voteShare: null,
+                metadata: buildSongMetadata(
+                  entry.songId,
+                  entry.title,
+                  entry.artist,
+                  entry.coverUrl,
+                ),
               });
             }
             return songs;
           }, [])
+          .sort(
+            (left, right) =>
+              right.xp - left.xp ||
+              left.engineRank - right.engineRank ||
+              left.id.localeCompare(right.id),
+          )
+          .map(({ engineRank: _engineRank, ...song }, index) => ({
+            ...song,
+            slot_number: index + 1,
+          }))
       : null;
-  const rankedSongs = engineRankedSongs ?? registryRankedSongs;
+  const liveVoteSongsById = new Map(
+    liveVoteEvaluation.status === 'ready'
+      ? liveVoteEvaluation.songs.map((song) => [song.songId, song])
+      : [],
+  );
+  const liveVoteRankedSongs =
+    liveVoteEvaluation.status === 'ready'
+      ? (registryData ?? [])
+          .map((item: any) => {
+            const songId = String(item.id);
+            const liveVoteSong = liveVoteSongsById.get(songId);
+            return {
+              ...item,
+              xp:
+                liveVoteSong?.hasAcceptedVotes === true
+                  ? liveVoteSong.xp
+                  : null,
+              upvotes: readTotalUpvotes(item.upvotes),
+              voteShare: null,
+              metadata: buildSongMetadata(
+                songId,
+                item.title ?? '',
+                item.artist ?? '',
+                item.cover_url ?? '',
+              ),
+            };
+          })
+          .sort(
+            (
+              left: { xp: number | null; slot_number?: number },
+              right: { xp: number | null; slot_number?: number },
+            ) =>
+              (right.xp ?? -1) - (left.xp ?? -1) ||
+              Number(left.slot_number ?? 0) -
+                Number(right.slot_number ?? 0),
+          )
+          .slice(0, 15)
+      : null;
+  const hasRealEnginePublication =
+    enginePublication.status === 'published' &&
+    !enginePublication.publication.isSyntheticDemo;
+  const rankedSongs = hasRealEnginePublication
+    ? engineRankedSongs ?? registryRankedSongs
+    : liveVoteRankedSongs ?? registryRankedSongs;
+  const liveVoteChartNotice =
+    !hasRealEnginePublication && liveVoteEvaluation.status === 'ready'
+      ? `Provisional live Engine XP from ${liveVoteEvaluation.acceptedVoteCount} captured accepted votes across ${liveVoteEvaluation.songsWithVotes} songs in the current 72-hour window. Ordered by XP, not final BORA rank. Synthetic seeds and platform ranks are excluded; unobserved activity is not inferred.`
+      : undefined;
+
+  if (
+    liveVoteEvaluation.status === 'unavailable' ||
+    liveVoteEvaluation.status === 'not-ready'
+  ) {
+    console.error(
+      '[bora-engine-live-vote-evaluation] chart fallback unavailable:',
+      liveVoteEvaluation.reason,
+    );
+  }
 
   if (enginePublication.status === 'unavailable') {
     console.error(
@@ -128,10 +281,6 @@ export default async function Home() {
   }
 
   // LOG YA KUJUA ENGINE IMEPOKEA ENTRIES NGAPI
-
-  console.log(
-    `BORA ENGINE: System Active. Processing ${rankedSongs.length} entries.`
-  );
 
   const trending = await getTrending();
 
@@ -197,7 +346,21 @@ export default async function Home() {
           navigation={navigation}
           top10={
             <section className="w-full pt-8 md:pt-12">
-              <ChartWrapper songs={rankedSongs} />
+              {!hasRealEnginePublication && (
+                <p
+                  role="status"
+                  className="mx-auto mb-4 max-w-3xl px-4 text-center text-[9px] font-bold uppercase tracking-[0.14em]"
+                  style={{ color: 'var(--bora-text-muted)' }}
+                >
+                  Live vote baseline · ordered by recorded up-votes · vote
+                  share is each song&apos;s portion of all recorded up-votes
+                </p>
+              )}
+              <ChartWrapper
+                songs={rankedSongs}
+                isSyntheticDemo={false}
+                dataNotice={liveVoteChartNotice}
+              />
             </section>
           }
           trends={

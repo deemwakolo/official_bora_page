@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getDailyPlatformRankSnapshot,
+  getSyntheticDailyPlatformRankDates,
   submitDailyPlatformRanks,
 } from '@/lib/bora-engine/manual-platform-actions';
 import type {
@@ -13,6 +14,7 @@ import type {
   DailyPlatformRankActionResult,
   DailyPlatformRankSnapshotResult,
   ManualPlatform,
+  SyntheticDailyPlatformRankDatesResult,
 } from '@/lib/bora-engine/manual-platform-types';
 
 const PLATFORMS: readonly {
@@ -41,8 +43,6 @@ function resultMessage(result: DailyPlatformRankActionResult): string {
       return 'Every song needs a positive integer rank and evidence reference for all platforms.';
     case 'idempotency-conflict':
       return 'This retry identifier was already used with different rank data.';
-    case 'outside-entry-window':
-      return 'Daily rank entry is open from 20:00 until midnight EAT.';
     case 'invalid-or-incomplete-ranks':
       return 'Ranks must cover every active song and platform, with unique positions per platform.';
     case 'mapping-required':
@@ -50,7 +50,7 @@ function resultMessage(result: DailyPlatformRankActionResult): string {
     case 'correction-required':
       return 'The daily snapshot changed. Reload it and explicitly select correction mode.';
     case 'correction-not-allowed':
-      return 'A correction was supplied, but there is no existing snapshot to correct.';
+      return 'This historical date is not an eligible synthetic snapshot to replace.';
     case 'rank-slot-conflict':
       return 'A different platform observation already uses this daily scoring slot.';
     case 'no-songs':
@@ -69,6 +69,9 @@ export default function DailyPlatformRankEntry({
 }) {
   const [snapshot, setSnapshot] =
     useState<DailyPlatformRankSnapshotResult | null>(null);
+  const [syntheticDates, setSyntheticDates] =
+    useState<SyntheticDailyPlatformRankDatesResult | null>(null);
+  const [selectedDate, setSelectedDate] = useState('');
   const [ranks, setRanks] = useState<Record<string, string>>({});
   const [evidenceReferences, setEvidenceReferences] = useState<
     Record<ManualPlatform, string>
@@ -79,12 +82,16 @@ export default function DailyPlatformRankEntry({
   const [message, setMessage] = useState<string | null>(null);
   const requestId = useRef<string | null>(null);
 
-  async function loadSnapshot() {
+  const loadSnapshot = useCallback(async (effectiveDate = '') => {
     setLoading(true);
+    requestId.current = null;
     try {
-      const current = await getDailyPlatformRankSnapshot();
+      const current = await getDailyPlatformRankSnapshot(
+        effectiveDate || undefined,
+      );
       setSnapshot(current);
       setCorrecting(false);
+      setEvidenceReferences({ youtube: '', spotify: '', boomplay: '' });
       if (current.status === 'ready') {
         setRanks(
           Object.fromEntries(
@@ -106,11 +113,24 @@ export default function DailyPlatformRankEntry({
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const loadSyntheticDates = useCallback(async () => {
+    try {
+      setSyntheticDates(await getSyntheticDailyPlatformRankDates());
+    } catch (error) {
+      console.error(
+        '[bora-engine-daily-platform-ranks] synthetic date refresh failed:',
+        error instanceof Error ? error.message : 'unknown',
+      );
+      setSyntheticDates({ status: 'unavailable' });
+    }
+  }, []);
 
   useEffect(() => {
-    void loadSnapshot();
-  }, []);
+    void loadSnapshot('');
+    void loadSyntheticDates();
+  }, [loadSnapshot, loadSyntheticDates]);
 
   const mappedSongPlatforms = new Set(
     mappingState.status === 'ready'
@@ -135,13 +155,16 @@ export default function DailyPlatformRankEntry({
     });
   const correctionIsExplicit =
     snapshot?.status !== 'ready' || correcting;
+  const historicalSnapshotIsEligible =
+    !selectedDate ||
+    (snapshot?.status === 'ready' && snapshot.isSynthetic);
   const canSubmit =
     !loading &&
     !pending &&
     allMappingsPresent &&
     completeRanks &&
     correctionIsExplicit &&
-    snapshot?.status !== 'closed-window' &&
+    historicalSnapshotIsEligible &&
     snapshot?.status !== 'unauthorized' &&
     snapshot?.status !== 'unavailable';
 
@@ -154,6 +177,7 @@ export default function DailyPlatformRankEntry({
     try {
       const result = await submitDailyPlatformRanks({
         requestId: requestId.current,
+        ...(selectedDate ? { effectiveDate: selectedDate } : {}),
         ...(snapshot?.status === 'ready'
           ? { supersedesSnapshotId: snapshot.snapshotId }
           : {}),
@@ -169,7 +193,12 @@ export default function DailyPlatformRankEntry({
       setMessage(resultMessage(result));
       if (result.status === 'recorded' || result.status === 'already-recorded') {
         requestId.current = null;
-        await loadSnapshot();
+        if (selectedDate) {
+          setSelectedDate('');
+          await Promise.all([loadSnapshot(''), loadSyntheticDates()]);
+        } else {
+          await loadSnapshot('');
+        }
       }
     } catch (error) {
       console.error(
@@ -183,17 +212,19 @@ export default function DailyPlatformRankEntry({
   }
 
   const statusMessage =
-    snapshot?.status === 'closed-window'
-      ? 'Entry opens daily at 20:00 EAT and closes at midnight.'
-      : snapshot?.status === 'none'
-        ? 'No snapshot exists for the upcoming EAT day.'
+    snapshot?.status === 'none'
+      ? selectedDate
+        ? 'No snapshot exists for the selected EAT date.'
+        : 'No snapshot exists for the next EAT date.'
+      : snapshot?.status === 'not-correctable'
+        ? 'That date is no longer a synthetic snapshot available for replacement. Reload the dates.'
         : snapshot?.status === 'ready'
-          ? `Current snapshot: ${snapshot.effectiveDate}, revision ${snapshot.revision}.`
+          ? `${snapshot.isSynthetic ? 'Synthetic snapshot to replace' : 'Current snapshot'}: ${snapshot.effectiveDate}, revision ${snapshot.revision}.`
           : snapshot?.status === 'unavailable'
             ? 'Daily rank history is unavailable.'
             : snapshot?.status === 'unauthorized'
               ? 'Administrator authorization is required.'
-              : 'Loading the current EAT-day snapshot…';
+              : 'Loading the daily-rank snapshot…';
 
   return (
     <section
@@ -216,7 +247,8 @@ export default function DailyPlatformRankEntry({
         >
           Enter every song’s integer position for all three platforms. Position 1 is best.
           Each rank contributes inverse-rank activity to the latest seven EAT-day window.
-          This is separate from hourly vote and seed processing.
+          This is separate from hourly vote and seed processing. Entry is available at any time.
+          Replace synthetic history only with source-verified ranks and evidence references.
         </p>
         <p
           className="mt-2 text-[7px] font-bold"
@@ -228,6 +260,53 @@ export default function DailyPlatformRankEntry({
       </header>
 
       <form onSubmit={submit} className="space-y-4 p-4 sm:p-5">
+        <label className="block text-[7px] font-bold uppercase tracking-[0.08em]">
+          Snapshot date
+          <select
+            value={selectedDate}
+            onChange={(event) => {
+              const nextDate = event.target.value;
+              setSelectedDate(nextDate);
+              setMessage(null);
+              void loadSnapshot(nextDate);
+            }}
+            disabled={loading || pending}
+            className="mt-1 w-full border bg-transparent px-2 py-2 text-[8px] font-normal normal-case outline-none focus:border-[color:var(--bora-gold)]"
+            style={{
+              borderColor: 'var(--bora-border)',
+              color: 'var(--bora-text)',
+            }}
+          >
+            <option value="">Next EAT date (new ranks)</option>
+            {syntheticDates?.status === 'ready' &&
+              syntheticDates.dates.map((date) => (
+                <option key={date} value={date}>
+                  Replace synthetic history — {date}
+                </option>
+              ))}
+          </select>
+        </label>
+
+        {selectedDate && snapshot?.status === 'ready' && snapshot.isSynthetic && (
+          <p
+            className="border p-3 text-[8px] leading-5"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--bora-gold) 55%, transparent)',
+              color: 'var(--bora-gold)',
+            }}
+            role="alert"
+          >
+            The saved positions for this date are synthetic placeholders. Submit only verified
+            positions from the selected date; the original synthetic revision remains in audit
+            history.
+          </p>
+        )}
+        {syntheticDates?.status === 'unavailable' && (
+          <p className="text-[8px] text-red-400" role="alert">
+            Synthetic history dates could not be loaded. Reload before attempting a replacement.
+          </p>
+        )}
+
         <div className="grid gap-3 md:grid-cols-3">
           {PLATFORMS.map(({ value: platform, label }) => (
             <label
@@ -331,11 +410,17 @@ export default function DailyPlatformRankEntry({
               color: 'var(--bora-gold)',
             }}
           >
-            {pending ? 'Saving ranks…' : snapshot?.status === 'ready' ? 'Save correction' : 'Save daily ranks'}
+            {pending
+              ? 'Saving ranks…'
+              : selectedDate
+                ? 'Replace synthetic ranks'
+                : snapshot?.status === 'ready'
+                  ? 'Save correction'
+                  : 'Save daily ranks'}
           </button>
           <button
             type="button"
-            onClick={() => void loadSnapshot()}
+            onClick={() => void loadSnapshot(selectedDate)}
             disabled={loading || pending}
             className="px-2 py-2 text-[8px] underline disabled:opacity-40"
           >

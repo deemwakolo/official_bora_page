@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
@@ -13,26 +14,27 @@ import {
   Gauge,
   LockKeyhole,
   Radio,
-  Search,
   ShieldAlert,
-  Upload,
 } from 'lucide-react';
 import type {
+  EngineRoomCurrentHourInputs,
   EngineRoomPlatformMappings,
   EngineRoomOperationsSnapshot,
   EngineRoomSongList,
 } from '@/lib/bora-engine/admin-room-read-model';
-import type { ManualPlatform } from '@/lib/bora-engine/manual-platform-types';
-import ManualPlatformEntry from './ManualPlatformEntry';
-import DailyPlatformRankEntry from './DailyPlatformRankEntry';
 import DailyRankPublicationControl from './DailyRankPublicationControl';
 import type { PlatformSourceAssessment } from '@/lib/bora-engine/source-readiness';
+import EngineRoomNavbar, {
+  type EngineRoomSection,
+} from './EngineRoomNavbar';
+import EngineRoomHeader from './EngineRoomHeader';
+import EngineRoomWorkspace from './EngineRoomWorkspace';
 import {
   runSecureVoteReconciliation,
   type RunSecureVoteReconciliationResult,
 } from '@/lib/bora-engine/vote-event-reconciliation-action';
 
-type RoomSection = 'data-entry' | 'operations';
+type RoomSection = EngineRoomSection;
 type OperationsSection =
   | 'overview'
   | 'coverage'
@@ -51,6 +53,7 @@ interface EngineRoomGUIProps {
   readonly songList: EngineRoomSongList | null;
   readonly platformMappings: EngineRoomPlatformMappings;
   readonly sourceAssessments: readonly PlatformSourceAssessment[];
+  readonly currentHourInputs: EngineRoomCurrentHourInputs | null;
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -228,217 +231,6 @@ function BlockedNotice({
           {children}
         </div>
       </div>
-    </div>
-  );
-}
-
-function DataEntryView({
-  songList,
-  platformMappings,
-  sourceAssessments,
-}: {
-  readonly songList: EngineRoomSongList | null;
-  readonly platformMappings: EngineRoomPlatformMappings;
-  readonly sourceAssessments: readonly PlatformSourceAssessment[];
-}) {
-  const [query, setQuery] = useState('');
-  const songs = useMemo(
-    () => (songList?.status === 'ready' ? songList.songs : []),
-    [songList],
-  );
-  const mappings = useMemo(
-    () =>
-      platformMappings.status === 'ready'
-        ? platformMappings.mappings
-        : [],
-    [platformMappings],
-  );
-
-  const filteredSongs = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return songs;
-    return songs.filter((song) =>
-      `${song.title} ${song.artist} ${song.slotNumber}`
-        .toLowerCase()
-        .includes(normalized),
-    );
-  }, [query, songs]);
-
-  return (
-    <div className="space-y-4">
-      <BlockedNotice title="Manual evidence entry is enabled">
-        <p className="mt-2">
-          Baselines are distinct from hourly observations. Cumulative totals,
-          including YouTube view counts, do not satisfy hourly coverage. Hourly
-          reports are accepted only for an explicitly authorized exact-hour
-          source; coverage and publication gates still require real evidence.
-        </p>
-      </BlockedNotice>
-
-      <Panel
-        title="Platform source contracts"
-        description="Each platform must be approved independently before evidence can be submitted."
-        icon={Radio}
-      >
-        <div className="grid gap-3 md:grid-cols-3">
-          {sourceAssessments.map((platform) => (
-            <div
-              key={platform.platform}
-              className="border p-3"
-              style={{ borderColor: 'var(--bora-border)' }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[8px] font-black uppercase tracking-[0.12em]">
-                  {PLATFORM_LABELS[platform.platform] ?? platform.platform}
-                </p>
-                <StatusPill value={platform.status} />
-              </div>
-              <p
-                className="mt-3 text-[7px] leading-5"
-                style={{ color: 'var(--bora-text-muted)' }}
-              >
-                {displayStatus(platform.reason)}
-              </p>
-              <p
-                className="mt-2 text-[6px]"
-                style={{ color: 'var(--bora-text-subtle)' }}
-              >
-                {platform.unit} · {platform.sourceIdentity ?? 'No source identity'}
-              </p>
-            </div>
-          ))}
-        </div>
-      </Panel>
-
-      {songList?.status === 'ready' && (
-        <Panel
-          title="Manual data entry"
-          description="Manage platform identities and supporting measurements. Hourly Engine rollover now uses votes and seed history only."
-          icon={Upload}
-        >
-          <ManualPlatformEntry
-            songs={songList.songs}
-            mappingState={platformMappings}
-          />
-        </Panel>
-      )}
-
-      {songList?.status === 'ready' && (
-        <DailyPlatformRankEntry
-          songs={songList.songs}
-          mappingState={platformMappings}
-        />
-      )}
-
-      <Panel
-        title="Song registry and current YouTube identity"
-        description="Existing songs stay intact; saved source identities are shown separately by platform."
-        icon={Database}
-      >
-        {songList?.status === 'unavailable' || !songList ? (
-          <p
-            className="text-[8px]"
-            style={{ color: 'var(--bora-red)' }}
-            role="alert"
-          >
-            Song registry could not be loaded. No mapping data is shown.
-          </p>
-        ) : (
-          <>
-            <label className="relative block max-w-md">
-              <Search
-                size={13}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'var(--bora-text-subtle)' }}
-                aria-hidden
-              />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Filter songs by title, artist or slot"
-                className="w-full border bg-transparent py-2 pl-9 pr-3 text-[8px] outline-none focus:border-[color:var(--bora-gold)]"
-                style={{
-                  borderColor: 'var(--bora-border)',
-                  color: 'var(--bora-text)',
-                }}
-              />
-            </label>
-            <p
-              className="mt-3 text-[7px]"
-              style={{ color: 'var(--bora-text-subtle)' }}
-            >
-              {songs.length} registry songs loaded · {filteredSongs.length} shown
-            </p>
-            <div className="mt-3 overflow-x-auto border" style={{ borderColor: 'var(--bora-border)' }}>
-              <table className="w-full min-w-[640px] border-collapse text-left">
-                <thead>
-                  <tr
-                    className="text-[7px] uppercase tracking-[0.12em]"
-                    style={{
-                      color: 'var(--bora-text-subtle)',
-                      backgroundColor: 'var(--bora-background-deep)',
-                    }}
-                  >
-                    <th className="px-3 py-3 font-black">Song</th>
-                    <th className="px-3 py-3 font-black">YouTube legacy ID</th>
-                    <th className="px-3 py-3 font-black">Spotify</th>
-                    <th className="px-3 py-3 font-black">Boomplay</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSongs.map((song) => {
-                    const mappingFor = (platform: ManualPlatform) =>
-                      mappings.find(
-                        (mapping) =>
-                          mapping.songId === song.id &&
-                          mapping.platform === platform,
-                      )?.platformIdentity;
-                    return (
-                      <tr
-                        key={song.id}
-                        className="border-t"
-                        style={{ borderColor: 'var(--bora-border)' }}
-                      >
-                        <td className="px-3 py-3">
-                          <p className="text-[8px] font-bold">
-                            {song.title || 'Untitled entry'}
-                          </p>
-                          <p
-                            className="mt-1 text-[7px]"
-                            style={{ color: 'var(--bora-text-muted)' }}
-                          >
-                            {song.artist || 'Unknown artist'} · slot {song.slotNumber}
-                          </p>
-                        </td>
-                        <td className="px-3 py-3 font-mono text-[7px]">
-                          {mappingFor('youtube') ?? song.youtubeId ?? 'Not mapped'}
-                        </td>
-                        <td className="px-3 py-3 font-mono text-[7px]">
-                          {mappingFor('spotify') ?? 'Not mapped'}
-                        </td>
-                        <td className="px-3 py-3 font-mono text-[7px]">
-                          {mappingFor('boomplay') ?? 'Not mapped'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredSongs.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-3 py-6 text-center text-[8px]"
-                        style={{ color: 'var(--bora-text-muted)' }}
-                      >
-                        No songs match this filter.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </Panel>
     </div>
   );
 }
@@ -1097,9 +889,15 @@ export default function EngineRoomGUI({
   songList,
   platformMappings,
   sourceAssessments,
+  currentHourInputs,
 }: EngineRoomGUIProps) {
-  const [roomSection, setRoomSection] = useState<RoomSection>(
-    access.isAdministrator && !access.isOperator ? 'data-entry' : 'operations',
+  const searchParams = useSearchParams();
+  const [roomSection, setRoomSection] = useState<RoomSection>(() =>
+    !access.isAdministrator
+      ? 'operations'
+      : searchParams.get('category') === 'premium'
+        ? 'premium'
+        : 'songs',
   );
 
   if (!access.isAdministrator && !access.isOperator) {
@@ -1140,109 +938,96 @@ export default function EngineRoomGUI({
 
   return (
     <main
-      className="relative min-h-screen w-full overflow-hidden"
+      className="relative min-h-screen w-full overflow-hidden pb-24"
       style={{
         backgroundColor: 'var(--bora-background)',
         color: 'var(--bora-text)',
       }}
     >
-      <div className="pointer-events-none fixed inset-0">
+      <EngineRoomHeader />
+      <div className="pointer-events-none fixed inset-0 z-0">
         <div
-          className="absolute left-1/2 top-[-20%] h-[600px] w-[900px] -translate-x-1/2 rounded-full blur-[150px]"
-          style={{ backgroundColor: 'var(--bora-gold-glow)' }}
+          className="absolute left-1/2 top-0 h-[460px] w-[780px] -translate-x-1/2 rounded-full blur-[150px]"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--bora-gold-glow) 45%, transparent)' }}
         />
       </div>
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-10 pt-16 md:px-8">
-        <header
-          className="flex flex-col gap-4 border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
-          style={{
-            borderColor: 'var(--bora-border)',
-            backgroundColor: 'var(--bora-background-deep)',
-          }}
-        >
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-10 pt-8 md:px-8">
+        <header className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <p
-              className="text-[7px] font-black uppercase tracking-[0.22em]"
-              style={{ color: 'var(--bora-gold)' }}
-            >
-              BORA Admin · Engine Room
+            <p className="text-[7px] font-black uppercase tracking-[0.22em]" style={{ color: 'var(--bora-gold)' }}>
+              BORA Engine Room
             </p>
-            <h1 className="mt-2 font-cinzel text-xl font-black uppercase tracking-[0.12em]">
-              Evidence & operations
+            <h1 className="mt-2 font-cinzel text-2xl font-black uppercase tracking-[0.12em]">
+              {roomSection === 'songs'
+                ? 'Song studio'
+                : roomSection === 'premium'
+                  ? 'Premium performance'
+                  : 'Engine operations'}
             </h1>
-            <p
-              className="mt-2 text-[7px] leading-5"
-              style={{ color: 'var(--bora-text-muted)' }}
-            >
-              Manual acquisition · Engine-managed validation, coverage and publication
-            </p>
           </div>
           <Link
             href="/admin/room-selector"
-            className="inline-flex shrink-0 items-center gap-2 text-[8px] font-black uppercase tracking-[0.12em]"
+            className="shrink-0 text-[7px] font-black uppercase tracking-[0.12em]"
             style={{ color: 'var(--bora-text-muted)' }}
           >
-            <ArrowLeft size={12} aria-hidden />
             Room selector
           </Link>
         </header>
-
-        <div
-          className="mt-4 grid grid-cols-2 border sm:max-w-xl"
-          style={{
-            borderColor: 'var(--bora-border)',
-            backgroundColor: 'var(--bora-background-deep)',
-          }}
-          role="tablist"
-          aria-label="Engine room areas"
-        >
-          {access.isAdministrator && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={roomSection === 'data-entry'}
-              onClick={() => setRoomSection('data-entry')}
-              className="flex items-center justify-center gap-2 border-r px-3 py-4 text-[7px] font-black uppercase tracking-[0.12em]"
-              style={{
-                borderColor: 'var(--bora-border)',
-                color:
-                  roomSection === 'data-entry'
-                    ? 'var(--bora-gold)'
-                    : 'var(--bora-text-muted)',
-              }}
-            >
-              <Upload size={13} aria-hidden />
-              Data Entry
-            </button>
-          )}
-          {access.isOperator && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={roomSection === 'operations'}
-              onClick={() => setRoomSection('operations')}
-              className="flex items-center justify-center gap-2 px-3 py-4 text-[7px] font-black uppercase tracking-[0.12em]"
-              style={{
-                color:
-                  roomSection === 'operations'
-                    ? 'var(--bora-gold)'
-                    : 'var(--bora-text-muted)',
-              }}
-            >
-              <Activity size={13} aria-hidden />
-              Engine Operations
-            </button>
-          )}
-        </div>
-
-        <div className="mt-4">
-          {roomSection === 'data-entry' && access.isAdministrator ? (
-            <DataEntryView
-              songList={songList}
-              platformMappings={platformMappings}
-              sourceAssessments={sourceAssessments}
-            />
-          ) : access.isOperator ? (
+        {access.isAdministrator && (
+          <div
+            className="mb-5 flex snap-x gap-3 overflow-x-auto pb-2"
+            role="tablist"
+            aria-label="Engine Room categories"
+          >
+            {([
+              ['songs', 'Song studio', 'Edit each song, its artwork, identity, and source records.'],
+              ['premium', 'Premium performance', 'Enter all-song chart positions and inspect Engine performance inputs.'],
+            ] as const).map(([section, title, description]) => (
+              <button
+                key={section}
+                type="button"
+                role="tab"
+                aria-selected={roomSection === section}
+                onClick={() => setRoomSection(section)}
+                className="min-w-[220px] flex-1 snap-start border p-4 text-left transition-colors sm:min-w-[280px] sm:p-5"
+                style={{
+                  borderColor:
+                    roomSection === section
+                      ? 'var(--bora-gold)'
+                      : 'var(--bora-border)',
+                  backgroundColor:
+                    roomSection === section
+                      ? 'color-mix(in srgb, var(--bora-gold) 7%, var(--bora-surface))'
+                      : 'var(--bora-surface)',
+                }}
+              >
+                <span className="text-[8px] font-black uppercase tracking-[0.12em]">
+                  {title}
+                </span>
+                <span className="mt-2 block text-[7px] leading-5" style={{ color: 'var(--bora-text-muted)' }}>
+                  {description}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        {roomSection === 'songs' && access.isAdministrator ? (
+          <EngineRoomWorkspace
+            songList={songList}
+            platformMappings={platformMappings}
+            sourceAssessments={sourceAssessments}
+            category="songs"
+            currentHourInputs={currentHourInputs}
+          />
+        ) : roomSection === 'premium' && access.isAdministrator ? (
+          <EngineRoomWorkspace
+            songList={songList}
+            platformMappings={platformMappings}
+            sourceAssessments={sourceAssessments}
+            category="premium"
+            currentHourInputs={currentHourInputs}
+          />
+        ) : access.isOperator ? (
             <OperationsView snapshot={operations} />
           ) : (
             <div className="border p-5" style={{ borderColor: 'var(--bora-border)' }}>
@@ -1264,14 +1049,15 @@ export default function EngineRoomGUI({
               </p>
             </div>
           )}
-        </div>
-        <p
-          className="mt-5 text-right text-[6px] uppercase tracking-[0.12em]"
-          style={{ color: 'var(--bora-text-subtle)' }}
-        >
+        <p className="mt-5 text-right text-[6px] uppercase tracking-[0.12em]" style={{ color: 'var(--bora-text-subtle)' }}>
           Hourly processing and publication require real, database-verified evidence
         </p>
       </div>
+      <EngineRoomNavbar
+        activeSection={roomSection}
+        onSectionChange={setRoomSection}
+        canOpenOperations={access.isOperator}
+      />
     </main>
   );
 }

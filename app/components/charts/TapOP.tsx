@@ -21,6 +21,7 @@ export interface SongMetadata {
 export interface TapTarget {
   rank: number;
   metadata: SongMetadata;
+  totalUpvotes?: number | null;
 }
 
 // WIRING: chukua song iliyochaguliwa, rudisha metadata yake.
