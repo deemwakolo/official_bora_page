@@ -1465,13 +1465,33 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
     if (error || !isRecord(data)) {
       throw new Error('BORA_ENGINE_COMMIT_FAILED');
     }
-    if (
-      data.status === 'completed' ||
-      data.status === 'already-completed' ||
-      data.status === 'stale-lease' ||
-      data.status === 'stale-state'
-    ) {
+    if (data.status === 'completed' || data.status === 'already-completed') {
       return { status: data.status };
+    }
+    if (data.status === 'stale-lease') {
+      return {
+        status: 'stale-lease',
+        ...(typeof data.reason === 'string'
+          ? {
+              reason: data.reason as
+                | 'lease-expired'
+                | 'lease-ownership-mismatch',
+            }
+          : {}),
+      };
+    }
+    if (data.status === 'stale-state') {
+      return {
+        status: 'stale-state',
+        ...(typeof data.reason === 'string'
+          ? {
+              reason: data.reason as
+                | 'state-head-revision-changed'
+                | 'engine-state-changed'
+                | 'coverage-evidence-changed',
+            }
+          : {}),
+      };
     }
     throw new Error('BORA_ENGINE_INVALID_COMMIT_RESULT');
   }
@@ -1957,7 +1977,10 @@ export function createBoraEnginePersistenceFromEnv(): BoraEnginePersistenceSetup
     };
   }
   const noStoreFetch: typeof fetch = (input, init) =>
-    fetch(input, { ...init, cache: 'no-store' });
+    fetch(input, {
+      ...(init ?? {}),
+      cache: 'no-store',
+    } as RequestInit);
   const client = createSupabaseClient(url, key, {
     auth: { persistSession: false },
     global: { fetch: noStoreFetch },

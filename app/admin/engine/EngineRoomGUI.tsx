@@ -33,6 +33,7 @@ import {
   runSecureVoteReconciliation,
   type RunSecureVoteReconciliationResult,
 } from '@/lib/bora-engine/vote-event-reconciliation-action';
+import { toggleBoraChartHoldSong } from '@/lib/bora-engine/chart-hold-actions';
 
 type RoomSection = EngineRoomSection;
 type OperationsSection =
@@ -54,6 +55,7 @@ interface EngineRoomGUIProps {
   readonly platformMappings: EngineRoomPlatformMappings;
   readonly sourceAssessments: readonly PlatformSourceAssessment[];
   readonly currentHourInputs: EngineRoomCurrentHourInputs | null;
+  readonly chartHoldSongIds: readonly string[];
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -374,10 +376,125 @@ function VoteReconciliationPanel() {
   );
 }
 
+function ChartHoldManager({
+  songList,
+  initialHeldSongIds,
+}: {
+  readonly songList: EngineRoomSongList | null;
+  readonly initialHeldSongIds: readonly string[];
+}) {
+  const [heldSongIds, setHeldSongIds] = useState<string[]>([...initialHeldSongIds]);
+  const [savingSongId, setSavingSongId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const songs = songList?.status === 'ready' ? songList.songs : [];
+
+  const toggleHold = async (songId: string) => {
+    if (savingSongId) return;
+
+    setSavingSongId(songId);
+    setError(null);
+
+    try {
+      const result = await toggleBoraChartHoldSong(songId);
+
+      if (!result.success) {
+        throw new Error(result.error ?? 'Unable to update the chart hold.');
+      }
+
+      setHeldSongIds((current) =>
+        result.held
+          ? Array.from(new Set([...current, songId]))
+          : current.filter((id) => id !== songId),
+      );
+    } catch (caughtError) {
+      console.error('[bora-chart-hold] toggle failed:', caughtError);
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to update the chart hold.',
+      );
+    } finally {
+      setSavingSongId(null);
+    }
+  };
+
+  return (
+    <Panel
+      title="Chart hold manager"
+      description="Server-backed hold list for songs kept out of the active chart. This is the authoritative admin control layer for chart holds, without exposing a create button yet."
+      icon={ShieldAlert}
+    >
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3 border px-3 py-2" style={{ borderColor: 'var(--bora-border)' }}>
+          <p className="text-[7px] font-black uppercase tracking-[0.12em]" style={{ color: 'var(--bora-text-muted)' }}>
+            Held songs
+          </p>
+          <StatusPill value={heldSongIds.length === 0 ? 'empty' : `${heldSongIds.length} active`} />
+        </div>
+
+        {error && (
+          <p className="border p-3 text-[7px] leading-5" style={{ borderColor: 'var(--bora-red)', color: 'var(--bora-red)' }} role="alert">
+            {error}
+          </p>
+        )}
+
+        {songs.length === 0 ? (
+          <p className="text-[8px]" style={{ color: 'var(--bora-text-muted)' }}>
+            No songs are available to stage in the chart hold registry.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {songs.map((song) => {
+              const isHeld = heldSongIds.includes(song.id);
+              return (
+                <div
+                  key={song.id}
+                  className="flex flex-col gap-3 border p-3 sm:flex-row sm:items-center sm:justify-between"
+                  style={{ borderColor: 'var(--bora-border)' }}
+                >
+                  <div>
+                    <p className="font-cinzel text-[10px] font-black uppercase tracking-[0.08em]">
+                      {song.title}
+                    </p>
+                    <p className="mt-1 text-[7px]" style={{ color: 'var(--bora-text-muted)' }}>
+                      {song.artist || 'Unknown artist'} · Slot {song.slotNumber}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void toggleHold(song.id)}
+                    disabled={savingSongId === song.id}
+                    className="border px-3 py-2 text-[7px] font-black uppercase tracking-[0.1em] disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      borderColor: isHeld ? 'var(--bora-red)' : 'var(--bora-border)',
+                      color: isHeld ? 'var(--bora-red)' : 'var(--bora-gold)',
+                    }}
+                  >
+                    {savingSongId === song.id
+                      ? 'Updating…'
+                      : isHeld
+                        ? 'Remove from chart hold'
+                        : 'Add to chart hold'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 function OperationsView({
   snapshot,
+  songList,
+  chartHoldSongIds,
 }: {
   readonly snapshot: EngineRoomOperationsSnapshot | null;
+  readonly songList: EngineRoomSongList | null;
+  readonly chartHoldSongIds: readonly string[];
 }) {
   const [section, setSection] = useState<OperationsSection>('overview');
   if (!snapshot || snapshot.status === 'unavailable') {
@@ -467,6 +584,11 @@ function OperationsView({
               }
             />
           </div>
+
+          <ChartHoldManager
+            songList={songList}
+            initialHeldSongIds={chartHoldSongIds}
+          />
 
           <Panel
             title="Platform source status"
@@ -890,6 +1012,7 @@ export default function EngineRoomGUI({
   platformMappings,
   sourceAssessments,
   currentHourInputs,
+  chartHoldSongIds,
 }: EngineRoomGUIProps) {
   const searchParams = useSearchParams();
   const [roomSection, setRoomSection] = useState<RoomSection>(() =>
@@ -1028,7 +1151,11 @@ export default function EngineRoomGUI({
             currentHourInputs={currentHourInputs}
           />
         ) : access.isOperator ? (
-            <OperationsView snapshot={operations} />
+            <OperationsView
+              snapshot={operations}
+              songList={songList}
+              chartHoldSongIds={chartHoldSongIds}
+            />
           ) : (
             <div className="border p-5" style={{ borderColor: 'var(--bora-border)' }}>
               <CheckCircle2

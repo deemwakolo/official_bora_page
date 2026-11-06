@@ -9,6 +9,7 @@ import type { EngineRoomPlatformMappings } from '@/lib/bora-engine/admin-room-re
 import { getConfiguredPlatformSourceAssessments } from '@/lib/bora-engine/platform-source-configuration';
 import { authorizeBoraAdministrator } from '@/lib/administrator-authorization';
 import { authorizeBoraEngineOperator } from '@/lib/bora-engine/operator-authorization';
+import { getBoraChartHoldSongIds } from '@/lib/bora-engine/chart-hold-actions';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -41,20 +42,23 @@ export default async function EngineRoomPage() {
         platformMappings={{ status: 'unavailable' }}
         sourceAssessments={sourceAssessments}
         currentHourInputs={null}
+        chartHoldSongIds={[]}
       />
     );
   }
 
-  const [operations, songList, platformMappings, currentHourInputs] = await Promise.all([
-    isOperator ? getEngineRoomOperationsSnapshot() : Promise.resolve(null),
-    isAdministrator ? getEngineRoomSongList() : Promise.resolve(null),
-    isAdministrator
-      ? getEngineRoomPlatformMappings()
-      : Promise.resolve<EngineRoomPlatformMappings>({ status: 'unavailable' }),
-    isAdministrator
-      ? getEngineRoomCurrentHourInputs()
-      : Promise.resolve(null),
-  ]);
+  const [operations, songList, platformMappings, currentHourInputs, chartHoldSongIds] =
+    await Promise.all([
+      isOperator ? getEngineRoomOperationsSnapshot() : Promise.resolve(null),
+      isAdministrator ? getEngineRoomSongList() : Promise.resolve(null),
+      isAdministrator
+        ? getEngineRoomPlatformMappings()
+        : Promise.resolve<EngineRoomPlatformMappings>({ status: 'unavailable' }),
+      isAdministrator
+        ? getEngineRoomCurrentHourInputs()
+        : Promise.resolve(null),
+      isAdministrator ? getBoraChartHoldSongIds() : Promise.resolve([]),
+    ]);
 
   return (
     <EngineRoomGUI
@@ -68,6 +72,7 @@ export default async function EngineRoomPage() {
       platformMappings={platformMappings}
       sourceAssessments={sourceAssessments}
       currentHourInputs={currentHourInputs}
+      chartHoldSongIds={chartHoldSongIds}
     />
   );
 }

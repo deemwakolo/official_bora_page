@@ -70,8 +70,17 @@ export interface HourlyRolloverCommit {
 export type HourlyCommitResult =
   | { readonly status: 'completed' }
   | { readonly status: 'already-completed' }
-  | { readonly status: 'stale-lease' }
-  | { readonly status: 'stale-state' };
+  | {
+      readonly status: 'stale-lease';
+      readonly reason?: 'lease-expired' | 'lease-ownership-mismatch';
+    }
+  | {
+      readonly status: 'stale-state';
+      readonly reason?:
+        | 'state-head-revision-changed'
+        | 'engine-state-changed'
+        | 'coverage-evidence-changed';
+    };
 
 /**
  * Persistence requirements for a production runner.
@@ -188,7 +197,11 @@ export type HourlyRolloverResult =
         | 'engine-failed'
         | 'commit-outcome-unknown'
         | 'lease-lost'
-        | 'state-changed';
+        | 'state-changed'
+        | 'state-head-changed'
+        | 'engine-state-changed'
+        | 'coverage-evidence-changed'
+        | 'lease-ownership-changed';
       readonly engineErrorCode?: EngineErrorCode;
     }
   | {
@@ -686,20 +699,36 @@ export async function runHourlyRollover(
     if (commitResult.status === 'already-completed') {
       return { status: 'already-completed', closedHour };
     }
-    if (commitResult.status === 'stale-lease') {
-      return {
-        status: 'retryable-failure',
-        closedHour,
-        reason: 'lease-lost',
-      };
-    }
-    if (commitResult.status === 'stale-state') {
-      return {
-        status: 'retryable-failure',
-        closedHour,
-        reason: 'state-changed',
-      };
-    }
+      if (commitResult.status === 'stale-lease') {
+        const failureReason =
+          commitResult.reason === 'lease-ownership-mismatch'
+            ? 'lease-ownership-changed'
+            : 'lease-lost';
+        return recordFailure(
+          persistence,
+          targetHour,
+          claim.leaseToken,
+          commitResult.reason ?? 'lease-expired',
+          failureReason,
+        );
+      }
+      if (commitResult.status === 'stale-state') {
+        const failureReason =
+          commitResult.reason === 'engine-state-changed'
+            ? 'engine-state-changed'
+            : commitResult.reason === 'coverage-evidence-changed'
+              ? 'coverage-evidence-changed'
+              : commitResult.reason === 'state-head-revision-changed'
+                ? 'state-head-changed'
+                : 'state-changed';
+        return recordFailure(
+          persistence,
+          targetHour,
+          claim.leaseToken,
+          commitResult.reason ?? 'state-head-revision-changed',
+          failureReason,
+        );
+      }
     if (commitResult.status !== 'completed') {
       return {
         status: 'retryable-failure',
