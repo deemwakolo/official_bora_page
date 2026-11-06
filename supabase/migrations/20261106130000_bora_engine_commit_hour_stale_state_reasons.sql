@@ -1,0 +1,429 @@
+-- ============================================================================
+-- Migration: 20261106130000_bora_engine_commit_hour_stale_state_reasons.sql
+-- Description: Makes bora_engine_commit_hour return the specific stale-state
+-- comparison that failed so stale commits are diagnosed accurately without
+-- falling back to a generic state-head revision classification.
+-- ============================================================================
+
+create or replace function public.bora_engine_commit_hour(
+  p_closed_hour bigint,
+  p_lease_token uuid,
+  p_expected_state_revision bigint,
+  p_expected_state jsonb,
+  p_expected_coverage jsonb,
+  p_next_state jsonb,
+  p_steps jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_run public.bora_engine_hourly_runs%rowtype;
+  v_head public.bora_engine_hourly_state_head%rowtype;
+  v_snapshot jsonb;
+  v_step_count integer;
+  v_song_count integer;
+  v_active_count integer;
+  v_complete_count integer;
+  v_updated integer;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    raise exception 'BORA_ENGINE_WORKER_REQUIRED';
+  end if;
+  if jsonb_typeof(p_expected_state) is distinct from 'object'
+    or jsonb_typeof(p_expected_coverage) is distinct from 'array'
+    or jsonb_typeof(p_next_state) is distinct from 'object'
+    or jsonb_typeof(p_next_state -> 'songs') is distinct from 'array'
+    or jsonb_typeof(p_steps) is distinct from 'array'
+    or p_closed_hour is null
+    or p_lease_token is null
+    or p_expected_state_revision is null
+    or p_expected_state_revision < 0
+    or p_next_state ->> 'referenceHour' is null
+    or (p_next_state ->> 'referenceHour')::bigint <> p_closed_hour + 1 then
+    raise exception 'BORA_ENGINE_INVALID_COMMIT';
+  end if;
+
+  select *
+    into v_run
+  from public.bora_engine_hourly_runs
+  where closed_hour = p_closed_hour
+  for update;
+
+  if not found then
+    return jsonb_build_object('status', 'stale-lease');
+  end if;
+  if v_run.status = 'completed' then
+    return jsonb_build_object('status', 'already-completed');
+  end if;
+  if v_run.status <> 'processing'
+    or v_run.lease_token <> p_lease_token
+    or v_run.lease_expires_at <= clock_timestamp() then
+    return jsonb_build_object('status', 'stale-lease');
+  end if;
+
+  select *
+    into v_head
+  from public.bora_engine_hourly_state_head
+  where singleton = true
+  for update;
+
+  if not found then
+    return jsonb_build_object(
+      'status', 'stale-state',
+      'reason', 'state-head-missing'
+    );
+  end if;
+
+  if v_head.reference_hour <> p_closed_hour then
+    return jsonb_build_object(
+      'status', 'stale-state',
+      'reason', 'state-head-reference-hour-mismatch'
+    );
+  end if;
+
+  if v_head.revision <> p_expected_state_revision then
+    return jsonb_build_object(
+      'status', 'stale-state',
+      'reason', 'state-head-revision-changed'
+    );
+  end if;
+
+  lock table public.bora_engine_song_state in share mode;
+  lock table public.bora_engine_vote_buckets in share mode;
+  lock table public.bora_engine_seed_hours in share mode;
+  lock table public.bora_engine_platform_observations in share mode;
+  lock table public.bora_engine_hourly_input_coverage in share mode;
+  lock table public.bora_engine_hourly_closures in share mode;
+
+  select count(*)
+    into v_active_count
+  from public.bora_engine_song_state
+  where lifecycle = 'ACTIVE';
+
+  if v_active_count = 0 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'no-active-songs',
+      'closedHour', p_closed_hour,
+      'expected', 0,
+      'complete', 0,
+      'missing', 0
+    );
+  end if;
+
+  select count(*)
+    into v_complete_count
+  from public.bora_engine_hourly_input_coverage c
+  join public.bora_engine_song_state s on s.song_id = c.song_id
+  where s.lifecycle = 'ACTIVE'
+    and c.status = 'COMPLETE'
+    and (
+      (c.input_type in ('VOTES', 'SEED')
+        and c.hour_index between p_closed_hour - 71 and p_closed_hour)
+      or
+      (c.input_type in ('YOUTUBE', 'SPOTIFY', 'BOOMPLAY')
+        and c.hour_index between p_closed_hour - 167 and p_closed_hour)
+    );
+
+  if v_complete_count <> v_active_count * 648 then
+    return jsonb_build_object(
+      'status', 'not-ready',
+      'reason', 'coverage-incomplete',
+      'closedHour', p_closed_hour,
+      'expected', v_active_count * 648,
+      'complete', v_complete_count,
+      'missing', greatest(v_active_count * 648 - v_complete_count, 0)
+    );
+  end if;
+
+  v_snapshot := public.bora_engine_hourly_snapshot(p_closed_hour);
+  if v_snapshot ->> 'status' <> 'ready' then
+    return jsonb_build_object(
+      'status', 'stale-state',
+      'reason', 'snapshot-not-ready'
+    );
+  end if;
+
+  if (v_snapshot ->> 'stateRevision')::bigint <> p_expected_state_revision then
+    return jsonb_build_object(
+      'status', 'stale-state',
+      'reason', 'snapshot-state-revision-changed'
+    );
+  end if;
+
+  if v_snapshot -> 'state' <> p_expected_state then
+    return jsonb_build_object(
+      'status', 'stale-state',
+      'reason', 'engine-state-changed'
+    );
+  end if;
+
+  if v_snapshot -> 'coverage' <> p_expected_coverage then
+    return jsonb_build_object(
+      'status', 'stale-state',
+      'reason', 'coverage-evidence-changed'
+    );
+  end if;
+
+  select count(*)
+    into v_song_count
+  from jsonb_array_elements(p_next_state -> 'songs');
+
+  select count(*)
+    into v_active_count
+  from public.bora_engine_song_state
+  where lifecycle = 'ACTIVE';
+
+  select count(*)
+    into v_step_count
+  from jsonb_to_recordset(p_steps) as x(
+    "songId" text,
+    "hourClosed" bigint,
+    "closedHourC" numeric,
+    "freshInjected" numeric,
+    "decayRate" numeric,
+    "persistentBefore" numeric,
+    "persistentAfter" numeric
+  );
+
+  if v_song_count <> (select count(*) from public.bora_engine_song_state)
+    or v_song_count <> (
+      select count(distinct value ->> 'songId')
+      from jsonb_array_elements(p_next_state -> 'songs')
+    ) then
+    raise exception 'BORA_ENGINE_INVALID_COMMIT_SHAPE';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_array_elements(p_next_state -> 'songs') as n(value)
+    left join public.bora_engine_song_state s
+      on s.song_id::text = n.value ->> 'songId'
+    where n.value ->> 'songId' is null
+      or n.value ->> 'lifecycle' is null
+      or n.value ->> 'k' is null
+      or n.value ->> 'persistentKura' is null
+      or s.song_id is null
+      or s.lifecycle <> n.value ->> 'lifecycle'
+      or s.k <> (n.value ->> 'k')::numeric
+      or (
+        s.lifecycle = 'VAULT'
+        and s.persistent_kura <> (n.value ->> 'persistentKura')::numeric
+      )
+  ) then
+    raise exception 'BORA_ENGINE_INVALID_NEXT_STATE';
+  end if;
+
+  if exists (
+    select 1
+    from public.bora_engine_song_state s
+    where s.lifecycle = 'ACTIVE'
+      and s.last_decay_hour is not null
+      and s.last_decay_hour >= p_closed_hour
+  ) then
+    raise exception 'BORA_ENGINE_HOUR_ALREADY_DECAYED';
+  end if;
+
+  if exists (
+    select 1
+    from public.bora_engine_song_state s
+    where s.lifecycle = 'ACTIVE'
+      and not exists (
+        select 1
+        from jsonb_to_recordset(p_steps) as x(
+          "songId" text,
+          "hourClosed" bigint,
+          "closedHourC" numeric,
+          "freshInjected" numeric,
+          "decayRate" numeric,
+          "persistentBefore" numeric,
+          "persistentAfter" numeric
+        )
+        join jsonb_array_elements(p_next_state -> 'songs') as n(value)
+          on n.value ->> 'songId' = x."songId"
+        where x."songId" = s.song_id::text
+          and x."hourClosed" = p_closed_hour
+          and x."persistentBefore" = s.persistent_kura
+          and x."persistentAfter" = (n.value ->> 'persistentKura')::numeric
+      )
+  ) then
+    raise exception 'BORA_ENGINE_INVALID_ROLLOVER_TRACE';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_to_recordset(p_steps) as x(
+      "songId" text,
+      "hourClosed" bigint,
+      "closedHourC" numeric,
+      "freshInjected" numeric,
+      "decayRate" numeric,
+      "persistentBefore" numeric,
+      "persistentAfter" numeric
+    )
+    join public.bora_engine_song_state s
+      on s.song_id::text = x."songId" and s.lifecycle = 'ACTIVE'
+    where x."hourClosed" = p_closed_hour
+      and (
+        x."closedHourC" is null
+        or x."closedHourC" < 0
+        or x."closedHourC" > 2
+        or x."freshInjected" is null
+        or x."freshInjected" < 0
+        or x."decayRate" is null
+        or x."decayRate" < 0
+        or x."decayRate" > 0.0025
+        or x."persistentBefore" is null
+        or x."persistentBefore" < 0
+        or x."persistentAfter" is null
+        or x."persistentAfter" < 0
+      )
+  ) then
+    raise exception 'BORA_ENGINE_INVALID_ROLLOVER_STEP';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_to_recordset(p_steps) as x(
+      "songId" text,
+      "hourClosed" bigint,
+      "closedHourC" numeric,
+      "freshInjected" numeric,
+      "decayRate" numeric,
+      "persistentBefore" numeric,
+      "persistentAfter" numeric
+    )
+    join public.bora_engine_song_state s
+      on s.song_id::text = x."songId" and s.lifecycle = 'ACTIVE'
+    left join public.bora_engine_vote_buckets b
+      on b.song_id = s.song_id and b.hour_index = p_closed_hour
+    left join public.bora_engine_seed_hours sh
+      on sh.song_id = s.song_id and sh.hour_index = p_closed_hour
+    where x."hourClosed" = p_closed_hour
+      and x."closedHourC" is distinct from case
+        when b.song_id is not null then greatest(
+          (case
+            when b.upvotes = 0 then 0
+            when b.upvotes < 5 then 1
+            else 2
+          end)
+          - (case
+            when b.downvotes = 0 then 0
+            when b.downvotes < 5 then 0.5
+            else 1
+          end),
+          0
+        )
+        when sh.song_id is not null then case
+          when sh.lifecycle = 'ARCHIVED' then 0
+          else sh.c
+        end
+        else 0
+      end
+  ) then
+    raise exception 'BORA_ENGINE_ROLLOVER_INPUT_MISMATCH';
+  end if;
+
+  insert into public.bora_engine_hourly_closures (
+    closed_hour,
+    song_id,
+    c,
+    c_source,
+    source_bucket_version,
+    source_seed_version,
+    fresh_injected,
+    decay_rate,
+    persistent_before,
+    persistent_after
+  )
+  select
+    p_closed_hour,
+    s.song_id,
+    x."closedHourC",
+    case
+      when b.song_id is not null then 'ACTUAL'
+      when sh.song_id is not null then 'SEED'
+      else 'NONE'
+    end,
+    b.version,
+    case when b.song_id is null then sh.version else null end,
+    x."freshInjected",
+    x."decayRate",
+    x."persistentBefore",
+    x."persistentAfter"
+  from jsonb_to_recordset(p_steps) as x(
+    "songId" text,
+    "hourClosed" bigint,
+    "closedHourC" numeric,
+    "freshInjected" numeric,
+    "decayRate" numeric,
+    "persistentBefore" numeric,
+    "persistentAfter" numeric
+  )
+  join public.bora_engine_song_state s
+    on s.song_id::text = x."songId" and s.lifecycle = 'ACTIVE'
+  left join public.bora_engine_vote_buckets b
+    on b.song_id = s.song_id and b.hour_index = p_closed_hour
+  left join public.bora_engine_seed_hours sh
+    on sh.song_id = s.song_id and sh.hour_index = p_closed_hour
+  where x."hourClosed" = p_closed_hour;
+
+  get diagnostics v_updated = row_count;
+  if v_updated <> v_active_count then
+    raise exception 'BORA_ENGINE_INCOMPLETE_CLOSURE_TRACE';
+  end if;
+
+  update public.bora_engine_song_state s
+  set persistent_kura = (n.value ->> 'persistentKura')::numeric,
+      last_decay_hour = p_closed_hour,
+      updated_at = clock_timestamp()
+  from jsonb_array_elements(p_next_state -> 'songs') as n(value)
+  where s.song_id::text = n.value ->> 'songId'
+    and s.lifecycle = 'ACTIVE';
+
+  update public.bora_engine_hourly_state_head
+  set reference_hour = p_closed_hour + 1,
+      revision = revision + 1,
+      updated_at = clock_timestamp()
+  where singleton = true
+    and reference_hour = p_closed_hour
+    and revision = p_expected_state_revision;
+
+  get diagnostics v_updated = row_count;
+  if v_updated <> 1 then
+    raise exception 'BORA_ENGINE_STATE_HEAD_CONFLICT';
+  end if;
+
+  update public.bora_engine_hourly_runs
+  set status = 'completed',
+      lease_token = null,
+      claim_request_id = null,
+      lease_expires_at = null,
+      completed_at = clock_timestamp(),
+      last_error_code = null,
+      last_error_message = null,
+      updated_at = clock_timestamp()
+  where closed_hour = p_closed_hour
+    and status = 'processing'
+    and lease_token = p_lease_token
+    and lease_expires_at > clock_timestamp();
+
+  get diagnostics v_updated = row_count;
+  if v_updated <> 1 then
+    raise exception 'BORA_ENGINE_STALE_LEASE';
+  end if;
+
+  return jsonb_build_object('status', 'completed');
+end;
+$$;
+
+revoke all on function public.bora_engine_commit_hour(
+  bigint, uuid, bigint, jsonb, jsonb, jsonb, jsonb
+) from public, anon, authenticated;
+
+grant execute on function public.bora_engine_commit_hour(
+  bigint, uuid, bigint, jsonb, jsonb, jsonb, jsonb
+) to service_role;

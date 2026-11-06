@@ -129,6 +129,54 @@ describe('hourly worker coordination', () => {
     expect(release).toHaveBeenCalledTimes(1);
   });
 
+  it('preserves the exact SQL stale-state reason instead of defaulting to state-head revision churn', async () => {
+    const token = '44444444-4444-4444-8444-444444444444';
+    const songId = makeSongId('song-4');
+    const state = makeState(H, [makeSong(songId, 17)]);
+    const coverage = [
+      makeCoverage(songId, H, 'VOTES'),
+      makeCoverage(songId, H, 'SEED'),
+    ];
+    const persistence: HourlyRolloverPersistence = {
+      readHourlyReferenceHour: async () => H,
+      reconcileHourlyCoverage: async () => ({
+        status: 'ready',
+        processedActiveSongCount: 1,
+        reconciledVoteEventCount: 1,
+      }),
+      claimHour: async () => ({ status: 'claimed', leaseToken: token }),
+      loadRolloverInput: async () => ({
+        status: 'loaded',
+        state,
+        coverage,
+        stateRevision: 5,
+      }),
+      releaseNotReady: async () => true,
+      recordRetryableFailure: async ({ errorCode }) => {
+        expect(errorCode).toBe('state-head-reference-hour-mismatch');
+        return true;
+      },
+      commitHour: async () => ({
+        status: 'stale-state',
+        reason: 'state-head-reference-hour-mismatch',
+      }),
+    };
+
+    const result = await runHourlyRollover({
+      closedHour: H,
+      claimRequestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      nowMs: (H + 1) * HOUR_MS + TRANSITION_MS + 1,
+      leaseDurationMs: 120_000,
+      persistence,
+    });
+
+    expect(result.status).toBe('retryable-failure');
+    if (result.status !== 'retryable-failure') {
+      throw new Error('Expected retryable failure after a state-head reference mismatch');
+    }
+    expect(result.reason).toBe('state-head-reference-hour-mismatch');
+  });
+
   it('allows only one worker to own the same closed hour at a time', async () => {
     const songId = makeSongId('song-1');
     const state = makeState(H, [makeSong(songId, 10)]);

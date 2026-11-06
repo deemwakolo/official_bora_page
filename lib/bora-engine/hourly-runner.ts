@@ -77,7 +77,11 @@ export type HourlyCommitResult =
   | {
       readonly status: 'stale-state';
       readonly reason?:
+        | 'state-head-missing'
+        | 'state-head-reference-hour-mismatch'
         | 'state-head-revision-changed'
+        | 'snapshot-not-ready'
+        | 'snapshot-state-revision-changed'
         | 'engine-state-changed'
         | 'coverage-evidence-changed';
     };
@@ -198,7 +202,11 @@ export type HourlyRolloverResult =
         | 'commit-outcome-unknown'
         | 'lease-lost'
         | 'state-changed'
+        | 'state-head-missing'
+        | 'state-head-reference-hour-mismatch'
         | 'state-head-changed'
+        | 'snapshot-not-ready'
+        | 'snapshot-state-revision-changed'
         | 'engine-state-changed'
         | 'coverage-evidence-changed'
         | 'lease-ownership-changed';
@@ -720,18 +728,26 @@ export async function runHourlyRollover(
     }
     if (commitResult.status === 'stale-state') {
       const failureReason =
-        commitResult.reason === 'engine-state-changed'
-          ? 'engine-state-changed'
-          : commitResult.reason === 'coverage-evidence-changed'
-            ? 'coverage-evidence-changed'
+        commitResult.reason === 'state-head-missing'
+          ? 'state-head-missing'
+          : commitResult.reason === 'state-head-reference-hour-mismatch'
+            ? 'state-head-reference-hour-mismatch'
             : commitResult.reason === 'state-head-revision-changed'
               ? 'state-head-changed'
-              : 'state-changed';
+              : commitResult.reason === 'snapshot-not-ready'
+                ? 'snapshot-not-ready'
+                : commitResult.reason === 'snapshot-state-revision-changed'
+                  ? 'snapshot-state-revision-changed'
+                  : commitResult.reason === 'engine-state-changed'
+                    ? 'engine-state-changed'
+                    : commitResult.reason === 'coverage-evidence-changed'
+                      ? 'coverage-evidence-changed'
+                      : 'state-changed';
       return recordFailure(
         persistence,
         targetHour,
         leaseToken,
-        commitResult.reason ?? 'state-head-revision-changed',
+        commitResult.reason ?? 'state-changed',
         failureReason,
       );
     }

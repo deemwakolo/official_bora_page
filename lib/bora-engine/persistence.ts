@@ -1486,7 +1486,11 @@ class SupabaseBoraEnginePersistence implements BoraEnginePersistence {
         ...(typeof data.reason === 'string'
           ? {
               reason: data.reason as
+                | 'state-head-missing'
+                | 'state-head-reference-hour-mismatch'
                 | 'state-head-revision-changed'
+                | 'snapshot-not-ready'
+                | 'snapshot-state-revision-changed'
                 | 'engine-state-changed'
                 | 'coverage-evidence-changed',
             }
