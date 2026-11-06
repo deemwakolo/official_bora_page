@@ -236,12 +236,9 @@ begin
           else 'Verified canonical accepted votes match the immutable Engine ledger.'
         end
       )
-      or v_vote_existing.checked_at is distinct from v_now
-      or v_vote_existing.updated_at is distinct from v_now
       or v_vote_existing.currentness is distinct from 'current'
       or v_vote_existing.source_identity is distinct from 'secure_vote_events'
       or v_vote_existing.evidence_id is distinct from 'secure-vote-ledger:' || v_vote_evidence_hash
-      or v_vote_existing.assessed_at is distinct from v_now
       or v_vote_existing.invalidated_reason is not null
       or v_vote_existing.derived_delta is distinct from v_vote_event_count_for_song
       or v_vote_existing.raw_value is distinct from v_vote_event_count_for_song
@@ -339,12 +336,9 @@ begin
     elsif
       v_seed_existing.status is distinct from 'COMPLETE'
       or v_seed_existing.detail is distinct from coalesce(v_seed_detail, 'Verified no seed record in the Engine seed-hour source.')
-      or v_seed_existing.checked_at is distinct from v_now
-      or v_seed_existing.updated_at is distinct from v_now
       or v_seed_existing.currentness is distinct from 'current'
       or v_seed_existing.source_identity is distinct from coalesce(v_seed_source_identity, 'seed-none')
       or v_seed_existing.evidence_id is distinct from 'engine-seed-hour:' || coalesce(v_seed_evidence_hash, md5(concat_ws(':', v_song.song_id::text, p_closed_hour::text, 'empty', 'empty', 'empty', 'empty')))
-      or v_seed_existing.assessed_at is distinct from v_now
       or v_seed_existing.invalidated_reason is not null
       or v_seed_existing.derived_delta is distinct from 0
       or v_seed_existing.raw_value is distinct from 0

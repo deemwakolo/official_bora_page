@@ -3,6 +3,7 @@ import { HOUR_MS, TRANSITION_MS } from '../constants';
 import { runHourlyRollover } from '../../../../lib/bora-engine/hourly-runner';
 import type {
   HourlyInputCoverage,
+  HourlyRolloverLoadResult,
   HourlyRolloverPersistence,
 } from '../../../../lib/bora-engine/hourly-runner';
 import type { EngineState, RolloverSong } from './rollover';
@@ -232,5 +233,54 @@ describe('hourly worker coordination', () => {
       throw new Error('Expected retryable failure after stale coverage mismatch');
     }
     expect(result.reason).toBe('coverage-evidence-changed');
+  });
+
+  it('reuses an already-acquired lease instead of claiming the same hour twice', async () => {
+    const token = '33333333-3333-4333-8333-333333333333';
+    const songId = makeSongId('song-3');
+    const state = makeState(H, [makeSong(songId, 8)]);
+    const coverage = [
+      makeCoverage(songId, H, 'VOTES'),
+      makeCoverage(songId, H, 'SEED'),
+    ];
+    const claimHour = vi.fn(async () => {
+      throw new Error('claimHour should not run when a lease is preassigned');
+    });
+    const loadRolloverInput = vi.fn(async (): Promise<HourlyRolloverLoadResult> => ({
+      status: 'loaded',
+      state,
+      coverage,
+      stateRevision: 9,
+    }));
+
+    const persistence: HourlyRolloverPersistence = {
+      readHourlyReferenceHour: async () => H,
+      reconcileHourlyCoverage: async () => ({
+        status: 'ready',
+        processedActiveSongCount: 1,
+        reconciledVoteEventCount: 1,
+      }),
+      claimHour,
+      loadRolloverInput,
+      releaseNotReady: async () => true,
+      recordRetryableFailure: async () => true,
+      commitHour: async () => ({ status: 'completed' }),
+    };
+
+    const result = await runHourlyRollover({
+      closedHour: H,
+      claimRequestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      preclaimedLeaseToken: token,
+      nowMs: (H + 1) * HOUR_MS + TRANSITION_MS + 1,
+      leaseDurationMs: 120_000,
+      persistence,
+    });
+
+    expect(claimHour).not.toHaveBeenCalled();
+    expect(loadRolloverInput).toHaveBeenCalledWith({
+      closedHour: H,
+      leaseToken: token,
+    });
+    expect(result.status).toBe('completed');
   });
 });

@@ -214,6 +214,8 @@ export interface RunHourlyRolloverOptions {
   readonly closedHour: number;
   /** Stable, unpredictable UUID retained by the caller across claim retries. */
   readonly claimRequestId: string;
+  /** Optional lease already acquired by the caller so the hour is never claimed twice. */
+  readonly preclaimedLeaseToken?: string;
   /** Explicit clock value for deterministic eligibility and lease timing. */
   readonly nowMs: number;
   readonly leaseDurationMs: number;
@@ -446,87 +448,91 @@ export async function runHourlyRollover(
   }
 
   const targetHour = closedHour as HourIndex;
-  let claim: HourClaimResult;
-  try {
-    claim = await persistence.claimHour({
-      closedHour: targetHour,
-      claimRequestId: options.claimRequestId,
-      leaseDurationMs,
-    });
-  } catch {
-    return {
-      status: 'retryable-failure',
-      closedHour,
-      reason: 'claim-failed',
-    };
-  }
-
-  if (!claim || typeof claim !== 'object') {
-    return {
-      status: 'retryable-failure',
-      closedHour,
-      reason: 'claim-failed',
-    };
-  }
-  if (claim.status === 'already-claimed') {
-    return { status: 'already-claimed', closedHour };
-  }
-  if (claim.status === 'already-completed') {
-    return { status: 'already-completed', closedHour };
-  }
-  if (claim.status === 'not-eligible') {
-    if (!Number.isSafeInteger(claim.eligibleAtMs)) {
+  let leaseToken: string;
+  if (options.preclaimedLeaseToken) {
+    if (!isUuid(options.preclaimedLeaseToken)) {
       return {
         status: 'retryable-failure',
         closedHour,
         reason: 'claim-failed',
       };
     }
-    return {
-      status: 'not-eligible',
-      closedHour,
-      eligibleAtMs: claim.eligibleAtMs,
-    };
-  }
-  if (claim.status !== 'claimed') {
-    return {
-      status: 'retryable-failure',
-      closedHour,
-      reason: 'claim-failed',
-    };
-  }
-  if (
-    typeof claim.leaseToken !== 'string' ||
-    !isUuid(claim.leaseToken)
-  ) {
-    return {
-      status: 'retryable-failure',
-      closedHour,
-      reason: 'claim-failed',
-    };
+    leaseToken = options.preclaimedLeaseToken;
+  } else {
+    let claim: HourClaimResult;
+    try {
+      claim = await persistence.claimHour({
+        closedHour: targetHour,
+        claimRequestId: options.claimRequestId,
+        leaseDurationMs,
+      });
+    } catch {
+      return {
+        status: 'retryable-failure',
+        closedHour,
+        reason: 'claim-failed',
+      };
+    }
+
+    if (!claim || typeof claim !== 'object') {
+      return {
+        status: 'retryable-failure',
+        closedHour,
+        reason: 'claim-failed',
+      };
+    }
+    if (claim.status === 'already-claimed') {
+      return { status: 'already-claimed', closedHour };
+    }
+    if (claim.status === 'already-completed') {
+      return { status: 'already-completed', closedHour };
+    }
+    if (claim.status === 'not-eligible') {
+      if (!Number.isSafeInteger(claim.eligibleAtMs)) {
+        return {
+          status: 'retryable-failure',
+          closedHour,
+          reason: 'claim-failed',
+        };
+      }
+      return {
+        status: 'not-eligible',
+        closedHour,
+        eligibleAtMs: claim.eligibleAtMs,
+      };
+    }
+    if (claim.status !== 'claimed') {
+      return {
+        status: 'retryable-failure',
+        closedHour,
+        reason: 'claim-failed',
+      };
+    }
+    if (typeof claim.leaseToken !== 'string' || !isUuid(claim.leaseToken)) {
+      return {
+        status: 'retryable-failure',
+        closedHour,
+        reason: 'claim-failed',
+      };
+    }
+    leaseToken = claim.leaseToken;
   }
 
   let loaded: HourlyRolloverLoadResult;
   try {
     loaded = await persistence.loadRolloverInput({
       closedHour: targetHour,
-      leaseToken: claim.leaseToken,
+      leaseToken,
     });
   } catch {
-    return recordFailure(
-      persistence,
-      targetHour,
-      claim.leaseToken,
-      'input-load-failed',
-      'load-failed',
-    );
+    return recordFailure(persistence, targetHour, leaseToken, 'input-load-failed', 'load-failed');
   }
 
   if (!loaded || typeof loaded !== 'object') {
     return recordFailure(
       persistence,
       targetHour,
-      claim.leaseToken,
+      leaseToken,
       'invalid-loaded-input',
       'load-failed',
     );
@@ -536,7 +542,7 @@ export async function runHourlyRollover(
     try {
       const released = await persistence.releaseNotReady({
         closedHour: targetHour,
-        leaseToken: claim.leaseToken,
+        leaseToken,
       });
       return released
         ? { status: 'not-ready', closedHour, gaps: loaded.gaps }
@@ -562,7 +568,7 @@ export async function runHourlyRollover(
     return recordFailure(
       persistence,
       targetHour,
-      claim.leaseToken,
+      leaseToken,
       'invalid-loaded-input',
       'load-failed',
     );
@@ -586,7 +592,7 @@ export async function runHourlyRollover(
     try {
       const released = await persistence.releaseNotReady({
         closedHour: targetHour,
-        leaseToken: claim.leaseToken,
+        leaseToken,
       });
       return released
         ? { status: 'not-ready', closedHour, gaps }
@@ -611,7 +617,7 @@ export async function runHourlyRollover(
     try {
       const released = await persistence.releaseNotReady({
         closedHour: targetHour,
-        leaseToken: claim.leaseToken,
+        leaseToken,
       });
       return released
         ? { status: 'not-ready', closedHour, gaps }
@@ -630,7 +636,7 @@ export async function runHourlyRollover(
     try {
       const released = await persistence.releaseNotReady({
         closedHour: targetHour,
-        leaseToken: claim.leaseToken,
+        leaseToken,
       });
       return released
         ? { status: 'not-ready', closedHour, gaps }
@@ -651,7 +657,7 @@ export async function runHourlyRollover(
     return recordFailure(
       persistence,
       targetHour,
-      claim.leaseToken,
+      leaseToken,
       'engine-threw',
       'engine-failed',
     );
@@ -660,7 +666,7 @@ export async function runHourlyRollover(
     const failed = await recordFailure(
       persistence,
       targetHour,
-      claim.leaseToken,
+      leaseToken,
       rolled.error.code,
       'engine-failed',
     );
@@ -675,7 +681,7 @@ export async function runHourlyRollover(
 
   try {
     const commitResult = await persistence.commitHour({
-      leaseToken: claim.leaseToken,
+      leaseToken,
       commit: {
         closedHour: targetHour,
         expectedState: loaded.state,
@@ -699,36 +705,36 @@ export async function runHourlyRollover(
     if (commitResult.status === 'already-completed') {
       return { status: 'already-completed', closedHour };
     }
-      if (commitResult.status === 'stale-lease') {
-        const failureReason =
-          commitResult.reason === 'lease-ownership-mismatch'
-            ? 'lease-ownership-changed'
-            : 'lease-lost';
-        return recordFailure(
-          persistence,
-          targetHour,
-          claim.leaseToken,
-          commitResult.reason ?? 'lease-expired',
-          failureReason,
-        );
-      }
-      if (commitResult.status === 'stale-state') {
-        const failureReason =
-          commitResult.reason === 'engine-state-changed'
-            ? 'engine-state-changed'
-            : commitResult.reason === 'coverage-evidence-changed'
-              ? 'coverage-evidence-changed'
-              : commitResult.reason === 'state-head-revision-changed'
-                ? 'state-head-changed'
-                : 'state-changed';
-        return recordFailure(
-          persistence,
-          targetHour,
-          claim.leaseToken,
-          commitResult.reason ?? 'state-head-revision-changed',
-          failureReason,
-        );
-      }
+    if (commitResult.status === 'stale-lease') {
+      const failureReason =
+        commitResult.reason === 'lease-ownership-mismatch'
+          ? 'lease-ownership-changed'
+          : 'lease-lost';
+      return recordFailure(
+        persistence,
+        targetHour,
+        leaseToken,
+        commitResult.reason ?? 'lease-expired',
+        failureReason,
+      );
+    }
+    if (commitResult.status === 'stale-state') {
+      const failureReason =
+        commitResult.reason === 'engine-state-changed'
+          ? 'engine-state-changed'
+          : commitResult.reason === 'coverage-evidence-changed'
+            ? 'coverage-evidence-changed'
+            : commitResult.reason === 'state-head-revision-changed'
+              ? 'state-head-changed'
+              : 'state-changed';
+      return recordFailure(
+        persistence,
+        targetHour,
+        leaseToken,
+        commitResult.reason ?? 'state-head-revision-changed',
+        failureReason,
+      );
+    }
     if (commitResult.status !== 'completed') {
       return {
         status: 'retryable-failure',

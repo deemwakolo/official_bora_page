@@ -194,6 +194,30 @@ export async function runBoraEngineThroughHour(input: {
     nextHour <= input.targetClosedHour &&
     processedHourCount < MAX_HOURS_PER_INVOCATION
   ) {
+    const claimRequestId = input.claimRequestIdForHour(nextHour);
+    const claim = await setup.persistence.claimHour({
+      closedHour: nextHour as HourIndex,
+      claimRequestId,
+      leaseDurationMs: LEASE_DURATION_MS,
+    });
+
+    if (claim.status === 'already-claimed') {
+      return { status: 'already-claimed', closedHour: nextHour };
+    }
+    if (claim.status === 'already-completed') {
+      return { status: 'already-completed', closedHour: nextHour };
+    }
+    if (claim.status === 'not-eligible') {
+      return {
+        status: 'not-eligible',
+        closedHour: nextHour,
+        eligibleAtMs: claim.eligibleAtMs,
+      };
+    }
+    if (claim.status !== 'claimed' || !claim.leaseToken) {
+      return { status: 'persistence-failure', reason: 'claim-failed' };
+    }
+
     let coverage;
     try {
       coverage = await setup.persistence.reconcileHourlyCoverage({
@@ -205,12 +229,20 @@ export async function runBoraEngineThroughHour(input: {
         '[bora-engine-hourly] coverage reconciliation failed:',
         error instanceof Error ? error.message : 'unknown error',
       );
+      await setup.persistence.releaseNotReady({
+        closedHour: nextHour as HourIndex,
+        leaseToken: claim.leaseToken,
+      });
       return { status: 'persistence-failure' };
     }
     if (
       coverage.status === 'ready' &&
       coverage.processedActiveSongCount === 0
     ) {
+      await setup.persistence.releaseNotReady({
+        closedHour: nextHour as HourIndex,
+        leaseToken: claim.leaseToken,
+      });
       return {
         status: 'not-ready',
         closedHour: nextHour,
@@ -219,6 +251,10 @@ export async function runBoraEngineThroughHour(input: {
       };
     }
     if (coverage.status !== 'ready') {
+      await setup.persistence.releaseNotReady({
+        closedHour: nextHour as HourIndex,
+        leaseToken: claim.leaseToken,
+      });
       if (coverage.reason === 'reference-hour-mismatch') {
         return { status: 'state-hour-mismatch' };
       }
@@ -234,12 +270,17 @@ export async function runBoraEngineThroughHour(input: {
     try {
       rollover = await runHourlyRollover({
         closedHour: nextHour,
-        claimRequestId: input.claimRequestIdForHour(nextHour),
+        claimRequestId,
         nowMs,
         leaseDurationMs: LEASE_DURATION_MS,
         persistence: setup.persistence,
+        preclaimedLeaseToken: claim.leaseToken,
       });
     } catch {
+      await setup.persistence.releaseNotReady({
+        closedHour: nextHour as HourIndex,
+        leaseToken: claim.leaseToken,
+      });
       return { status: 'persistence-failure' };
     }
     if (rollover.status !== 'completed') {
