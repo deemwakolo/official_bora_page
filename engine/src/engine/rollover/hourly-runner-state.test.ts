@@ -332,3 +332,51 @@ describe('hourly worker coordination', () => {
     expect(result.status).toBe('completed');
   });
 });
+
+  it('reports state-head-missing when state-head row does not exist', async () => {
+    const token = '33333333-3333-4333-8333-333333333333';
+    const songId = makeSongId('song-3');
+    const state = makeState(H, [makeSong(songId, 8)]);
+    const coverage = [
+      makeCoverage(songId, H, 'VOTES'),
+      makeCoverage(songId, H, 'SEED'),
+    ];
+    const persistence: HourlyRolloverPersistence = {
+      readHourlyReferenceHour: async () => H,
+      reconcileHourlyCoverage: async () => ({
+        status: 'ready',
+        processedActiveSongCount: 1,
+        reconciledVoteEventCount: 1,
+      }),
+      claimHour: async () => ({ status: 'claimed', leaseToken: token }),
+      loadRolloverInput: async () => ({
+        status: 'loaded',
+        state,
+        coverage,
+        stateRevision: 11,
+      }),
+      releaseNotReady: async () => true,
+      recordRetryableFailure: async ({ errorCode }) => {
+        expect(errorCode).toBe('state-head-missing');
+        return true;
+      },
+      commitHour: async () => ({
+        status: 'stale-state',
+        reason: 'state-head-missing',
+      }),
+    };
+
+    const result = await runHourlyRollover({
+      closedHour: H,
+      claimRequestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      nowMs: (H + 1) * HOUR_MS + TRANSITION_MS + 1,
+      leaseDurationMs: 120_000,
+      persistence,
+    });
+
+    expect(result.status).toBe('retryable-failure');
+    if (result.status !== 'retryable-failure') {
+      throw new Error('Expected retryable failure after stale-state commit');
+    }
+    expect(result.reason).toBe('state-head-missing');
+  });
