@@ -8,6 +8,8 @@
 # testing
 /coverage
 /.bora-checker/
+**/node_modules/
+**/.vite/
 
 # next.js
 /.next/

@@ -25,10 +25,14 @@ declare
   v_vote_existing public.bora_engine_hourly_input_coverage%rowtype;
   v_vote_event_count_for_song bigint;
   v_vote_evidence_hash text;
+  v_vote_last_invalidated_revision bigint := -1;
+  v_vote_next_revision bigint;
   v_seed_existing public.bora_engine_hourly_input_coverage%rowtype;
   v_seed_source_identity text;
   v_seed_evidence_hash text;
   v_seed_detail text;
+  v_seed_last_invalidated_revision bigint := -1;
+  v_seed_next_revision bigint;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'BORA_ENGINE_WORKER_REQUIRED';
@@ -165,6 +169,14 @@ begin
     where lifecycle = 'ACTIVE'
     order by song_id
   loop
+    if to_regclass('public.bora_engine_vote_coverage_invalidation') is not null then
+      select max(i.invalidates_revision)
+        into v_vote_last_invalidated_revision
+      from public.bora_engine_vote_coverage_invalidation i
+      where i.song_id = v_song.song_id
+        and i.hour_index = p_closed_hour;
+    end if;
+
     select count(*)::bigint,
            md5(coalesce(
              string_agg(
@@ -196,6 +208,11 @@ begin
       and input_type = 'VOTES'
       and hour_index = p_closed_hour;
 
+    v_vote_next_revision := greatest(
+      coalesce(v_vote_existing.revision, 0),
+      coalesce(v_vote_last_invalidated_revision, -1)
+    ) + 1;
+
     if v_vote_existing is null then
       insert into public.bora_engine_hourly_input_coverage (
         song_id, input_type, hour_index, status, detail, checked_at, updated_at,
@@ -214,7 +231,7 @@ begin
         end,
         v_now,
         v_now,
-        1,
+        v_vote_next_revision,
         'current',
         'secure_vote_events',
         'secure-vote-ledger:' || v_vote_evidence_hash,
@@ -254,7 +271,7 @@ begin
           end,
           checked_at = v_now,
           updated_at = v_now,
-          revision = v_vote_existing.revision + 1,
+          revision = v_vote_next_revision,
           currentness = 'current',
           source_identity = 'secure_vote_events',
           evidence_id = 'secure-vote-ledger:' || v_vote_evidence_hash,
@@ -278,6 +295,14 @@ begin
     where song_id = v_song.song_id
       and input_type = 'SEED'
       and hour_index = p_closed_hour;
+
+    if to_regclass('public.bora_engine_seed_coverage_invalidation') is not null then
+      select max(i.invalidates_revision)
+        into v_seed_last_invalidated_revision
+      from public.bora_engine_seed_coverage_invalidation i
+      where i.song_id = v_song.song_id
+        and i.hour_index = p_closed_hour;
+    end if;
 
     select
       case
@@ -304,6 +329,11 @@ begin
     where sh.song_id = v_song.song_id
       and sh.hour_index = p_closed_hour;
 
+    v_seed_next_revision := greatest(
+      coalesce(v_seed_existing.revision, 0),
+      coalesce(v_seed_last_invalidated_revision, -1)
+    ) + 1;
+
     if v_seed_existing is null then
       insert into public.bora_engine_hourly_input_coverage (
         song_id, input_type, hour_index, status, detail, checked_at, updated_at,
@@ -319,7 +349,7 @@ begin
         coalesce(v_seed_detail, 'Verified no seed record in the Engine seed-hour source.'),
         v_now,
         v_now,
-        1,
+        v_seed_next_revision,
         'current',
         coalesce(v_seed_source_identity, 'seed-none'),
         'engine-seed-hour:' || coalesce(v_seed_evidence_hash, md5(concat_ws(':', v_song.song_id::text, p_closed_hour::text, 'empty', 'empty', 'empty', 'empty'))),
@@ -351,7 +381,7 @@ begin
           detail = coalesce(v_seed_detail, 'Verified no seed record in the Engine seed-hour source.'),
           checked_at = v_now,
           updated_at = v_now,
-          revision = v_seed_existing.revision + 1,
+          revision = v_seed_next_revision,
           currentness = 'current',
           source_identity = coalesce(v_seed_source_identity, 'seed-none'),
           evidence_id = 'engine-seed-hour:' || coalesce(v_seed_evidence_hash, md5(concat_ws(':', v_song.song_id::text, p_closed_hour::text, 'empty', 'empty', 'empty', 'empty'))),
